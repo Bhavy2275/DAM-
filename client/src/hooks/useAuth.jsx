@@ -12,10 +12,20 @@ export function AuthProvider({ children }) {
     }, []);
 
     const checkAuth = async () => {
+        // If there is no token, skip the /auth/me call entirely
+        const token = localStorage.getItem('dam_token');
+        if (!token) {
+            setUser(null);
+            setLoading(false);
+            return;
+        }
+
         try {
             const { data } = await api.get('/auth/me');
             setUser(data.user);
         } catch {
+            // If token is invalid/expired, clear it so we don't keep getting 401s
+            localStorage.removeItem('dam_token');
             setUser(null);
         } finally {
             setLoading(false);
