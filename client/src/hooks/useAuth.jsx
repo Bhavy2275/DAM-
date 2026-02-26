@@ -24,12 +24,16 @@ export function AuthProvider({ children }) {
 
     const login = async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password });
+        if (data.token) {
+            localStorage.setItem('dam_token', data.token);
+        }
         setUser(data.user);
         return data;
     };
 
     const logout = async () => {
         await api.post('/auth/logout');
+        localStorage.removeItem('dam_token');
         setUser(null);
     };
 

@@ -33,11 +33,12 @@ router.post('/login', async (req, res) => {
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            sameSite: 'none',  // required for cross-domain
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
         res.json({
+            token, // send token in body for cross-domain use
             user: { id: user.id, name: user.name, email: user.email, role: user.role }
         });
     } catch (error) {
