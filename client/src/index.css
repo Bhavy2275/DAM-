@@ -1,0 +1,379 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════
+   DAM LIGHTING SOLUTION — "Luxury Dark Atelier" Design System
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Google Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap');
+
+/* ── TailwindCSS v4 Theme ── */
+@theme {
+  --color-base: #070C18;
+  --color-surface: #0E1629;
+  --color-elevated: #152035;
+  --color-border: #1E2D47;
+
+  --color-accent: #F5A623;
+  --color-accent-glow: rgba(245, 166, 35, 0.15);
+  --color-accent-dim: #8C6016;
+  --color-accent-bright: #FFB940;
+
+  --color-text-primary: #EDF2FF;
+  --color-text-secondary: #7B91B0;
+  --color-text-muted: #3D5476;
+
+  --color-status-draft: #4A5568;
+  --color-status-sent: #3B82F6;
+  --color-status-accepted: #10B981;
+  --color-status-rejected: #EF4444;
+  --color-status-invoiced: #8B5CF6;
+  --color-status-pending: #F59E0B;
+  --color-status-paid: #10B981;
+  --color-status-partial: #F97316;
+
+  --color-danger: #EF4444;
+  --color-success: #10B981;
+  --color-info: #3B82F6;
+  --color-warning: #F59E0B;
+
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body: 'Outfit', sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+}
+
+/* ── Base Styles ── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-base);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-dim);
+}
+
+/* ── Typography ── */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+/* ── Status Badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-family: var(--font-body);
+}
+
+.badge-draft {
+  background: rgba(74, 85, 104, 0.15);
+  color: #94a3b8;
+}
+
+.badge-sent {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+
+.badge-accepted,
+.badge-completed,
+.badge-paid {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+}
+
+.badge-rejected {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+.badge-invoiced {
+  background: rgba(139, 92, 246, 0.12);
+  color: #a78bfa;
+}
+
+.badge-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+
+.badge-partial {
+  background: rgba(249, 115, 22, 0.12);
+  color: #fb923c;
+}
+
+/* ── Pulse dot for SENT status ── */
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* ── Skeleton Shimmer ── */
+.skeleton {
+  background: linear-gradient(90deg,
+      var(--color-surface) 25%,
+      var(--color-elevated) 50%,
+      var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ── Ambient Glow Utility ── */
+.glow-amber {
+  box-shadow: 0 0 0 1px var(--color-accent), 0 8px 32px var(--color-accent-glow);
+}
+
+.glow-amber-soft {
+  box-shadow: 0 4px 20px var(--color-accent-glow);
+}
+
+.glow-inset {
+  box-shadow: inset 0 0 40px var(--color-accent-glow);
+}
+
+/* ── Card Surface ── */
+.card-surface {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+}
+
+.card-surface:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 8px 32px var(--color-accent-glow);
+  transform: translateY(-4px);
+}
+
+/* ── Input Styling ── */
+.input-dark {
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input-dark::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input-dark:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 4px 20px var(--color-accent-glow);
+}
+
+/* ── Button Base ── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--color-accent);
+  color: var(--color-base);
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-body);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px var(--color-accent-glow);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-body);
+}
+
+.btn-ghost:hover {
+  background: var(--color-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-muted);
+}
+
+/* ── Table Styling ── */
+.dark-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dark-table thead th {
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dark-table tbody td {
+  padding: 14px 20px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.dark-table tbody tr {
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.dark-table tbody tr::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--color-accent);
+  transition: width 0.2s ease;
+}
+
+.dark-table tbody tr:hover {
+  background: var(--color-elevated);
+}
+
+.dark-table tbody tr:hover::before {
+  width: 3px;
+}
+
+/* ── Tab-num for financial numbers ── */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Ambient page gradient ── */
+.page-ambient {
+  background: radial-gradient(ellipse at 20% 0%, rgba(245, 166, 35, 0.04) 0%, transparent 60%);
+  min-height: 100%;
+}
+
+/* ── Label styling ── */
+.label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+  font-family: var(--font-body);
+}
+
+/* ── Heading underline ── */
+@keyframes underline-slide {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 60px;
+  }
+}
+
+.heading-underline::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 2px;
+  background: var(--color-accent);
+  margin-top: 8px;
+  animation: underline-slide 0.5s ease-out forwards;
+}

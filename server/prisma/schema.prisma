@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("STAFF") // ADMIN | STAFF
+  createdAt    DateTime @default(now())
+}
+
+model Client {
+  id         String      @id @default(uuid())
+  name       String
+  company    String
+  address    String
+  city       String
+  state      String
+  pincode    String
+  email      String?
+  phone      String?
+  createdAt  DateTime    @default(now())
+  quotations Quotation[]
+  payments   Payment[]
+}
+
+model Quotation {
+  id              String            @id @default(uuid())
+  quoteNumber     String            @unique
+  title           String
+  clientId        String
+  client          Client            @relation(fields: [clientId], references: [id])
+  projectName     String
+  projectLocation String
+  status          String            @default("DRAFT") // DRAFT | SENT | ACCEPTED | REJECTED | INVOICED
+  validDays       Int               @default(30)
+  gstRate         Float             @default(18)
+  notes           String?
+  createdById     String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  lineItems       QuotationItem[]
+  recommendations Recommendation[]
+  payments        Payment[]
+}
+
+model QuotationItem {
+  id            String      @id @default(uuid())
+  quotationId   String
+  quotation     Quotation   @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  sno           Int
+  productCode   String
+  description   String
+  polarImageUrl String?
+  unit          String
+  qtyApprox     Float
+  brands        ItemBrand[]
+}
+
+model ItemBrand {
+  id              String        @id @default(uuid())
+  quotationItemId String
+  quotationItem   QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
+  brandColumn     String        // HYBEC_ELITE | HYBEC_ECO_PRO | JAGUAR | PHILIPS | CUSTOM
+  macadamStep     String?
+  rate            Float?
+  amount          Float?
+  spaceMatch      Float?
+}
+
+model Recommendation {
+  id          String    @id @default(uuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  label       String
+  sno         Int
+  productCode String
+  qty         Float
+  unit        String
+  brandName   String
+  amount      Float
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  quotationId     String
+  quotation       Quotation @relation(fields: [quotationId], references: [id])
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  amountPaid      Float
+  paymentDate     DateTime
+  paymentMethod   String   // CASH | BANK_TRANSFER | UPI | CHEQUE
+  referenceNumber String?
+  notes           String?
+  status          String   @default("COMPLETED") // COMPLETED | PENDING | PARTIAL
+  createdAt       DateTime @default(now())
+}
+
+model CompanySettings {
+  id               String @id @default(uuid())
+  companyName      String @default("Dam Lighting Solution LLP")
+  tagline          String @default("design. allocate. maintain.")
+  logoUrl          String?
+  address          String @default("")
+  phone            String @default("")
+  email            String @default("")
+  website          String @default("")
+  gstNumber        String @default("")
+  bankName         String @default("")
+  accountName      String @default("")
+  accountNumber    String @default("")
+  ifscCode         String @default("")
+  bankAddress      String @default("")
+  currency         String @default("INR")
+  defaultGst       Float  @default(18)
+  defaultValidDays Int    @default(30)
+  defaultTerms     String @default("")
+}

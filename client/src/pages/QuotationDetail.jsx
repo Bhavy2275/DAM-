@@ -1,0 +1,258 @@
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Download, Mail, ArrowLeft, Edit, CreditCard, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from '../lib/api';
+import { formatINR } from '../lib/formatCurrency';
+import { fadeUp, staggerContainer, modalOverlay, modalContent } from '../lib/animations';
+import StatusBadge from '../components/StatusBadge';
+
+const BRAND_LABELS = { HYBEC_ELITE: 'Hybec Elite', HYBEC_ECO_PRO: 'Hybec Eco Pro', JAGUAR: 'Jaguar', PHILIPS: 'Philips', CUSTOM: 'Custom' };
+
+export default function QuotationDetail() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [quotation, setQuotation] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [paymentForm, setPaymentForm] = useState({ amountPaid: '', paymentDate: new Date().toISOString().split('T')[0], paymentMethod: 'BANK_TRANSFER', referenceNumber: '', notes: '' });
+
+    useEffect(() => { loadQuotation(); }, [id]);
+
+    const loadQuotation = async () => {
+        try { const { data } = await api.get(`/quotations/${id}`); setQuotation(data); }
+        catch (err) { console.error(err); }
+        finally { setLoading(false); }
+    };
+
+    const handleStatusChange = async (status) => {
+        try { await api.put(`/quotations/${id}`, { status }); toast.success(`Status: ${status}`); loadQuotation(); }
+        catch (err) { toast.error('Failed to update'); }
+    };
+
+    const handleDownloadPDF = async () => {
+        try {
+            const response = await api.get(`/quotations/${id}/pdf`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url; link.setAttribute('download', `${quotation.quoteNumber}.pdf`);
+            document.body.appendChild(link); link.click(); link.remove();
+            toast.success('PDF downloaded');
+        } catch (err) { toast.error('PDF failed'); }
+    };
+
+    const handleSendEmail = async () => {
+        try { await api.post(`/quotations/${id}/send-email`); toast.success('Email sent'); loadQuotation(); }
+        catch (err) { toast.error('Email failed'); }
+    };
+
+    const handleAddPayment = async () => {
+        try {
+            await api.post('/payments', { quotationId: id, clientId: quotation.clientId, amountPaid: parseFloat(paymentForm.amountPaid), paymentDate: paymentForm.paymentDate, paymentMethod: paymentForm.paymentMethod, referenceNumber: paymentForm.referenceNumber, notes: paymentForm.notes });
+            toast.success('Payment added');
+            setShowPaymentModal(false); loadQuotation();
+        } catch (err) { toast.error('Failed to add payment'); }
+    };
+
+    if (loading) return <div style={{ padding: 32 }}><div className="skeleton" style={{ height: 40, width: 240, marginBottom: 24 }} />{[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 200, marginBottom: 16 }} />)}</div>;
+    if (!quotation) return <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-muted)' }}>Quotation not found</div>;
+
+    const recLabels = ['RECOMMENDATION A', 'RECOMMENDATION B', 'RECOMMENDATION C', 'RECOMMENDATION D'];
+    const recGroups = recLabels.map(l => quotation.recommendations.filter(r => r.label === l));
+    const recTotals = recGroups.map(group => {
+        const sum = group.reduce((s, r) => s + r.amount, 0);
+        const gst = sum * (quotation.gstRate / 100);
+        return { sum, gst, total: sum + gst };
+    });
+    const totalPaid = (quotation.payments || []).reduce((s, p) => s + p.amountPaid, 0);
+    const grandTotal = recTotals[0]?.total || 0;
+    const balance = grandTotal - totalPaid;
+    const activeBrands = ['HYBEC_ELITE', 'HYBEC_ECO_PRO', 'JAGUAR', 'PHILIPS', 'CUSTOM'].filter(bc =>
+        quotation.lineItems.some(item => item.brands.some(b => b.brandColumn === bc && (b.rate || b.amount)))
+    );
+
+    return (
+        <motion.div variants={staggerContainer} initial="hidden" animate="visible" style={{ padding: 32, maxWidth: 1400, margin: '0 auto' }}>
+            {/* Header */}
+            <motion.div variants={fadeUp}>
+                <button onClick={() => navigate('/quotations')} className="btn-ghost" style={{ marginBottom: 12, padding: '6px 12px', fontSize: 12 }}><ArrowLeft size={14} /> Back</button>
+                <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
+                    <div>
+                        <h1 className="font-display" style={{ fontSize: '2.2rem', fontWeight: 700 }}>{quotation.quoteNumber}</h1>
+                        <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4 }}>{quotation.title}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <StatusBadge status={quotation.status} />
+                        <Link to={`/quotations/${id}/edit`} className="btn-ghost" style={{ padding: '8px 14px' }}><Edit size={14} /> Edit</Link>
+                        <button onClick={handleDownloadPDF} className="btn-primary" style={{ padding: '8px 14px' }}><Download size={14} /> PDF</button>
+                        <button onClick={handleSendEmail} className="btn-ghost" style={{ padding: '8px 14px', borderColor: 'var(--color-info)', color: 'var(--color-info)' }}><Mail size={14} /> Email</button>
+                        <button onClick={() => setShowPaymentModal(true)} className="btn-ghost" style={{ padding: '8px 14px', borderColor: 'var(--color-status-accepted)', color: 'var(--color-status-accepted)' }}><CreditCard size={14} /> Payment</button>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Status Actions */}
+            <motion.div variants={fadeUp} className="flex gap-2" style={{ marginBottom: 24 }}>
+                {['SENT', 'ACCEPTED', 'REJECTED', 'INVOICED'].map(s => (
+                    <button key={s} onClick={() => handleStatusChange(s)}
+                        style={{
+                            padding: '6px 14px', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 600,
+                            background: quotation.status === s ? 'var(--color-accent)' : 'var(--color-surface)',
+                            color: quotation.status === s ? 'var(--color-base)' : 'var(--color-text-muted)',
+                            border: `1px solid ${quotation.status === s ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                            cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase', letterSpacing: 1
+                        }}>
+                        {s}
+                    </button>
+                ))}
+            </motion.div>
+
+            {/* Info Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 32 }}>
+                <motion.div variants={fadeUp} className="card-surface" style={{ padding: 20, cursor: 'default' }}>
+                    <div className="label">Client</div>
+                    <div style={{ fontWeight: 600, fontSize: 15 }}>{quotation.client?.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{quotation.client?.company}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{quotation.client?.city}, {quotation.client?.state}</div>
+                </motion.div>
+                <motion.div variants={fadeUp} className="card-surface" style={{ padding: 20, cursor: 'default' }}>
+                    <div className="label">Project</div>
+                    <div style={{ fontWeight: 600, fontSize: 15 }}>{quotation.projectName}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{quotation.projectLocation}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Valid {quotation.validDays} days</div>
+                </motion.div>
+                <motion.div variants={fadeUp} className="card-surface" style={{ padding: 20, borderTop: '2px solid var(--color-accent)', cursor: 'default' }}>
+                    <div className="label" style={{ color: 'var(--color-accent)' }}>Payment Status</div>
+                    <div className="font-display tabular-nums" style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-accent)' }}>{formatINR(grandTotal)}</div>
+                    <div style={{ fontSize: 12, marginTop: 6 }}>Paid: <span style={{ color: 'var(--color-status-accepted)', fontWeight: 600 }}>{formatINR(totalPaid)}</span></div>
+                    <div style={{ fontSize: 12 }}>Balance: <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>{formatINR(balance)}</span></div>
+                </motion.div>
+            </div>
+
+            {/* Items Table */}
+            <motion.div variants={fadeUp} className="card-surface" style={{ overflow: 'hidden', marginBottom: 32, cursor: 'default' }}>
+                <div style={{ padding: '14px 20px', background: 'var(--color-base)', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, letterSpacing: 1.5, borderBottom: '2px solid var(--color-accent)' }}>{quotation.projectName} — LIGHTING QUOTATION</div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table className="dark-table" style={{ fontSize: 12 }}>
+                        <thead><tr>
+                            <th>S.No</th><th>Code</th><th style={{ minWidth: 180 }}>Description</th><th>Unit</th><th>Qty</th>
+                            {activeBrands.map(bc => <th key={bc} colSpan="4" style={{ textAlign: 'center', color: 'var(--color-accent)', borderLeft: '1px solid var(--color-border)' }}>{BRAND_LABELS[bc]}</th>)}
+                        </tr></thead>
+                        <tbody>
+                            {quotation.lineItems.map((item, idx) => (
+                                <tr key={item.id}>
+                                    <td style={{ textAlign: 'center' }}>{item.sno}</td>
+                                    <td style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{item.productCode}</td>
+                                    <td style={{ color: 'var(--color-text-muted)', maxWidth: 200, fontSize: 11 }}>{item.description}</td>
+                                    <td style={{ textAlign: 'center' }}>{item.unit}</td>
+                                    <td style={{ textAlign: 'center', fontWeight: 600 }}>{item.qtyApprox}</td>
+                                    {activeBrands.map(bc => {
+                                        const brand = item.brands.find(b => b.brandColumn === bc);
+                                        const matchPct = brand?.spaceMatch || 0;
+                                        const matchColor = matchPct >= 100 ? 'var(--color-status-accepted)' : matchPct >= 90 ? 'var(--color-accent)' : 'var(--color-status-partial)';
+                                        return [
+                                            <td key={`${bc}-m`} style={{ textAlign: 'center', borderLeft: '1px solid var(--color-border)', fontSize: 11 }}>{brand?.macadamStep || '-'}</td>,
+                                            <td key={`${bc}-r`} className="tabular-nums" style={{ textAlign: 'right', fontSize: 11 }}>{brand?.rate ? formatINR(brand.rate) : '-'}</td>,
+                                            <td key={`${bc}-a`} className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600 }}>{brand?.amount ? formatINR(brand.amount) : '-'}</td>,
+                                            <td key={`${bc}-s`} style={{ textAlign: 'center' }}>
+                                                {brand?.spaceMatch ? <span style={{ background: matchColor, color: '#fff', padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600 }}>{brand.spaceMatch}%</span> : '-'}
+                                            </td>,
+                                        ];
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
+
+            {/* Recommendations */}
+            <motion.div variants={fadeUp} className="card-surface" style={{ overflow: 'hidden', marginBottom: 32, cursor: 'default' }}>
+                <div style={{ padding: '14px 20px', background: 'var(--color-base)', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: 1.5, borderBottom: '2px solid var(--color-accent)' }}>RECOMMENDATIONS SUMMARY</div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table className="dark-table" style={{ fontSize: 12 }}>
+                        <thead><tr>
+                            <th>S.No</th><th>Qty</th><th>Unit</th><th>Code</th>
+                            {recLabels.map(l => <th key={l} colSpan="2" style={{ textAlign: 'center', color: 'var(--color-accent)' }}>REC {l.split(' ')[1]}</th>)}
+                        </tr></thead>
+                        <tbody>
+                            {quotation.lineItems.map((item, idx) => (
+                                <tr key={idx}>
+                                    <td>{item.sno}</td><td>{item.qtyApprox}</td><td>{item.unit}</td><td style={{ fontWeight: 700 }}>{item.productCode}</td>
+                                    {recGroups.map((group, gi) => {
+                                        const rec = group.find(r => r.productCode === item.productCode);
+                                        return [
+                                            <td key={`b-${gi}`} style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{rec?.brandName || '-'}</td>,
+                                            <td key={`a-${gi}`} className="tabular-nums" style={{ fontWeight: 600, textAlign: 'right' }}>{rec ? formatINR(rec.amount) : '-'}</td>
+                                        ];
+                                    })}
+                                </tr>
+                            ))}
+                            <tr style={{ background: 'var(--color-base)' }}>
+                                <td colSpan="4" style={{ textAlign: 'right', fontWeight: 700 }}>SUM</td>
+                                {recTotals.map((r, i) => <td key={i} colSpan="2" className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600 }}>{formatINR(r.sum)}</td>)}
+                            </tr>
+                            <tr style={{ background: 'var(--color-base)' }}>
+                                <td colSpan="4" style={{ textAlign: 'right', fontWeight: 600 }}>GST {quotation.gstRate}%</td>
+                                {recTotals.map((r, i) => <td key={i} colSpan="2" className="tabular-nums" style={{ textAlign: 'right' }}>{formatINR(r.gst)}</td>)}
+                            </tr>
+                            <tr style={{ background: 'var(--color-accent)', color: 'var(--color-base)' }}>
+                                <td colSpan="4" style={{ textAlign: 'right', fontWeight: 700 }}>TOTAL</td>
+                                {recTotals.map((r, i) => <td key={i} colSpan="2" className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700 }}>{formatINR(r.total)}</td>)}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
+
+            {/* Payments */}
+            {quotation.payments?.length > 0 && (
+                <motion.div variants={fadeUp} className="card-surface" style={{ overflow: 'hidden', cursor: 'default' }}>
+                    <div style={{ padding: '14px 20px', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, borderBottom: '1px solid var(--color-border)' }}>Payment History</div>
+                    <table className="dark-table">
+                        <thead><tr><th>Date</th><th>Method</th><th>Reference</th><th style={{ textAlign: 'right' }}>Amount</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {quotation.payments.map(p => (
+                                <tr key={p.id}>
+                                    <td>{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
+                                    <td>{p.paymentMethod}</td>
+                                    <td style={{ color: 'var(--color-text-muted)' }}>{p.referenceNumber || '-'}</td>
+                                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-status-accepted)' }}>{formatINR(p.amountPaid)}</td>
+                                    <td><StatusBadge status={p.status} /></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </motion.div>
+            )}
+
+            {/* Payment Modal */}
+            <AnimatePresence>
+                {showPaymentModal && (
+                    <motion.div variants={modalOverlay} initial="hidden" animate="visible" exit="exit"
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={() => setShowPaymentModal(false)}>
+                        <motion.div variants={modalContent} initial="hidden" animate="visible" exit="exit" onClick={e => e.stopPropagation()}
+                            style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderTop: '2px solid var(--color-status-accepted)', borderRadius: 'var(--radius-lg)', padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 20px 80px rgba(0,0,0,0.5)' }}>
+                            <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
+                                <h3 className="font-display" style={{ fontSize: 20, fontWeight: 600 }}>Add Payment</h3>
+                                <button onClick={() => setShowPaymentModal(false)} style={{ padding: 6, background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={18} /></button>
+                            </div>
+                            <div className="space-y-3">
+                                <div><label className="label">Amount (₹)</label><input type="number" value={paymentForm.amountPaid} onChange={e => setPaymentForm({ ...paymentForm, amountPaid: e.target.value })} className="input-dark" /></div>
+                                <div><label className="label">Date</label><input type="date" value={paymentForm.paymentDate} onChange={e => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} className="input-dark" /></div>
+                                <div><label className="label">Method</label><select value={paymentForm.paymentMethod} onChange={e => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })} className="input-dark"><option value="BANK_TRANSFER">Bank Transfer</option><option value="UPI">UPI</option><option value="CASH">Cash</option><option value="CHEQUE">Cheque</option></select></div>
+                                <div><label className="label">Reference</label><input type="text" value={paymentForm.referenceNumber} onChange={e => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })} className="input-dark" /></div>
+                            </div>
+                            <div className="flex gap-3" style={{ marginTop: 24 }}>
+                                <button onClick={() => setShowPaymentModal(false)} className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                                <button onClick={handleAddPayment} className="btn-primary" style={{ flex: 1, justifyContent: 'center', background: 'var(--color-status-accepted)' }}>Save Payment</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+}
