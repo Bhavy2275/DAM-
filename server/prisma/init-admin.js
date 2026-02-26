@@ -46,6 +46,28 @@ async function main() {
     }
 }
 
-main()
-    .catch(e => { console.error('❌ Init failed:', e); process.exit(1); })
-    .finally(() => prisma.$disconnect());
+async function runInit() {
+    try {
+        await main();
+    } catch (e) {
+        console.error('❌ Init failed:', e);
+        throw e;
+    } finally {
+        await prisma.$disconnect();
+    }
+}
+
+// When executed as a standalone script (e.g. `node prisma/init-admin.js`)
+// perform the init then exit.
+if (require.main === module) {
+    runInit()
+        .then(() => {
+            process.exit(0);
+        })
+        .catch(() => {
+            process.exit(1);
+        });
+}
+
+// When imported from the server (index.js) we export the init function.
+module.exports = { runInit };

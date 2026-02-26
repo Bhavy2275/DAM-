@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const { runInit } = require('./prisma/init-admin');
 
 const authRoutes = require('./routes/auth');
 const clientRoutes = require('./routes/clients');
@@ -65,6 +66,17 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`DAM Lighting API running on port ${PORT}`);
-});
+async function start() {
+  try {
+    await runInit();
+  } catch (e) {
+    // If seeding fails, log the error but still start the server
+    console.error('Admin/bootstrap initialisation failed:', e);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`DAM Lighting API running on port ${PORT}`);
+  });
+}
+
+start();
