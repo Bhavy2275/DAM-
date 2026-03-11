@@ -9,30 +9,26 @@ router.use(authenticate);
 // GET /api/clients
 router.get('/', async (req, res) => {
     try {
-        const clients = await prisma.client.findMany({
-            orderBy: { createdAt: 'desc' },
+        const { search } = req.query;
+        let clients = await prisma.client.findMany({
             include: {
                 _count: { select: { quotations: true, payments: true } }
-            }
+            },
+            orderBy: { createdAt: 'desc' }
         });
+        if (search) {
+            const s = search.toLowerCase();
+            clients = clients.filter(c =>
+                c.fullName.toLowerCase().includes(s) ||
+                c.companyName.toLowerCase().includes(s) ||
+                c.city.toLowerCase().includes(s) ||
+                (c.emailId || '').toLowerCase().includes(s)
+            );
+        }
         res.json(clients);
     } catch (error) {
         console.error('Get clients error:', error);
         res.status(500).json({ error: 'Failed to fetch clients' });
-    }
-});
-
-// POST /api/clients
-router.post('/', async (req, res) => {
-    try {
-        const { name, company, address, city, state, pincode, email, phone } = req.body;
-        const client = await prisma.client.create({
-            data: { name, company, address, city, state, pincode, email, phone }
-        });
-        res.status(201).json(client);
-    } catch (error) {
-        console.error('Create client error:', error);
-        res.status(500).json({ error: 'Failed to create client' });
     }
 });
 
@@ -49,22 +45,34 @@ router.get('/:id', async (req, res) => {
         if (!client) return res.status(404).json({ error: 'Client not found' });
         res.json(client);
     } catch (error) {
-        console.error('Get client error:', error);
         res.status(500).json({ error: 'Failed to fetch client' });
+    }
+});
+
+// POST /api/clients
+router.post('/', async (req, res) => {
+    try {
+        const { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress } = req.body;
+        const client = await prisma.client.create({
+            data: { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress }
+        });
+        res.status(201).json(client);
+    } catch (error) {
+        console.error('Create client error:', error);
+        res.status(500).json({ error: 'Failed to create client' });
     }
 });
 
 // PUT /api/clients/:id
 router.put('/:id', async (req, res) => {
     try {
-        const { name, company, address, city, state, pincode, email, phone } = req.body;
+        const { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress } = req.body;
         const client = await prisma.client.update({
             where: { id: req.params.id },
-            data: { name, company, address, city, state, pincode, email, phone }
+            data: { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress }
         });
         res.json(client);
     } catch (error) {
-        console.error('Update client error:', error);
         res.status(500).json({ error: 'Failed to update client' });
     }
 });
@@ -75,31 +83,7 @@ router.delete('/:id', async (req, res) => {
         await prisma.client.delete({ where: { id: req.params.id } });
         res.json({ message: 'Client deleted' });
     } catch (error) {
-        console.error('Delete client error:', error);
         res.status(500).json({ error: 'Failed to delete client' });
-    }
-});
-
-// GET /api/clients/:id/summary
-router.get('/:id/summary', async (req, res) => {
-    try {
-        const client = await prisma.client.findUnique({
-            where: { id: req.params.id },
-            include: {
-                quotations: {
-                    include: { recommendations: true },
-                    orderBy: { createdAt: 'desc' }
-                },
-                payments: { orderBy: { paymentDate: 'desc' } }
-            }
-        });
-        if (!client) return res.status(404).json({ error: 'Client not found' });
-
-        const totalPaid = client.payments.reduce((sum, p) => sum + p.amountPaid, 0);
-        res.json({ ...client, totalPaid });
-    } catch (error) {
-        console.error('Get client summary error:', error);
-        res.status(500).json({ error: 'Failed to fetch client summary' });
     }
 });
 

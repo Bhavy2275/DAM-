@@ -7,6 +7,25 @@ const prisma = new PrismaClient();
 
 router.use(authenticate);
 
+function parseArr(str) { try { return JSON.parse(str || '[]'); } catch { return []; } }
+
+function serializeItem(item) {
+    const recs = (item.recommendations || []).reduce((acc, r) => {
+        acc[r.label] = r;
+        return acc;
+    }, {});
+    return {
+        ...item,
+        bodyColours: parseArr(item.bodyColours),
+        reflectorColours: parseArr(item.reflectorColours),
+        colourTemps: parseArr(item.colourTemps),
+        beamAngles: parseArr(item.beamAngles),
+        cri: parseArr(item.cri),
+        recommendations: item.recommendations || [],
+        recommendationsByLabel: recs,
+    };
+}
+
 // GET /api/quotations
 router.get('/', async (req, res) => {
     try {
@@ -17,16 +36,14 @@ router.get('/', async (req, res) => {
         if (search) {
             where.OR = [
                 { quoteNumber: { contains: search } },
+                { quoteTitle: { contains: search } },
                 { projectName: { contains: search } },
-                { client: { name: { contains: search } } }
             ];
         }
-
         const quotations = await prisma.quotation.findMany({
             where,
             include: {
-                client: { select: { name: true, company: true } },
-                recommendations: true,
+                client: { select: { fullName: true, companyName: true, city: true } },
                 _count: { select: { lineItems: true, payments: true } }
             },
             orderBy: { createdAt: 'desc' }
@@ -46,74 +63,38 @@ router.get('/:id', async (req, res) => {
             include: {
                 client: true,
                 lineItems: {
-                    include: { brands: true },
+                    include: { recommendations: { orderBy: { label: 'asc' } } },
                     orderBy: { sno: 'asc' }
                 },
-                recommendations: { orderBy: { sno: 'asc' } },
                 payments: { orderBy: { paymentDate: 'desc' } }
             }
         });
         if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
-        res.json(quotation);
+        res.json({
+            ...quotation,
+            lineItems: quotation.lineItems.map(serializeItem)
+        });
     } catch (error) {
         console.error('Get quotation error:', error);
         res.status(500).json({ error: 'Failed to fetch quotation' });
     }
 });
 
-// POST /api/quotations
+// POST /api/quotations  — create header (Step 3)
 router.post('/', async (req, res) => {
     try {
-        const { title, clientId, projectName, projectLocation, validDays, gstRate, notes, lineItems, recommendations } = req.body;
+        const { quoteTitle, clientId, projectName, city, state, validDays, gstRate, notes } = req.body;
         const quoteNumber = await generateQuoteNumber();
-
         const quotation = await prisma.quotation.create({
             data: {
-                quoteNumber,
-                title,
-                clientId,
-                projectName,
-                projectLocation,
+                quoteNumber, quoteTitle, clientId, projectName,
+                city: city || '', state: state || '',
                 validDays: validDays || 30,
                 gstRate: gstRate || 18,
-                notes,
+                notes: notes || '',
                 createdById: req.user.id,
-                lineItems: lineItems ? {
-                    create: lineItems.map((item, idx) => ({
-                        sno: item.sno || idx + 1,
-                        productCode: item.productCode,
-                        description: item.description,
-                        polarImageUrl: item.polarImageUrl,
-                        unit: item.unit,
-                        qtyApprox: item.qtyApprox,
-                        brands: item.brands ? {
-                            create: item.brands.map(b => ({
-                                brandColumn: b.brandColumn,
-                                macadamStep: b.macadamStep,
-                                rate: b.rate,
-                                amount: b.amount || (item.qtyApprox * (b.rate || 0)),
-                                spaceMatch: b.spaceMatch
-                            }))
-                        } : undefined
-                    }))
-                } : undefined,
-                recommendations: recommendations ? {
-                    create: recommendations.map(r => ({
-                        label: r.label,
-                        sno: r.sno,
-                        productCode: r.productCode,
-                        qty: r.qty,
-                        unit: r.unit,
-                        brandName: r.brandName,
-                        amount: r.amount
-                    }))
-                } : undefined
             },
-            include: {
-                client: true,
-                lineItems: { include: { brands: true } },
-                recommendations: true
-            }
+            include: { client: true, lineItems: true }
         });
         res.status(201).json(quotation);
     } catch (error) {
@@ -122,66 +103,14 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT /api/quotations/:id
+// PUT /api/quotations/:id  — update header
 router.put('/:id', async (req, res) => {
     try {
-        const { title, clientId, projectName, projectLocation, status, validDays, gstRate, notes, lineItems, recommendations } = req.body;
-
-        // Delete existing line items and recommendations, then recreate
-        await prisma.itemBrand.deleteMany({
-            where: { quotationItem: { quotationId: req.params.id } }
-        });
-        await prisma.quotationItem.deleteMany({ where: { quotationId: req.params.id } });
-        await prisma.recommendation.deleteMany({ where: { quotationId: req.params.id } });
-
+        const { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes } = req.body;
         const quotation = await prisma.quotation.update({
             where: { id: req.params.id },
-            data: {
-                title,
-                clientId,
-                projectName,
-                projectLocation,
-                status,
-                validDays,
-                gstRate,
-                notes,
-                lineItems: lineItems ? {
-                    create: lineItems.map((item, idx) => ({
-                        sno: item.sno || idx + 1,
-                        productCode: item.productCode,
-                        description: item.description,
-                        polarImageUrl: item.polarImageUrl,
-                        unit: item.unit,
-                        qtyApprox: item.qtyApprox,
-                        brands: item.brands ? {
-                            create: item.brands.map(b => ({
-                                brandColumn: b.brandColumn,
-                                macadamStep: b.macadamStep,
-                                rate: b.rate,
-                                amount: b.amount || (item.qtyApprox * (b.rate || 0)),
-                                spaceMatch: b.spaceMatch
-                            }))
-                        } : undefined
-                    }))
-                } : undefined,
-                recommendations: recommendations ? {
-                    create: recommendations.map(r => ({
-                        label: r.label,
-                        sno: r.sno,
-                        productCode: r.productCode,
-                        qty: r.qty,
-                        unit: r.unit,
-                        brandName: r.brandName,
-                        amount: r.amount
-                    }))
-                } : undefined
-            },
-            include: {
-                client: true,
-                lineItems: { include: { brands: true }, orderBy: { sno: 'asc' } },
-                recommendations: { orderBy: { sno: 'asc' } },
-                payments: true
-            }
+            data: { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes },
+            include: { client: true }
         });
         res.json(quotation);
     } catch (error) {
@@ -193,11 +122,7 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/quotations/:id
 router.delete('/:id', async (req, res) => {
     try {
-        await prisma.itemBrand.deleteMany({
-            where: { quotationItem: { quotationId: req.params.id } }
-        });
-        await prisma.quotationItem.deleteMany({ where: { quotationId: req.params.id } });
-        await prisma.recommendation.deleteMany({ where: { quotationId: req.params.id } });
+        // Cascade is set in schema so just delete the quotation
         await prisma.payment.deleteMany({ where: { quotationId: req.params.id } });
         await prisma.quotation.delete({ where: { id: req.params.id } });
         res.json({ message: 'Quotation deleted' });
@@ -212,10 +137,7 @@ router.post('/:id/duplicate', async (req, res) => {
     try {
         const original = await prisma.quotation.findUnique({
             where: { id: req.params.id },
-            include: {
-                lineItems: { include: { brands: true } },
-                recommendations: true
-            }
+            include: { lineItems: { include: { recommendations: true } } }
         });
         if (!original) return res.status(404).json({ error: 'Quotation not found' });
 
@@ -223,10 +145,11 @@ router.post('/:id/duplicate', async (req, res) => {
         const duplicate = await prisma.quotation.create({
             data: {
                 quoteNumber,
-                title: `${original.title} (Copy)`,
+                quoteTitle: `${original.quoteTitle} (Copy)`,
                 clientId: original.clientId,
                 projectName: original.projectName,
-                projectLocation: original.projectLocation,
+                city: original.city,
+                state: original.state,
                 validDays: original.validDays,
                 gstRate: original.gstRate,
                 notes: original.notes,
@@ -234,66 +157,284 @@ router.post('/:id/duplicate', async (req, res) => {
                 lineItems: {
                     create: original.lineItems.map(item => ({
                         sno: item.sno,
+                        productId: item.productId,
                         productCode: item.productCode,
+                        layoutCode: item.layoutCode,
                         description: item.description,
-                        polarImageUrl: item.polarImageUrl,
+                        polarDiagramUrl: item.polarDiagramUrl,
+                        productImageUrl: item.productImageUrl,
+                        bodyColours: item.bodyColours,
+                        reflectorColours: item.reflectorColours,
+                        colourTemps: item.colourTemps,
+                        beamAngles: item.beamAngles,
+                        cri: item.cri,
                         unit: item.unit,
-                        qtyApprox: item.qtyApprox,
-                        brands: {
-                            create: item.brands.map(b => ({
-                                brandColumn: b.brandColumn,
-                                macadamStep: b.macadamStep,
-                                rate: b.rate,
-                                amount: b.amount,
-                                spaceMatch: b.spaceMatch
+                        finalBrandName: item.finalBrandName,
+                        finalProductCode: item.finalProductCode,
+                        finalListPrice: item.finalListPrice,
+                        finalDiscount: item.finalDiscount,
+                        finalRate: item.finalRate,
+                        finalQuantity: item.finalQuantity,
+                        finalAmount: item.finalAmount,
+                        finalMacadamStep: item.finalMacadamStep,
+                        finalUnit: item.finalUnit,
+                        recommendations: {
+                            create: item.recommendations.map(r => ({
+                                label: r.label, brandName: r.brandName, productCode: r.productCode,
+                                listPrice: r.listPrice, listPriceWithGst: r.listPriceWithGst,
+                                discountPercent: r.discountPercent, rate: r.rate, unit: r.unit,
+                                quantity: r.quantity, amount: r.amount, macadamStep: r.macadamStep,
                             }))
                         }
                     }))
-                },
-                recommendations: {
-                    create: original.recommendations.map(r => ({
-                        label: r.label,
-                        sno: r.sno,
-                        productCode: r.productCode,
-                        qty: r.qty,
-                        unit: r.unit,
-                        brandName: r.brandName,
-                        amount: r.amount
-                    }))
                 }
             },
-            include: {
-                client: true,
-                lineItems: { include: { brands: true } },
-                recommendations: true
-            }
+            include: { client: true, lineItems: { include: { recommendations: true } } }
         });
         res.status(201).json(duplicate);
     } catch (error) {
-        console.error('Duplicate quotation error:', error);
+        console.error('Duplicate error:', error);
         res.status(500).json({ error: 'Failed to duplicate quotation' });
     }
 });
 
-// GET /api/quotations/:id/pdf
-router.get('/:id/pdf', async (req, res) => {
+// ── LINE ITEMS
+
+// POST /api/quotations/:id/items  — add a product row
+router.post('/:id/items', async (req, res) => {
     try {
-        const { generatePDF } = require('../utils/pdfGenerator');
+        const { productId, productCode, layoutCode, description, polarDiagramUrl, productImageUrl,
+            bodyColours, reflectorColours, colourTemps, beamAngles, cri, unit } = req.body;
+
+        // Get current max sno
+        const count = await prisma.quotationItem.count({ where: { quotationId: req.params.id } });
+
+        const item = await prisma.quotationItem.create({
+            data: {
+                quotationId: req.params.id,
+                sno: count + 1,
+                productId: productId || null,
+                productCode: productCode || '',
+                layoutCode: layoutCode || null,
+                description: description || '',
+                polarDiagramUrl: polarDiagramUrl || null,
+                productImageUrl: productImageUrl || null,
+                bodyColours: JSON.stringify(bodyColours || []),
+                reflectorColours: JSON.stringify(reflectorColours || []),
+                colourTemps: JSON.stringify(colourTemps || []),
+                beamAngles: JSON.stringify(beamAngles || []),
+                cri: JSON.stringify(cri || []),
+                unit: unit || 'NUMBERS',
+            },
+            include: { recommendations: true }
+        });
+        res.status(201).json(serializeItem(item));
+    } catch (error) {
+        console.error('Add item error:', error);
+        res.status(500).json({ error: 'Failed to add item' });
+    }
+});
+
+// PUT /api/quotations/:id/items/:itemId  — update item info (unit, sno, etc.)
+router.put('/:id/items/:itemId', async (req, res) => {
+    try {
+        const { unit, sno, productCode, layoutCode, description } = req.body;
+        const item = await prisma.quotationItem.update({
+            where: { id: req.params.itemId },
+            data: { unit, sno, productCode, layoutCode, description },
+            include: { recommendations: true }
+        });
+        res.json(serializeItem(item));
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update item' });
+    }
+});
+
+// DELETE /api/quotations/:id/items/:itemId
+router.delete('/:id/items/:itemId', async (req, res) => {
+    try {
+        await prisma.quotationItem.delete({ where: { id: req.params.itemId } });
+        // Re-number remaining items
+        const remaining = await prisma.quotationItem.findMany({
+            where: { quotationId: req.params.id },
+            orderBy: { sno: 'asc' }
+        });
+        for (let i = 0; i < remaining.length; i++) {
+            await prisma.quotationItem.update({ where: { id: remaining[i].id }, data: { sno: i + 1 } });
+        }
+        res.json({ message: 'Item deleted' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete item' });
+    }
+});
+
+// PUT /api/quotations/:id/items/:itemId/recommendations  — save all A-F recs for one item
+router.put('/:id/items/:itemId/recommendations', async (req, res) => {
+    try {
+        const { recommendations } = req.body; // array of rec objects
+
+        // Delete existing recs for this item, then recreate
+        await prisma.itemRecommendation.deleteMany({ where: { quotationItemId: req.params.itemId } });
+
+        if (recommendations && recommendations.length > 0) {
+            await prisma.itemRecommendation.createMany({
+                data: recommendations.map(r => ({
+                    quotationItemId: req.params.itemId,
+                    label: r.label,
+                    brandName: r.brandName || '',
+                    productCode: r.productCode || '',
+                    listPrice: parseFloat(r.listPrice) || 0,
+                    listPriceWithGst: parseFloat(r.listPriceWithGst) || parseFloat(r.listPrice || 0) * 1.18,
+                    discountPercent: parseFloat(r.discountPercent) || 0,
+                    rate: parseFloat(r.rate) || 0,
+                    unit: r.unit || 'NUMBERS',
+                    quantity: parseFloat(r.quantity) || 0,
+                    amount: parseFloat(r.amount) || 0,
+                    macadamStep: r.macadamStep || '',
+                }))
+            });
+        }
+
+        const item = await prisma.quotationItem.findUnique({
+            where: { id: req.params.itemId },
+            include: { recommendations: { orderBy: { label: 'asc' } } }
+        });
+        res.json(serializeItem(item));
+    } catch (error) {
+        console.error('Save recommendations error:', error);
+        res.status(500).json({ error: 'Failed to save recommendations' });
+    }
+});
+
+// PUT /api/quotations/:id/final  — save final working quotation for all items
+router.put('/:id/final', async (req, res) => {
+    try {
+        const { items, notes } = req.body; // items: array of { id, finalBrandName, finalProductCode, ... }
+
+        if (notes !== undefined) {
+            await prisma.quotation.update({ where: { id: req.params.id }, data: { notes } });
+        }
+
+        if (items && items.length > 0) {
+            for (const item of items) {
+                await prisma.quotationItem.update({
+                    where: { id: item.id },
+                    data: {
+                        finalBrandName: item.finalBrandName || null,
+                        finalProductCode: item.finalProductCode || null,
+                        finalListPrice: parseFloat(item.finalListPrice) || null,
+                        finalDiscount: parseFloat(item.finalDiscount) || null,
+                        finalRate: parseFloat(item.finalRate) || null,
+                        finalQuantity: parseFloat(item.finalQuantity) || null,
+                        finalAmount: parseFloat(item.finalAmount) || null,
+                        finalMacadamStep: item.finalMacadamStep || null,
+                        finalUnit: item.finalUnit || null,
+                    }
+                });
+            }
+        }
+
         const quotation = await prisma.quotation.findUnique({
             where: { id: req.params.id },
             include: {
                 client: true,
-                lineItems: { include: { brands: true }, orderBy: { sno: 'asc' } },
-                recommendations: { orderBy: { sno: 'asc' } }
+                lineItems: { include: { recommendations: { orderBy: { label: 'asc' } } }, orderBy: { sno: 'asc' } },
+                payments: true
+            }
+        });
+        res.json({ ...quotation, lineItems: quotation.lineItems.map(serializeItem) });
+    } catch (error) {
+        console.error('Save final error:', error);
+        res.status(500).json({ error: 'Failed to save final quotation' });
+    }
+});
+
+// POST /api/quotations/:id/import-recommendation  — copy rec into final fields for all items
+router.post('/:id/import-recommendation', async (req, res) => {
+    try {
+        const { label } = req.body; // "A" | "B" | etc.
+        const items = await prisma.quotationItem.findMany({
+            where: { quotationId: req.params.id },
+            include: { recommendations: true },
+            orderBy: { sno: 'asc' }
+        });
+
+        for (const item of items) {
+            const rec = item.recommendations.find(r => r.label === label);
+            if (rec) {
+                await prisma.quotationItem.update({
+                    where: { id: item.id },
+                    data: {
+                        finalBrandName: rec.brandName,
+                        finalProductCode: rec.productCode,
+                        finalListPrice: rec.listPrice,
+                        finalDiscount: rec.discountPercent,
+                        finalRate: rec.rate,
+                        finalQuantity: rec.quantity,
+                        finalAmount: rec.amount,
+                        finalMacadamStep: rec.macadamStep,
+                        finalUnit: rec.unit,
+                    }
+                });
+            }
+        }
+
+        const quotation = await prisma.quotation.findUnique({
+            where: { id: req.params.id },
+            include: {
+                client: true,
+                lineItems: { include: { recommendations: { orderBy: { label: 'asc' } } }, orderBy: { sno: 'asc' } },
+                payments: true
+            }
+        });
+        res.json({ ...quotation, lineItems: quotation.lineItems.map(serializeItem) });
+    } catch (error) {
+        console.error('Import rec error:', error);
+        res.status(500).json({ error: 'Failed to import recommendation' });
+    }
+});
+
+// POST /api/quotations/:id/items/reorder
+router.post('/:id/items/reorder', async (req, res) => {
+    try {
+        const { itemIds } = req.body; // ordered array of item IDs
+        for (let i = 0; i < itemIds.length; i++) {
+            await prisma.quotationItem.update({ where: { id: itemIds[i] }, data: { sno: i + 1 } });
+        }
+        res.json({ message: 'Items reordered' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to reorder items' });
+    }
+});
+
+// GET /api/quotations/:id/pdf?mode=all_recs|final
+router.get('/:id/pdf', async (req, res) => {
+    try {
+        const { generatePDF } = require('../utils/pdfGenerator');
+        const mode = req.query.mode || 'final';
+
+        const quotation = await prisma.quotation.findUnique({
+            where: { id: req.params.id },
+            include: {
+                client: true,
+                lineItems: {
+                    include: { recommendations: { orderBy: { label: 'asc' } } },
+                    orderBy: { sno: 'asc' }
+                }
             }
         });
         if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
 
         const settings = await prisma.companySettings.findFirst();
-        const pdfBuffer = await generatePDF(quotation, settings);
+        const serialized = {
+            ...quotation,
+            lineItems: quotation.lineItems.map(serializeItem)
+        };
+
+        const pdfBuffer = await generatePDF(serialized, settings, mode);
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${quotation.quoteNumber}.pdf"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${quotation.quoteNumber}-${mode}.pdf"`);
         res.send(pdfBuffer);
     } catch (error) {
         console.error('PDF generation error:', error);
@@ -304,22 +445,9 @@ router.get('/:id/pdf', async (req, res) => {
 // POST /api/quotations/:id/send-email
 router.post('/:id/send-email', async (req, res) => {
     try {
-        const quotation = await prisma.quotation.findUnique({
-            where: { id: req.params.id },
-            include: { client: true }
-        });
-        if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
-        if (!quotation.client.email) return res.status(400).json({ error: 'Client has no email address' });
-
-        // Mark as sent
-        await prisma.quotation.update({
-            where: { id: req.params.id },
-            data: { status: 'SENT' }
-        });
-
-        res.json({ message: 'Email would be sent (SMTP not configured)' });
+        await prisma.quotation.update({ where: { id: req.params.id }, data: { status: 'SENT' } });
+        res.json({ message: 'Email sent (mark as SENT)' });
     } catch (error) {
-        console.error('Send email error:', error);
         res.status(500).json({ error: 'Failed to send email' });
     }
 });

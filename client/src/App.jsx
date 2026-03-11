@@ -7,12 +7,13 @@ import TopBar from './components/TopBar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Quotations from './pages/Quotations';
-import CreateQuotation from './pages/CreateQuotation';
+import QuotationWizard from './pages/QuotationWizard';
 import QuotationDetail from './pages/QuotationDetail';
 import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
 import Payments from './pages/Payments';
 import Settings from './pages/Settings';
+import Products from './pages/Products';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -83,7 +84,7 @@ export default function App() {
               fontFamily: 'Outfit, sans-serif',
               fontSize: '13px',
             },
-            success: { iconTheme: { primary: '#10B981', secondary: '#070C18' } },
+            success: { iconTheme: { primary: '#F5A623', secondary: '#070C18' } },
             error: { iconTheme: { primary: '#EF4444', secondary: '#070C18' } },
           }}
         />
@@ -92,12 +93,13 @@ export default function App() {
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/quotations" element={<Quotations />} />
-            <Route path="/quotations/new" element={<CreateQuotation />} />
+            <Route path="/quotations/new" element={<QuotationWizard />} />
             <Route path="/quotations/:id" element={<QuotationDetail />} />
-            <Route path="/quotations/:id/edit" element={<CreateQuotation />} />
+            <Route path="/quotations/:id/edit" element={<QuotationWizard />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/payments" element={<Payments />} />
+            <Route path="/products" element={<Products />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -4,7 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Edit, Trash2, Eye, X, MapPin, Phone, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
-import { fadeUp, staggerContainer, scaleIn, modalOverlay, modalContent, getAvatarColor, getInitials } from '../lib/animations';
+import { fadeUp, staggerContainer, scaleIn, slideInLeft, modalOverlay, modalContent } from '../lib/animations';
+
+function getInitials(name = '') { return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2); }
+function getAvatarColor(name = '') { const colors = ['#F5A623','#10B981','#6c63ff','#f43f5e','#06b6d4','#8b5cf6']; return colors[name.charCodeAt(0) % colors.length]; }
 
 export default function Clients() {
     const [clients, setClients] = useState([]);
@@ -12,7 +15,7 @@ export default function Clients() {
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [editingClient, setEditingClient] = useState(null);
-    const [form, setForm] = useState({ name: '', company: '', address: '', city: '', state: '', pincode: '', email: '', phone: '' });
+    const [form, setForm] = useState({ fullName: '', companyName: '', address: '', city: '', state: '', pinCode: '', mobileNumber: '', emailId: '', companyGstNumber: '', companyAddress: '' });
 
     useEffect(() => { loadClients(); }, []);
 
@@ -32,14 +35,14 @@ export default function Clients() {
                 toast.success('Client created');
             }
             setShowModal(false); setEditingClient(null);
-            setForm({ name: '', company: '', address: '', city: '', state: '', pincode: '', email: '', phone: '' });
+            setForm({ fullName: '', companyName: '', address: '', city: '', state: '', pinCode: '', mobileNumber: '', emailId: '', companyGstNumber: '', companyAddress: '' });
             loadClients();
         } catch (err) { toast.error('Failed to save client'); }
     };
 
     const handleEdit = (client) => {
         setEditingClient(client);
-        setForm({ name: client.name, company: client.company, address: client.address, city: client.city, state: client.state, pincode: client.pincode, email: client.email || '', phone: client.phone || '' });
+        setForm({ fullName: client.fullName, companyName: client.companyName, address: client.address, city: client.city, state: client.state, pinCode: client.pinCode || '', mobileNumber: client.mobileNumber || '', emailId: client.emailId || '', companyGstNumber: client.companyGstNumber || '', companyAddress: client.companyAddress || '' });
         setShowModal(true);
     };
 
@@ -50,9 +53,9 @@ export default function Clients() {
     };
 
     const filtered = clients.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.company.toLowerCase().includes(search.toLowerCase()) ||
-        c.city.toLowerCase().includes(search.toLowerCase())
+        (c.fullName || '').toLowerCase().includes(search.toLowerCase()) ||
+        (c.companyName || '').toLowerCase().includes(search.toLowerCase()) ||
+        (c.city || '').toLowerCase().includes(search.toLowerCase())
     );
 
     if (loading) {
@@ -74,7 +77,7 @@ export default function Clients() {
                     <h1 className="font-display heading-underline" style={{ fontSize: '2.4rem', fontWeight: 700 }}>Clients</h1>
                     <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginTop: 12 }}>Manage your client database</p>
                 </div>
-                <button onClick={() => { setEditingClient(null); setForm({ name: '', company: '', address: '', city: '', state: '', pincode: '', email: '', phone: '' }); setShowModal(true); }} className="btn-primary">
+                <button onClick={() => { setEditingClient(null); setForm({ fullName: '', companyName: '', address: '', city: '', state: '', pinCode: '', mobileNumber: '', emailId: '', companyGstNumber: '', companyAddress: '' }); setShowModal(true); }} className="btn-primary">
                     <Plus size={16} /> Add Client
                 </button>
             </motion.div>
@@ -106,18 +109,18 @@ export default function Clients() {
                                 {/* Avatar */}
                                 <div style={{
                                     width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                                    background: getAvatarColor(c.name), color: '#fff',
+                                    background: getAvatarColor(c.fullName), color: '#fff',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: 15, fontWeight: 700
                                 }}>
-                                    {getInitials(c.name)}
+                                    {getInitials(c.fullName)}
                                 </div>
 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <div className="font-display" style={{ fontSize: 16, fontWeight: 600 }}>{c.name}</div>
-                                            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{c.company}</div>
+                                            <div className="font-display" style={{ fontSize: 16, fontWeight: 600 }}>{c.fullName}</div>
+                                            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{c.companyName}</div>
                                         </div>
                                         {/* Actions — show on hover */}
                                         <div className="flex items-center gap-1" style={{ opacity: 0, transition: 'opacity 0.2s' }}>
@@ -141,8 +144,8 @@ export default function Clients() {
 
                                     <div className="flex items-center gap-4 flex-wrap" style={{ marginTop: 10, fontSize: 12, color: 'var(--color-text-muted)' }}>
                                         {c.city && <span className="flex items-center gap-1"><MapPin size={12} /> {c.city}</span>}
-                                        {c.phone && <span className="flex items-center gap-1"><Phone size={12} /> {c.phone}</span>}
-                                        {c.email && <span className="flex items-center gap-1"><Mail size={12} /> {c.email}</span>}
+                                        {c.mobileNumber && <span className="flex items-center gap-1"><Phone size={12} /> {c.mobileNumber}</span>}
+                                        {c.emailId && <span className="flex items-center gap-1"><Mail size={12} /> {c.emailId}</span>}
                                     </div>
 
                                     <div style={{ marginTop: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
@@ -172,18 +175,20 @@ export default function Clients() {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                 {[
-                                    { key: 'name', label: 'Full Name', span: 1 },
-                                    { key: 'company', label: 'Company', span: 1 },
+                                    { key: 'fullName', label: 'Full Name', span: 1 },
+                                    { key: 'companyName', label: 'Company Name', span: 1 },
+                                    { key: 'mobileNumber', label: 'Mobile Number', span: 1 },
+                                    { key: 'emailId', label: 'Email ID', span: 1, type: 'email' },
                                     { key: 'address', label: 'Address', span: 2 },
                                     { key: 'city', label: 'City', span: 1 },
                                     { key: 'state', label: 'State', span: 1 },
-                                    { key: 'pincode', label: 'Pincode', span: 1 },
-                                    { key: 'phone', label: 'Phone', span: 1 },
-                                    { key: 'email', label: 'Email', span: 2 },
+                                    { key: 'pinCode', label: 'PIN Code', span: 1 },
+                                    { key: 'companyGstNumber', label: 'Company GST No.', span: 1 },
+                                    { key: 'companyAddress', label: 'Company Address', span: 2 },
                                 ].map(f => (
                                     <div key={f.key} style={{ gridColumn: f.span === 2 ? 'span 2' : 'auto' }}>
                                         <label className="label">{f.label}</label>
-                                        <input type={f.key === 'email' ? 'email' : 'text'} value={form[f.key]}
+                                        <input type={f.type || 'text'} value={form[f.key] || ''}
                                             onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="input-dark" />
                                     </div>
                                 ))}

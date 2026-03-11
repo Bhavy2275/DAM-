@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -16,78 +16,126 @@ model User {
   createdAt    DateTime @default(now())
 }
 
+// ─── MASTER PRODUCT LIBRARY ───────────────────────────────────────────────
+model Product {
+  id              String          @id @default(uuid())
+  productCode     String          @unique
+  layoutCode      String?
+  description     String
+  basePrice       Float           @default(0) // Added base price
+  polarDiagramUrl String?
+  productImageUrl String?
+
+  // Stored as JSON strings for SQLite
+  bodyColours      String @default("[]")
+  reflectorColours String @default("[]")
+  colourTemps      String @default("[]")
+  beamAngles       String @default("[]")
+  cri              String @default("[]")
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  quotationItems QuotationItem[]
+}
+
+// ─── CLIENTS ──────────────────────────────────────────────────────────────
 model Client {
-  id         String      @id @default(uuid())
-  name       String
-  company    String
-  address    String
-  city       String
-  state      String
-  pincode    String
-  email      String?
-  phone      String?
-  createdAt  DateTime    @default(now())
-  quotations Quotation[]
-  payments   Payment[]
+  id               String      @id @default(uuid())
+  fullName         String
+  companyName      String
+  address          String
+  city             String
+  state            String
+  pinCode          String
+  mobileNumber     String
+  emailId          String?
+  companyGstNumber String?
+  companyAddress   String?
+  createdAt        DateTime    @default(now())
+  quotations       Quotation[]
+  payments         Payment[]
 }
 
+// ─── QUOTATIONS ────────────────────────────────────────────────────────────
 model Quotation {
-  id              String            @id @default(uuid())
-  quoteNumber     String            @unique
-  title           String
-  clientId        String
-  client          Client            @relation(fields: [clientId], references: [id])
-  projectName     String
-  projectLocation String
-  status          String            @default("DRAFT") // DRAFT | SENT | ACCEPTED | REJECTED | INVOICED
-  validDays       Int               @default(30)
-  gstRate         Float             @default(18)
-  notes           String?
-  createdById     String
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  lineItems       QuotationItem[]
-  recommendations Recommendation[]
-  payments        Payment[]
+  id          String          @id @default(uuid())
+  quoteNumber String          @unique
+  quoteTitle  String
+  projectName String
+  city        String          @default("")
+  state       String          @default("")
+  validDays   Int             @default(30)
+  gstRate     Float           @default(18)
+  status      String          @default("DRAFT") // DRAFT | SENT | ACCEPTED | REJECTED | INVOICED
+  clientId    String
+  client      Client          @relation(fields: [clientId], references: [id])
+  createdById String
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  lineItems QuotationItem[]
+  payments  Payment[]
 }
 
+// ─── QUOTATION LINE ITEMS ──────────────────────────────────────────────────
 model QuotationItem {
-  id            String      @id @default(uuid())
-  quotationId   String
-  quotation     Quotation   @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  sno           Int
-  productCode   String
-  description   String
-  polarImageUrl String?
-  unit          String
-  qtyApprox     Float
-  brands        ItemBrand[]
-}
-
-model ItemBrand {
-  id              String        @id @default(uuid())
-  quotationItemId String
-  quotationItem   QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
-  brandColumn     String        // HYBEC_ELITE | HYBEC_ECO_PRO | JAGUAR | PHILIPS | CUSTOM
-  macadamStep     String?
-  rate            Float?
-  amount          Float?
-  spaceMatch      Float?
-}
-
-model Recommendation {
   id          String    @id @default(uuid())
   quotationId String
   quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  label       String
   sno         Int
-  productCode String
-  qty         Float
-  unit        String
-  brandName   String
-  amount      Float
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id])
+
+  // Snapshot fields (copied from Product at quote creation time)
+  productCode     String
+  layoutCode      String?
+  description     String
+  basePrice       Float  @default(0) // Snapshot of price
+  polarDiagramUrl String?
+  productImageUrl String?
+  bodyColours     String @default("[]")
+  reflectorColours String @default("[]")
+  colourTemps     String @default("[]")
+  beamAngles      String @default("[]")
+  cri             String @default("[]")
+
+  unit String @default("NUMBERS") // NUMBERS | METERS
+
+  // Up to 6 recommendation columns per row
+  recommendations ItemRecommendation[]
+
+  // Final working quotation selection
+  finalBrandName   String?
+  finalProductCode String?
+  finalListPrice   Float?
+  finalDiscount    Float?
+  finalRate        Float?
+  finalQuantity    Float?
+  finalAmount      Float?
+  finalMacadamStep String?
+  finalUnit        String?
 }
 
+// ─── RECOMMENDATION COLUMNS (A–F per line item) ────────────────────────────
+model ItemRecommendation {
+  id              String        @id @default(uuid())
+  quotationItemId String
+  quotationItem   QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
+  label           String // "A" | "B" | "C" | "D" | "E" | "F"
+  brandName       String
+  productCode     String        @default("")
+  listPrice       Float
+  listPriceWithGst Float
+  discountPercent Float
+  rate            Float
+  unit            String        @default("NUMBERS")
+  quantity        Float
+  amount          Float
+  macadamStep     String        @default("")
+}
+
+// ─── PAYMENTS ─────────────────────────────────────────────────────────────
 model Payment {
   id              String   @id @default(uuid())
   quotationId     String
@@ -96,13 +144,14 @@ model Payment {
   client          Client   @relation(fields: [clientId], references: [id])
   amountPaid      Float
   paymentDate     DateTime
-  paymentMethod   String   // CASH | BANK_TRANSFER | UPI | CHEQUE
+  paymentMethod   String // CASH | BANK_TRANSFER | UPI | CHEQUE
   referenceNumber String?
   notes           String?
   status          String   @default("COMPLETED") // COMPLETED | PENDING | PARTIAL
   createdAt       DateTime @default(now())
 }
 
+// ─── COMPANY SETTINGS (single row) ────────────────────────────────────────
 model CompanySettings {
   id               String @id @default(uuid())
   companyName      String @default("Dam Lighting Solution LLP")

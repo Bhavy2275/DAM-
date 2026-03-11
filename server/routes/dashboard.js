@@ -12,7 +12,10 @@ router.get('/stats', async (req, res) => {
         const [totalQuotations, quotations, payments] = await Promise.all([
             prisma.quotation.count(),
             prisma.quotation.findMany({
-                include: { recommendations: true, client: { select: { name: true, company: true } } },
+                include: {
+                    client: { select: { fullName: true, companyName: true } },
+                    lineItems: true,
+                },
                 orderBy: { createdAt: 'desc' }
             }),
             prisma.payment.findMany()
@@ -21,19 +24,23 @@ router.get('/stats', async (req, res) => {
         const pending = quotations.filter(q => q.status === 'DRAFT' || q.status === 'SENT').length;
         const accepted = quotations.filter(q => q.status === 'ACCEPTED').length;
 
-        // Calculate total revenue from accepted/invoiced quotes using recommendations
+        // Revenue = sum of finalAmount across all line items for accepted/invoiced quotes
         const totalRevenue = quotations
             .filter(q => q.status === 'ACCEPTED' || q.status === 'INVOICED')
             .reduce((sum, q) => {
-                const recA = q.recommendations.filter(r => r.label === 'RECOMMENDATION A');
-                const recTotal = recA.reduce((s, r) => s + r.amount, 0);
-                return sum + recTotal;
+                const lineTotal = q.lineItems.reduce((s, item) => s + (item.finalAmount || 0), 0);
+                return sum + lineTotal;
             }, 0);
 
-        const totalPaid = payments.filter(p => p.status === 'COMPLETED').reduce((s, p) => s + p.amountPaid, 0);
-        const totalPendingPayments = payments.filter(p => p.status === 'PENDING').reduce((s, p) => s + p.amountPaid, 0);
+        const totalPaid = payments
+            .filter(p => p.status === 'COMPLETED')
+            .reduce((s, p) => s + p.amountPaid, 0);
 
-        // Monthly revenue for chart (last 12 months)
+        const totalPendingPayments = payments
+            .filter(p => p.status === 'PENDING')
+            .reduce((s, p) => s + p.amountPaid, 0);
+
+        // Monthly revenue (last 12 months) from payments
         const monthlyRevenue = [];
         const now = new Date();
         for (let i = 11; i >= 0; i--) {
@@ -49,7 +56,7 @@ router.get('/stats', async (req, res) => {
             });
         }
 
-        // Status distribution for donut chart
+        // Status distribution
         const statusCounts = {
             DRAFT: quotations.filter(q => q.status === 'DRAFT').length,
             SENT: quotations.filter(q => q.status === 'SENT').length,
@@ -62,11 +69,13 @@ router.get('/stats', async (req, res) => {
         const recentQuotations = quotations.slice(0, 10).map(q => ({
             id: q.id,
             quoteNumber: q.quoteNumber,
+            quoteTitle: q.quoteTitle,
             projectName: q.projectName,
-            clientName: q.client?.name,
+            clientName: q.client?.fullName,
+            clientCompany: q.client?.companyName,
             status: q.status,
             createdAt: q.createdAt,
-            total: q.recommendations.filter(r => r.label === 'RECOMMENDATION A').reduce((s, r) => s + r.amount, 0)
+            total: q.lineItems.reduce((s, item) => s + (item.finalAmount || 0), 0)
         }));
 
         res.json({

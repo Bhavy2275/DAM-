@@ -1,280 +1,279 @@
-async function generatePDF(quotation, settings) {
-    // Use dynamic import for puppeteer to handle environments where it's not available
-    let puppeteer;
-    try {
-        puppeteer = require('puppeteer');
-    } catch (e) {
-        throw new Error('Puppeteer is not installed. Run: npm install puppeteer');
-    }
+const puppeteer = require('puppeteer');
 
-    const html = buildPDFHTML(quotation, settings);
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({
-        format: 'A4',
-        landscape: true,
-        printBackground: true,
-        margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
-    });
-    await browser.close();
-    return Buffer.from(pdfBuffer);
+const MACADAM_SPACE = { '1A': 40, '2A': 50, '3A': 75, '4A': 90, '5A': 100 };
+
+function fmt(n) {
+    if (n == null || isNaN(n)) return '—';
+    return '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function num(n) { if (n == null || isNaN(n)) return '—'; return Number(n).toLocaleString('en-IN'); }
+
+function pillHtml(arr, color = '#1E2D47') {
+    if (!arr || arr.length === 0) return '—';
+    return arr.map(v => `<span class="pill">${v.replace('DEG', '°').replace('_', ' ')}</span>`).join(' ');
 }
 
-function formatINR(num) {
-    if (!num) return '₹0';
-    return '₹' + Number(num).toLocaleString('en-IN', { maximumFractionDigits: 0 });
-}
-
-function buildPDFHTML(quotation, settings) {
+function coverPage(q, settings) {
     const s = settings || {};
-    const c = quotation.client || {};
-    const brandColumns = ['HYBEC_ELITE', 'HYBEC_ECO_PRO', 'JAGUAR', 'PHILIPS', 'CUSTOM'];
-    const brandLabels = {
-        'HYBEC_ELITE': 'HYBEC ELITE',
-        'HYBEC_ECO_PRO': 'HYBEC ECO PRO',
-        'JAGUAR': 'JAGUAR',
-        'PHILIPS': 'PHILIPS',
-        'CUSTOM': 'CUSTOM'
-    };
-
-    // Determine which brand columns actually have data
-    const activeBrands = brandColumns.filter(bc =>
-        quotation.lineItems.some(item =>
-            item.brands.some(b => b.brandColumn === bc && (b.rate || b.amount))
-        )
-    );
-
-    // Build line items rows
-    const itemRows = quotation.lineItems.map((item, idx) => {
-        const brandCells = activeBrands.map(bc => {
-            const brand = item.brands.find(b => b.brandColumn === bc);
-            if (!brand) return '<td>-</td><td>-</td><td>-</td><td>-</td>';
-            const matchColor = (brand.spaceMatch || 0) >= 100 ? '#22c55e' : (brand.spaceMatch || 0) >= 90 ? '#f59e0b' : '#f97316';
-            return `
-        <td>${brand.macadamStep || '-'}</td>
-        <td>${brand.rate ? formatINR(brand.rate) : '-'}</td>
-        <td style="font-weight:600">${brand.amount ? formatINR(brand.amount) : '-'}</td>
-        <td><span style="background:${matchColor};color:#fff;padding:2px 8px;border-radius:12px;font-size:10px">${brand.spaceMatch || 0}%</span></td>
-      `;
-        }).join('');
-
-        return `
-      <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f8f9fc'}">
-        <td style="text-align:center">${item.sno}</td>
-        <td style="font-weight:600">${item.productCode}</td>
-        <td style="font-size:10px;max-width:200px">${item.description}</td>
-        <td style="text-align:center">${item.polarImageUrl ? `<img src="${item.polarImageUrl}" style="width:40px;height:40px;border-radius:50%"/>` : '-'}</td>
-        <td style="text-align:center">${item.unit}</td>
-        <td style="text-align:center">${item.qtyApprox}</td>
-        ${brandCells}
-      </tr>
-    `;
-    }).join('');
-
-    // Brand column headers
-    const brandHeaders = activeBrands.map(bc => `
-    <th colspan="4" style="background:#0A1628;color:#F59E0B;text-align:center;padding:8px;font-size:11px;border:1px solid #1e3a5f">
-      ${brandLabels[bc]}
-    </th>
-  `).join('');
-
-    const brandSubHeaders = activeBrands.map(() => `
-    <th style="background:#12243d;color:#fff;padding:4px;font-size:9px;border:1px solid #1e3a5f">Macadam</th>
-    <th style="background:#12243d;color:#fff;padding:4px;font-size:9px;border:1px solid #1e3a5f">Rate</th>
-    <th style="background:#12243d;color:#fff;padding:4px;font-size:9px;border:1px solid #1e3a5f">Amount</th>
-    <th style="background:#12243d;color:#fff;padding:4px;font-size:9px;border:1px solid #1e3a5f">Space%</th>
-  `).join('');
-
-    // Recommendations
-    const recLabels = ['RECOMMENDATION A', 'RECOMMENDATION B', 'RECOMMENDATION C', 'RECOMMENDATION D'];
-    const recGroups = recLabels.map(label => quotation.recommendations.filter(r => r.label === label));
-
-    const recRows = quotation.lineItems.map((item, idx) => {
-        const recCells = recGroups.map(group => {
-            const rec = group.find(r => r.productCode === item.productCode);
-            if (!rec) return '<td>-</td><td>-</td>';
-            return `<td>${rec.brandName}</td><td style="font-weight:600">${formatINR(rec.amount)}</td>`;
-        }).join('');
-
-        return `
-      <tr style="background:${idx % 2 === 0 ? '#fff' : '#f8f9fc'}">
-        <td style="text-align:center">${item.sno}</td>
-        <td style="text-align:center">${item.qtyApprox}</td>
-        <td style="text-align:center">${item.unit}</td>
-        <td style="font-weight:600">${item.productCode}</td>
-        ${recCells}
-      </tr>
-    `;
-    }).join('');
-
-    // Recommendation totals
-    const recTotals = recGroups.map(group => group.reduce((s, r) => s + r.amount, 0));
-    const gstRate = quotation.gstRate || 18;
-    const recGST = recTotals.map(t => t * (gstRate / 100));
-    const recGrand = recTotals.map((t, i) => t + recGST[i]);
-
-    const recTotalCells = recTotals.map(t => `<td colspan="2" style="font-weight:700;text-align:right;padding:8px">${formatINR(t)}</td>`).join('');
-    const recGSTCells = recGST.map(t => `<td colspan="2" style="text-align:right;padding:8px">${formatINR(t)}</td>`).join('');
-    const recGrandCells = recGrand.map(t => `<td colspan="2" style="font-weight:700;text-align:right;padding:8px;background:#0A1628;color:#F59E0B">${formatINR(t)}</td>`).join('');
-
-    const recHeaders = recLabels.map(l => `<th colspan="2" style="background:#0A1628;color:#F59E0B;text-align:center;padding:8px;font-size:11px">REC ${l.split(' ')[1]}</th>`).join('');
-
-    // Terms
-    const terms = (quotation.notes || s.defaultTerms || '').split('\n').map((t, i) => `<p style="margin:2px 0;font-size:11px">${t}</p>`).join('');
-
-    return `<!DOCTYPE html>
-<html>
-<head>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; }
-  .page { page-break-after: always; width: 100%; min-height: 100%; }
-  .page:last-child { page-break-after: auto; }
-
-  /* Cover Page */
-  .cover { display: flex; flex-direction: column; height: 100vh; }
-  .cover-top { flex: 1; background: #ffffff; display: flex; padding: 60px; }
-  .cover-left, .cover-right { flex: 1; }
-  .cover-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
-  .cover-company { font-size: 22px; font-weight: 700; color: #0A1628; margin-bottom: 10px; }
-  .cover-detail { font-size: 13px; color: #555; line-height: 1.8; }
-  .cover-bottom { flex: 1; background: #0A1628; display: flex; align-items: center; justify-content: space-between; padding: 60px; }
-  .cover-title { color: #ffffff; }
-  .cover-title h1 { font-size: 56px; font-weight: 300; letter-spacing: 4px; }
-  .cover-title h2 { font-size: 42px; font-weight: 700; }
-  .cover-brand { text-align: right; color: #F59E0B; }
-  .cover-brand h1 { font-size: 48px; font-weight: 800; letter-spacing: 6px; }
-  .cover-brand p { font-size: 14px; letter-spacing: 3px; margin-top: 10px; }
-
-  /* Table */
-  .items-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .items-table th, .items-table td { padding: 6px 8px; border: 1px solid #e2e8f0; }
-  .title-banner { background: #0A1628; color: #fff; padding: 16px; text-align: center; font-size: 16px; font-weight: 700; letter-spacing: 2px; margin-bottom: 0; }
-
-  /* Recommendations */
-  .rec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .rec-table th, .rec-table td { padding: 6px 8px; border: 1px solid #e2e8f0; }
-
-  /* Footer */
-  .terms-section { padding: 20px; background: #f8f9fc; }
-  .terms-title { font-size: 14px; font-weight: 700; color: #0A1628; margin-bottom: 10px; }
-  .bank-section { padding: 20px; background: #0A1628; color: #fff; }
-  .bank-title { font-size: 14px; font-weight: 700; color: #F59E0B; margin-bottom: 10px; }
-  .bank-detail { font-size: 11px; line-height: 1.8; }
-</style>
-</head>
-<body>
-
-<!-- COVER PAGE -->
-<div class="page">
-  <div class="cover">
+    return `
+  <div class="cover-page">
     <div class="cover-top">
-      <div class="cover-left">
-        <div class="cover-label">Developed & Illuminated By</div>
-        <div class="cover-company">${s.companyName || 'Dam Lighting Solution LLP'}</div>
-        <div class="cover-detail">
-          ${s.phone || ''}<br/>
-          ${s.email || ''}<br/>
-          ${s.website || ''}<br/>
-          ${s.address || ''}
-        </div>
+      <div class="cover-col">
+        <div class="cover-label">Developed &amp; Illuminated By</div>
+        <div class="cover-company">${s.companyName || 'DAM Lighting Solution LLP'}</div>
+        <div class="cover-sub">${s.phone || ''} &nbsp;|&nbsp; ${s.email || ''}</div>
+        <div class="cover-sub">${s.website || ''}</div>
+        <div class="cover-address">${s.address || ''}</div>
       </div>
-      <div class="cover-right" style="padding-left:40px;border-left:2px solid #e2e8f0">
-        <div class="cover-label">Developed & Illuminated For</div>
-        <div class="cover-company">${c.company || c.name || ''}</div>
-        <div class="cover-detail">
-          ${c.address || ''}<br/>
-          ${c.city || ''}${c.state ? ', ' + c.state : ''}${c.pincode ? ' — ' + c.pincode : ''}
-        </div>
+      <div class="cover-divider"></div>
+      <div class="cover-col">
+        <div class="cover-label">Developed &amp; Illuminated For</div>
+        <div class="cover-company">${q.client?.companyName || ''}</div>
+        <div class="cover-sub">${q.client?.fullName || ''}</div>
+        <div class="cover-address">${q.client?.address || ''}, ${q.client?.city || ''} — ${q.client?.pinCode || ''}</div>
       </div>
     </div>
     <div class="cover-bottom">
-      <div class="cover-title">
-        <h1>Light</h1>
-        <h2>Quotation</h2>
-      </div>
-      <div class="cover-brand">
-        <h1>DAM</h1>
-        <p>${s.tagline || 'design. allocate. maintain.'}</p>
+      <div class="cover-quote-label">Light Quotation</div>
+      <div class="cover-dam">
+        <div class="cover-dam-logo">DAM</div>
+        <div class="cover-dam-tag">design. allocate. maintain.</div>
       </div>
     </div>
-  </div>
-</div>
+  </div>`;
+}
 
-<!-- ITEMS TABLE -->
-<div class="page">
-  <div class="title-banner">${quotation.projectName || quotation.title} — LIGHTING QUOTATION</div>
-  <table class="items-table">
+function allRecsPdf(q, settings) {
+    const labels = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const activeLabels = [];
+    for (const label of labels) {
+        if (q.lineItems.some(item => item.recommendations.some(r => r.label === label && r.brandName))) {
+            activeLabels.push(label);
+        }
+    }
+
+    const recTotals = activeLabels.map(label => {
+        const sum = q.lineItems.reduce((acc, item) => {
+            const r = item.recommendations.find(r => r.label === label);
+            return acc + (r ? r.amount : 0);
+        }, 0);
+        const gst = sum * (q.gstRate / 100);
+        return { label, sum, gst, total: sum + gst };
+    });
+
+    const rowsHtml = q.lineItems.map((item, i) => {
+        const recCells = activeLabels.map(label => {
+            const r = item.recommendations.find(r => r.label === label);
+            if (!r || !r.brandName) return `<td class="rec-cell" colspan="3">—</td>`;
+            const space = MACADAM_SPACE[r.macadamStep] || '—';
+            return `
+              <td class="rec-cell">${r.macadamStep || '—'}</td>
+              <td class="rec-cell mono">${fmt(r.rate)}</td>
+              <td class="rec-cell mono">${fmt(r.amount)}<br><small>${space}%</small></td>`;
+        }).join('');
+        return `<tr class="${i % 2 === 0 ? 'row-even' : 'row-odd'}">
+          <td>${item.sno}</td>
+          <td><strong>${item.productCode}</strong></td>
+          <td class="desc">${item.description.substring(0, 80)}</td>
+          <td>${item.unit === 'NUMBERS' ? 'Nos.' : 'Mtr.'}</td>
+          ${recCells}
+        </tr>`;
+    }).join('');
+
+    const summaryRows = recTotals.map(r => `
+      <tr>
+        <td colspan="2"><strong>Rec ${r.label}</strong></td>
+        <td class="mono">${fmt(r.sum)}</td>
+        <td class="mono">${fmt(r.gst)}</td>
+        <td class="mono"><strong>${fmt(r.total)}</strong></td>
+      </tr>`).join('');
+
+    const recHeaders = activeLabels.map(l =>
+        `<th colspan="3" class="rec-header">REC ${l}</th>`).join('');
+    const recSubHeaders = activeLabels.map(() =>
+        `<th>Macadam</th><th>Rate</th><th>Amount</th>`).join('');
+
+    return `
+  <div class="page-break"></div>
+  <div class="section-header">${q.projectName} — ${q.city} — LIGHTING QUOTATION</div>
+  <table class="main-table">
     <thead>
       <tr>
-        <th rowspan="2" style="background:#0A1628;color:#fff;padding:8px;border:1px solid #1e3a5f">S.No</th>
-        <th rowspan="2" style="background:#0A1628;color:#fff;padding:8px;border:1px solid #1e3a5f">Code</th>
-        <th rowspan="2" style="background:#0A1628;color:#fff;padding:8px;border:1px solid #1e3a5f;min-width:180px">Description</th>
-        <th rowspan="2" style="background:#0A1628;color:#fff;padding:8px;border:1px solid #1e3a5f">Polar</th>
-        <th rowspan="2" style="background:#0A1628;color:#fff;padding:8px;border:1px solid #1e3a5f">Unit</th>
-        <th rowspan="2" style="background:#0A1628;color:#fff;padding:8px;border:1px solid #1e3a5f">Qty</th>
-        ${brandHeaders}
-      </tr>
-      <tr>${brandSubHeaders}</tr>
-    </thead>
-    <tbody>${itemRows}</tbody>
-  </table>
-</div>
-
-<!-- RECOMMENDATIONS -->
-<div class="page">
-  <div class="title-banner">RECOMMENDATIONS SUMMARY</div>
-  <table class="rec-table">
-    <thead>
-      <tr>
-        <th style="background:#0A1628;color:#fff;padding:8px">S.No</th>
-        <th style="background:#0A1628;color:#fff;padding:8px">Qty</th>
-        <th style="background:#0A1628;color:#fff;padding:8px">Unit</th>
-        <th style="background:#0A1628;color:#fff;padding:8px">Code</th>
+        <th rowspan="2">S.No</th>
+        <th rowspan="2">Code</th>
+        <th rowspan="2">Description</th>
+        <th rowspan="2">Unit</th>
         ${recHeaders}
       </tr>
+      <tr>${recSubHeaders}</tr>
     </thead>
-    <tbody>
-      ${recRows}
-      <tr style="background:#f1f5f9">
-        <td colspan="4" style="text-align:right;font-weight:700;padding:8px">SUM</td>
-        ${recTotalCells}
-      </tr>
-      <tr style="background:#f1f5f9">
-        <td colspan="4" style="text-align:right;font-weight:700;padding:8px">GST ${gstRate}%</td>
-        ${recGSTCells}
-      </tr>
-      <tr>
-        <td colspan="4" style="text-align:right;font-weight:700;padding:8px;background:#0A1628;color:#fff">TOTAL</td>
-        ${recGrandCells}
-      </tr>
-    </tbody>
+    <tbody>${rowsHtml}</tbody>
   </table>
 
-  <!-- Terms & Conditions -->
-  <div class="terms-section" style="margin-top:24px">
-    <div class="terms-title">Terms & Conditions</div>
-    ${terms}
+  <div class="summary-section">
+    <div class="summary-title">RECOMMENDATION SUMMARY</div>
+    <table class="summary-table">
+      <thead><tr><th colspan="2">Brand</th><th>Sub-Total</th><th>GST (${q.gstRate}%)</th><th>Grand Total</th></tr></thead>
+      <tbody>${summaryRows}</tbody>
+    </table>
+  </div>`;
+}
+
+function finalPdf(q, settings) {
+    const items = q.lineItems;
+    const subtotal = items.reduce((acc, i) => acc + (i.finalAmount || 0), 0);
+    const gstAmt = subtotal * (q.gstRate / 100);
+    const grandTotal = subtotal + gstAmt;
+
+    const rowsHtml = items.map((item, i) => {
+        return `<tr class="${i % 2 === 0 ? 'row-even' : 'row-odd'}">
+          <td>${item.sno}</td>
+          <td><strong>${item.productCode}</strong></td>
+          <td class="desc">${item.description.substring(0, 100)}</td>
+          <td>${pillHtml(item.bodyColours)}</td>
+          <td>${pillHtml(item.colourTemps)}</td>
+          <td>${pillHtml(item.beamAngles)}</td>
+          <td>${pillHtml(item.cri)}</td>
+          <td>${item.layoutCode || '—'}</td>
+          <td>${item.finalBrandName || '—'}</td>
+          <td class="mono">${fmt(item.finalListPrice)}</td>
+          <td class="mono">${fmt(item.finalListPrice ? item.finalListPrice * 1.18 : null)}</td>
+          <td>${item.finalDiscount != null ? item.finalDiscount + '%' : '—'}</td>
+          <td class="mono">${fmt(item.finalRate)}</td>
+          <td>${item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
+          <td>${num(item.finalQuantity)}</td>
+          <td class="mono"><strong>${fmt(item.finalAmount)}</strong></td>
+          <td>${item.finalMacadamStep || '—'}</td>
+        </tr>`;
+    }).join('');
+
+    const terms = (q.notes || '').split('\n').map(t => t.trim()).filter(Boolean);
+    const s = settings || {};
+
+    return `
+  <div class="page-break"></div>
+  <div class="section-header">${q.projectName} — ${q.city} — LIGHTING QUOTATION</div>
+  <table class="main-table final-table">
+    <thead>
+      <tr>
+        <th>S.No</th><th>Code</th><th>Description</th>
+        <th>Body</th><th>CCT</th><th>Beam</th><th>CRI</th><th>Layout</th>
+        <th>Brand</th><th>LP</th><th>LP+18%</th><th>Disc%</th><th>Rate</th>
+        <th>Unit</th><th>Qty</th><th>Amount</th><th>Macadam</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+
+  <div class="summary-section">
+    <table class="totals-table">
+      <tr><td>Sub-Total</td><td class="mono">${fmt(subtotal)}</td></tr>
+      <tr><td>GST (${q.gstRate}%)</td><td class="mono">${fmt(gstAmt)}</td></tr>
+      <tr class="grand-total"><td>GRAND TOTAL</td><td class="mono">${fmt(grandTotal)}</td></tr>
+    </table>
   </div>
 
-  <!-- Bank Details -->
-  <div class="bank-section" style="margin-top:16px;border-radius:8px">
-    <div class="bank-title">Bank Details</div>
-    <div class="bank-detail">
-      <strong>Account Name:</strong> ${s.accountName || '-'}<br/>
-      <strong>Bank Name:</strong> ${s.bankName || '-'}<br/>
-      <strong>Account Number:</strong> ${s.accountNumber || '-'}<br/>
-      <strong>IFSC Code:</strong> ${s.ifscCode || '-'}<br/>
-      <strong>Address:</strong> ${s.bankAddress || '-'}<br/>
-      <strong>GST:</strong> ${s.gstNumber || '-'}<br/>
-      <strong>Contact No:</strong> ${s.phone || '-'}
+  <div class="footer-section">
+    ${terms.length ? `<div class="terms-title">Terms &amp; Conditions</div>
+    <ol class="terms-list">${terms.map(t => `<li>${t.replace(/^\d+\.\s*/, '')}</li>`).join('')}</ol>` : ''}
+
+    <div class="bank-section">
+      <div class="bank-title">Bank Details</div>
+      <div class="bank-grid">
+        <div><span class="bank-label">Account Name:</span> ${s.accountName || ''}</div>
+        <div><span class="bank-label">Bank:</span> ${s.bankName || ''}</div>
+        <div><span class="bank-label">Account No:</span> ${s.accountNumber || ''}</div>
+        <div><span class="bank-label">IFSC:</span> ${s.ifscCode || ''}</div>
+        <div><span class="bank-label">GST No:</span> ${s.gstNumber || ''}</div>
+        <div><span class="bank-label">Address:</span> ${s.bankAddress || ''}</div>
+      </div>
     </div>
-  </div>
-</div>
+  </div>`;
+}
 
+const CSS = `
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; color: #1a1a2e; background: #fff; }
+  .cover-page { min-height: 100vh; display: flex; flex-direction: column; }
+  .cover-top { display: flex; flex: 1; padding: 60px 50px; background: #fff; }
+  .cover-col { flex: 1; padding: 20px; }
+  .cover-divider { width: 1px; background: #ddd; margin: 20px 0; }
+  .cover-label { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+  .cover-company { font-size: 22px; font-weight: 700; color: #070C18; margin-bottom: 8px; line-height: 1.3; }
+  .cover-sub { font-size: 11px; color: #444; margin-bottom: 4px; }
+  .cover-address { font-size: 10px; color: #666; margin-top: 12px; line-height: 1.5; }
+  .cover-bottom { background: #070C18; padding: 40px 50px; display: flex; justify-content: space-between; align-items: center; }
+  .cover-quote-label { font-family: 'Georgia', serif; font-size: 36px; color: #fff; font-style: italic; }
+  .cover-dam-logo { font-size: 28px; font-weight: 900; color: #F5A623; letter-spacing: 4px; }
+  .cover-dam-tag { font-size: 11px; color: #7B91B0; letter-spacing: 2px; margin-top: 4px; }
+  .page-break { page-break-before: always; }
+  .section-header { background: #070C18; color: #fff; padding: 12px 16px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .main-table th { background: #0E1629; color: #7B91B0; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 4px; text-align: center; border: 1px solid #1E2D47; }
+  .main-table td { padding: 5px 4px; border: 1px solid #e8ebf0; font-size: 8.5px; text-align: center; vertical-align: middle; }
+  .desc { text-align: left !important; font-size: 8px; }
+  .row-even { background: #fff; }
+  .row-odd { background: #F8F9FC; }
+  .rec-header { background: #152035 !important; color: #F5A623 !important; }
+  .rec-cell { font-size: 8px; }
+  .mono { font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; padding: 1px 4px; border-radius: 3px; background: #EDF2FF; font-size: 7px; color: #0E1629; margin: 1px; }
+  .summary-section { margin: 16px 0; }
+  .summary-title { font-weight: 700; font-size: 10px; color: #070C18; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #F5A623; padding-bottom: 4px; }
+  .summary-table { width: 100%; border-collapse: collapse; }
+  .summary-table th { background: #0E1629; color: #7B91B0; padding: 6px 8px; font-size: 9px; font-weight: 600; border: 1px solid #1E2D47; }
+  .summary-table td { padding: 5px 8px; border: 1px solid #e8ebf0; font-size: 9px; }
+  .totals-table { margin-left: auto; border-collapse: collapse; min-width: 300px; }
+  .totals-table td { padding: 6px 12px; border: 1px solid #e8ebf0; font-size: 10px; }
+  .totals-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .grand-total td { background: #070C18; color: #F5A623; font-weight: 700; font-size: 12px; }
+  .footer-section { margin-top: 24px; padding-top: 16px; border-top: 2px solid #F5A623; }
+  .terms-title { font-weight: 700; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; color: #070C18; }
+  .terms-list { padding-left: 18px; margin-bottom: 20px; }
+  .terms-list li { margin-bottom: 3px; font-size: 9px; color: #333; line-height: 1.4; }
+  .bank-section { margin-top: 16px; }
+  .bank-title { font-weight: 700; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; color: #070C18; }
+  .bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+  .bank-grid > div { font-size: 9px; color: #333; }
+  .bank-label { font-weight: 600; color: #555; }
+  .final-table th { font-size: 7.5px; padding: 5px 3px; }
+  .final-table td { font-size: 8px; padding: 4px 3px; }
+`;
+
+async function generatePDF(quotation, settings, mode = 'final') {
+    const bodyContent = mode === 'all_recs'
+        ? allRecsPdf(quotation, settings)
+        : finalPdf(quotation, settings);
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>${CSS}</style>
+</head>
+<body>
+  ${coverPage(quotation, settings)}
+  ${bodyContent}
 </body>
 </html>`;
+
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    try {
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            landscape: mode === 'all_recs',
+            printBackground: true,
+            margin: { top: '15mm', right: '12mm', bottom: '15mm', left: '12mm' }
+        });
+        return pdfBuffer;
+    } finally {
+        await browser.close();
+    }
 }
 
 module.exports = { generatePDF };

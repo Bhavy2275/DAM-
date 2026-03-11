@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
             where,
             include: {
                 quotation: { select: { quoteNumber: true, projectName: true } },
-                client: { select: { name: true, company: true } }
+                client: { select: { fullName: true, companyName: true } }
             },
             orderBy: { paymentDate: 'desc' }
         });
@@ -47,7 +47,7 @@ router.post('/', async (req, res) => {
             },
             include: {
                 quotation: { select: { quoteNumber: true } },
-                client: { select: { name: true } }
+                client: { select: { fullName: true } }
             }
         });
         res.status(201).json(payment);

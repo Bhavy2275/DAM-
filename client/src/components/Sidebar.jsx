@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     LayoutDashboard, FileText, Users, CreditCard, Settings,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, Lightbulb
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { slideInLeft } from '../lib/animations';
@@ -12,6 +12,7 @@ const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/quotations', icon: FileText, label: 'Quotations' },
     { path: '/clients', icon: Users, label: 'Clients' },
+    { path: '/products', icon: Lightbulb, label: 'Products' },
     { path: '/payments', icon: CreditCard, label: 'Payments' },
     { path: '/settings', icon: Settings, label: 'Settings', adminOnly: true },
 ];
