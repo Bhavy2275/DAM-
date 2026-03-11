@@ -81,7 +81,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/products
 router.post('/', async (req, res) => {
     try {
-        const { productCode, layoutCode, description, basePrice, bodyColours, reflectorColours, colourTemps, beamAngles, cri } = req.body;
+        const { productCode, layoutCode, description, basePrice, bodyColours, reflectorColours, colourTemps, beamAngles, cri, customAttributes } = req.body;
         const product = await prisma.product.create({
             data: {
                 productCode,
@@ -93,6 +93,7 @@ router.post('/', async (req, res) => {
                 colourTemps: JSON.stringify(colourTemps || []),
                 beamAngles: JSON.stringify(beamAngles || []),
                 cri: JSON.stringify(cri || []),
+                customAttributes: JSON.stringify(customAttributes || []),
             }
         });
         res.status(201).json(serializeProduct(product));
@@ -106,7 +107,7 @@ router.post('/', async (req, res) => {
 // PUT /api/products/:id
 router.put('/:id', async (req, res) => {
     try {
-        const { productCode, layoutCode, description, basePrice, bodyColours, reflectorColours, colourTemps, beamAngles, cri } = req.body;
+        const { productCode, layoutCode, description, basePrice, bodyColours, reflectorColours, colourTemps, beamAngles, cri, customAttributes } = req.body;
         const product = await prisma.product.update({
             where: { id: req.params.id },
             data: {
@@ -119,6 +120,7 @@ router.put('/:id', async (req, res) => {
                 colourTemps: JSON.stringify(colourTemps || []),
                 beamAngles: JSON.stringify(beamAngles || []),
                 cri: JSON.stringify(cri || []),
+                customAttributes: JSON.stringify(customAttributes || []),
             }
         });
         res.json(serializeProduct(product));

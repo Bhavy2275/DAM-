@@ -32,6 +32,7 @@ model Product {
   colourTemps      String @default("[]")
   beamAngles       String @default("[]")
   cri              String @default("[]")
+  customAttributes String @default("[]")
 
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt

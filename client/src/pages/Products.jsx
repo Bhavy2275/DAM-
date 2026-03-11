@@ -16,14 +16,31 @@ const CRI_OPTIONS = ['>70', '>80', '>90'];
 const emptyForm = {
     productCode: '', layoutCode: '', description: '', basePrice: '',
     bodyColours: [], reflectorColours: [], colourTemps: [], beamAngles: [], cri: [],
+    customAttributes: [], // Array of { key: '', value: '' }
 };
 
 function MultiCheckGroup({ label, options, selected, onChange, formatLabel }) {
+    const [customValue, setCustomValue] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
+
+    // Combine standard options with any custom options currently selected
+    const allOptions = Array.from(new Set([...options, ...selected]));
+
+    const handleAddCustom = (e) => {
+        e.preventDefault();
+        const val = customValue.trim().toUpperCase();
+        if (val && !selected.includes(val)) {
+            onChange([...selected, val]);
+        }
+        setCustomValue('');
+        setIsAdding(false);
+    };
+
     return (
         <div style={{ marginBottom: 16 }}>
             <div className="label" style={{ marginBottom: 8 }}>{label}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {options.map(opt => {
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                {allOptions.map(opt => {
                     const isSelected = selected.includes(opt);
                     return (
                         <button
@@ -40,10 +57,41 @@ function MultiCheckGroup({ label, options, selected, onChange, formatLabel }) {
                             }}
                         >
                             {isSelected && <Check size={10} />}
-                            {formatLabel ? formatLabel(opt) : opt.replace('DEG', '°').replace('_', ' ')}
+                            {formatLabel ? formatLabel(opt) : opt.replace('DEG', '°').replace(/_/g, ' ')}
                         </button>
                     );
                 })}
+                
+                {isAdding ? (
+                    <form onSubmit={handleAddCustom} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <input
+                            type="text"
+                            autoFocus
+                            value={customValue}
+                            onChange={(e) => setCustomValue(e.target.value)}
+                            onBlur={() => { if (!customValue) setIsAdding(false); }}
+                            placeholder="Type & Enter..."
+                            style={{
+                                background: 'var(--color-surface)', border: '1px solid var(--color-accent)',
+                                color: 'var(--color-text-primary)', borderRadius: 20, padding: '4px 10px',
+                                fontSize: 11, outline: 'none', width: 100
+                            }}
+                        />
+                    </form>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setIsAdding(true)}
+                        style={{
+                            padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                            border: '1px dashed var(--color-border)', background: 'transparent',
+                            color: 'var(--color-text-muted)', transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', gap: 4
+                        }}
+                    >
+                        <Plus size={10} /> Other
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -87,6 +135,7 @@ export default function Products() {
             basePrice: p.basePrice || '',
             bodyColours: p.bodyColours || [], reflectorColours: p.reflectorColours || [],
             colourTemps: p.colourTemps || [], beamAngles: p.beamAngles || [], cri: p.cri || [],
+            customAttributes: p.customAttributes || [],
         });
         setPolarFile(null);
         setShowModal(true);
@@ -365,6 +414,56 @@ export default function Products() {
                                 <MultiCheckGroup label="Colour Temperature" options={COLOUR_TEMPS} selected={form.colourTemps} onChange={v => updateField('colourTemps', v)} />
                                 <MultiCheckGroup label="Beam Angle" options={BEAM_ANGLES} selected={form.beamAngles} onChange={v => updateField('beamAngles', v)} />
                                 <MultiCheckGroup label="CRI" options={CRI_OPTIONS} selected={form.cri} onChange={v => updateField('cri', v)} />
+
+                                {/* Dynamic Custom Attributes */}
+                                <div style={{ marginTop: 24, padding: 16, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)' }}>
+                                    <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+                                        <label className="label" style={{ marginBottom: 0 }}>Extra Specifications (Optional)</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => updateField('customAttributes', [...form.customAttributes, { key: '', value: '' }])}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                                        >
+                                            <Plus size={12} /> Add Field
+                                        </button>
+                                    </div>
+                                    
+                                    {form.customAttributes.length === 0 ? (
+                                        <p style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic', margin: 0 }}>No extra fields added. E.g. "Wattage", "Cutout", "Driver Type".</p>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                            {form.customAttributes.map((attr, idx) => (
+                                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 8, alignItems: 'center' }}>
+                                                    <input 
+                                                        type="text" className="input-dark" placeholder="Field Name (e.g. Cutout)" 
+                                                        value={attr.key} 
+                                                        onChange={e => {
+                                                            const newAttrs = [...form.customAttributes];
+                                                            newAttrs[idx].key = e.target.value;
+                                                            updateField('customAttributes', newAttrs);
+                                                        }} 
+                                                    />
+                                                    <input 
+                                                        type="text" className="input-dark" placeholder="Value (e.g. 75mm)" 
+                                                        value={attr.value} 
+                                                        onChange={e => {
+                                                            const newAttrs = [...form.customAttributes];
+                                                            newAttrs[idx].value = e.target.value;
+                                                            updateField('customAttributes', newAttrs);
+                                                        }} 
+                                                    />
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => updateField('customAttributes', form.customAttributes.filter((_, i) => i !== idx))}
+                                                        style={{ padding: 8, background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer' }}
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
 
                                 <div className="flex gap-3 justify-end" style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
                                     <button onClick={() => setShowModal(false)} className="btn-ghost">Cancel</button>
