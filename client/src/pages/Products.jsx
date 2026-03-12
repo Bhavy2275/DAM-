@@ -405,7 +405,7 @@ export default function Products() {
                                     />
                                     {editProduct?.polarDiagramUrl && !polarFile && (
                                         <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-accent)' }}>
-                                            <a href={`http://localhost:5000${editProduct.polarDiagramUrl}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                            <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${editProduct.polarDiagramUrl}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
                                                 View Current Polar Diagram
                                             </a>
                                         </div>
