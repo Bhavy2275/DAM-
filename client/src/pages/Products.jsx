@@ -107,8 +107,10 @@ export default function Products() {
     const [editProduct, setEditProduct] = useState(null);
     const [form, setForm] = useState(emptyForm);
     const [polarFile, setPolarFile] = useState(null);
+    const [imageFile, setImageFile] = useState(null);
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     useEffect(() => { loadProducts(); }, []);
 
@@ -125,6 +127,7 @@ export default function Products() {
         setEditProduct(null);
         setForm(emptyForm);
         setPolarFile(null);
+        setImageFile(null);
         setShowModal(true);
     };
 
@@ -141,6 +144,7 @@ export default function Products() {
             customAttributes: Array.isArray(p.customAttributes) ? p.customAttributes : [],
         });
         setPolarFile(null);
+        setImageFile(null);
         setShowModal(true);
     };
 
@@ -150,27 +154,28 @@ export default function Products() {
             return;
         }
         setSaving(true);
-        let savedProductId = null;
-
         try {
+            // Always use FormData so files + JSON arrays can travel together
+            const fd = new FormData();
+            fd.append('productCode',      form.productCode.trim());
+            fd.append('layoutCode',       form.layoutCode.trim());
+            fd.append('description',      form.description.trim());
+            fd.append('basePrice',        form.basePrice || '0');
+            fd.append('bodyColours',      JSON.stringify(form.bodyColours));
+            fd.append('reflectorColours', JSON.stringify(form.reflectorColours));
+            fd.append('colourTemps',      JSON.stringify(form.colourTemps));
+            fd.append('beamAngles',       JSON.stringify(form.beamAngles));
+            fd.append('cri',              JSON.stringify(form.cri));
+            fd.append('customAttributes', JSON.stringify(Array.isArray(form.customAttributes) ? form.customAttributes : []));
+            if (polarFile) fd.append('polarDiagram', polarFile);
+            if (imageFile) fd.append('productImage', imageFile);
+
             if (editProduct) {
-                await api.put(`/products/${editProduct.id}`, form);
-                savedProductId = editProduct.id;
+                await api.put(`/products/${editProduct.id}`, fd);
                 toast.success('Product updated');
             } else {
-                const { data } = await api.post('/products', form);
-                savedProductId = data.id;
+                await api.post('/products', fd);
                 toast.success('Product created');
-            }
-
-            // Upload polar file if present
-            if (polarFile && savedProductId) {
-                const formData = new FormData();
-                formData.append('polar', polarFile);
-                await api.post(`/products/${savedProductId}/polar`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-                toast.success('Polar diagram uploaded');
             }
 
             setShowModal(false);
@@ -393,23 +398,44 @@ export default function Products() {
                                         className="input-dark" style={{ height: 100, resize: 'none' }}
                                         placeholder="Full specification paragraph..." />
                                 </div>
-                                <div style={{ marginBottom: 24, padding: 16, border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-elevated)' }}>
-                                    <label className="label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                                        <Upload size={14} /> Polar Diagram (Optional)
-                                    </label>
-                                    <input 
-                                        type="file" 
-                                        accept="image/png, image/jpeg, application/pdf"
-                                        onChange={e => setPolarFile(e.target.files[0])}
-                                        style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}
-                                    />
-                                    {editProduct?.polarDiagramUrl && !polarFile && (
-                                        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-accent)' }}>
-                                            <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${editProduct.polarDiagramUrl}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                                View Current Polar Diagram
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+                                    {/* Polar Diagram Upload */}
+                                    <div style={{ padding: 14, border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-elevated)' }}>
+                                        <label className="label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                            <Upload size={13} /> Polar Diagram
+                                        </label>
+                                        <input 
+                                            type="file" 
+                                            accept="image/png,image/jpeg,image/webp,application/pdf"
+                                            onChange={e => setPolarFile(e.target.files[0])}
+                                            style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: '100%' }}
+                                        />
+                                        {polarFile && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-accent)' }}>📎 {polarFile.name}</div>}
+                                        {editProduct?.polarDiagramUrl && !polarFile && (
+                                            <a href={`${API_BASE}${editProduct.polarDiagramUrl}`} target="_blank" rel="noreferrer"
+                                                style={{ marginTop: 6, display: 'block', fontSize: 11, color: 'var(--color-accent)', textDecoration: 'none' }}>
+                                                View existing ↗
                                             </a>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
+                                    {/* Product Image Upload */}
+                                    <div style={{ padding: 14, border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-elevated)' }}>
+                                        <label className="label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                            <Upload size={13} /> Product Image
+                                        </label>
+                                        <input 
+                                            type="file" 
+                                            accept="image/png,image/jpeg,image/webp"
+                                            onChange={e => setImageFile(e.target.files[0])}
+                                            style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: '100%' }}
+                                        />
+                                        {imageFile && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-accent)' }}>📎 {imageFile.name}</div>}
+                                        {editProduct?.productImageUrl && !imageFile && (
+                                            <img src={`${API_BASE}${editProduct.productImageUrl}`} alt="Product"
+                                                style={{ marginTop: 6, maxHeight: 60, maxWidth: '100%', objectFit: 'contain', borderRadius: 4 }}
+                                                onError={e => e.target.style.display = 'none'} />
+                                        )}
+                                    </div>
                                 </div>
 
                                 <MultiCheckGroup label="Body Colour" options={BODY_COLOURS} selected={form.bodyColours} onChange={v => updateField('bodyColours', v)} />
