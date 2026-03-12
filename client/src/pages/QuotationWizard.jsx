@@ -73,15 +73,10 @@ function RecCell({ label, rec, onChange }) {
     const color = REC_COLORS[label] || 'var(--color-accent)';
     const handleChange = (key, val) => {
         const updated = { ...rec, [key]: val };
-        if (key === 'listPrice' || key === 'discountPercent' || key === 'quantity') {
-            const lp = parseFloat(key === 'listPrice' ? val : rec.listPrice) || 0;
-            const disc = parseFloat(key === 'discountPercent' ? val : rec.discountPercent) || 0;
-            const qty = parseFloat(key === 'quantity' ? val : rec.quantity) || 0;
-            updated.listPriceWithGst = calcLPWithGst(lp);
-            updated.rate = calcRate(lp, disc);
-            updated.amount = calcAmount(updated.rate, qty);
-        }
-        onChange(updated);
+        // Always recalculate so that rate & amount are guaranteed to be evaluated
+        // even if the user only types a brandName while listPrice was set by a template
+        const recalculated = recalcRec(updated);
+        onChange(recalculated);
     };
 
     const fields = [
