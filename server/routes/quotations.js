@@ -75,6 +75,20 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /api/quotations/recalculate-all (Temp Backfill Route)
+router.get('/recalculate-all', async (req, res) => {
+    try {
+        const quotations = await prisma.quotation.findMany({ select: { id: true } });
+        for (const q of quotations) {
+            await recalculateQuotationTotal(q.id);
+        }
+        res.json({ message: `Successfully recalculated totals for ${quotations.length} quotations.` });
+    } catch (error) {
+        console.error('Recalculate all error:', error);
+        res.status(500).json({ error: 'Failed to recalculate totals' });
+    }
+});
+
 // GET /api/quotations/:id
 router.get('/:id', async (req, res) => {
     try {
