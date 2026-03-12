@@ -38,13 +38,43 @@ router.get('/:id', async (req, res) => {
         const client = await prisma.client.findUnique({
             where: { id: req.params.id },
             include: {
-                quotations: { orderBy: { createdAt: 'desc' } },
-                payments: { orderBy: { paymentDate: 'desc' } }
+                quotations: {
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true, quoteNumber: true, quoteTitle: true, projectName: true,
+                        status: true, grandTotal: true, subtotal: true, gstAmount: true,
+                        createdAt: true, gstRate: true
+                    }
+                },
+                payments: {
+                    orderBy: { paymentDate: 'desc' },
+                    include: {
+                        quotation: { select: { quoteNumber: true } }
+                    }
+                }
             }
         });
         if (!client) return res.status(404).json({ error: 'Client not found' });
-        res.json(client);
+
+        // Build financial summary
+        const totalQuoted = client.quotations.reduce((s, q) => s + (q.grandTotal || 0), 0);
+        const totalPaid = client.payments
+            .filter(p => p.status === 'COMPLETED')
+            .reduce((s, p) => s + p.amountPaid, 0);
+        const outstanding = totalQuoted - totalPaid;
+
+        res.json({
+            ...client,
+            summary: {
+                totalQuoted,
+                totalPaid,
+                outstanding,
+                totalQuotations: client.quotations.length,
+                totalPayments: client.payments.length
+            }
+        });
     } catch (error) {
+        console.error('Get client error:', error);
         res.status(500).json({ error: 'Failed to fetch client' });
     }
 });

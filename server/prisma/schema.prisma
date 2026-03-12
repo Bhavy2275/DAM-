@@ -72,6 +72,9 @@ model Quotation {
   client      Client          @relation(fields: [clientId], references: [id])
   createdById String
   notes       String?
+  grandTotal  Float           @default(0)
+  subtotal    Float           @default(0)
+  gstAmount   Float           @default(0)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

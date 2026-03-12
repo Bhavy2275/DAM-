@@ -26,6 +26,24 @@ function serializeItem(item) {
     };
 }
 
+// Recalculate and persist quotation totals after any item change
+async function recalculateQuotationTotal(quotationId) {
+    try {
+        const items = await prisma.quotationItem.findMany({ where: { quotationId } });
+        const subtotal = items.reduce((sum, i) => sum + (i.finalAmount || 0), 0);
+        const quotation = await prisma.quotation.findUnique({ where: { id: quotationId } });
+        if (!quotation) return;
+        const gstAmount = subtotal * ((quotation.gstRate || 18) / 100);
+        const grandTotal = subtotal + gstAmount;
+        await prisma.quotation.update({
+            where: { id: quotationId },
+            data: { grandTotal, subtotal, gstAmount }
+        });
+    } catch (err) {
+        console.error('recalculateQuotationTotal error:', err);
+    }
+}
+
 // GET /api/quotations
 router.get('/', async (req, res) => {
     try {
@@ -38,6 +56,8 @@ router.get('/', async (req, res) => {
                 { quoteNumber: { contains: search } },
                 { quoteTitle: { contains: search } },
                 { projectName: { contains: search } },
+                { client: { fullName: { contains: search } } },
+                { client: { companyName: { contains: search } } },
             ];
         }
         const quotations = await prisma.quotation.findMany({
@@ -191,6 +211,7 @@ router.post('/:id/duplicate', async (req, res) => {
             },
             include: { client: true, lineItems: { include: { recommendations: true } } }
         });
+        await recalculateQuotationTotal(duplicate.id);
         res.status(201).json(duplicate);
     } catch (error) {
         console.error('Duplicate error:', error);
@@ -228,6 +249,7 @@ router.post('/:id/items', async (req, res) => {
             },
             include: { recommendations: true }
         });
+        await recalculateQuotationTotal(req.params.id);
         res.status(201).json(serializeItem(item));
     } catch (error) {
         console.error('Add item error:', error);
@@ -235,17 +257,34 @@ router.post('/:id/items', async (req, res) => {
     }
 });
 
-// PUT /api/quotations/:id/items/:itemId  — update item info (unit, sno, etc.)
+// PUT /api/quotations/:id/items/:itemId  — update item info AND final fields
 router.put('/:id/items/:itemId', async (req, res) => {
     try {
-        const { unit, sno, productCode, layoutCode, description } = req.body;
+        const {
+            unit, sno, productCode, layoutCode, description,
+            finalBrandName, finalProductCode, finalListPrice, finalDiscount,
+            finalRate, finalUnit, finalQuantity, finalAmount, finalMacadamStep
+        } = req.body;
         const item = await prisma.quotationItem.update({
             where: { id: req.params.itemId },
-            data: { unit, sno, productCode, layoutCode, description },
+            data: {
+                unit, sno, productCode, layoutCode, description,
+                ...(finalBrandName !== undefined && { finalBrandName: finalBrandName || null }),
+                ...(finalProductCode !== undefined && { finalProductCode: finalProductCode || null }),
+                ...(finalListPrice !== undefined && { finalListPrice: parseFloat(finalListPrice) || null }),
+                ...(finalDiscount !== undefined && { finalDiscount: parseFloat(finalDiscount) || null }),
+                ...(finalRate !== undefined && { finalRate: parseFloat(finalRate) || null }),
+                ...(finalUnit !== undefined && { finalUnit: finalUnit || null }),
+                ...(finalQuantity !== undefined && { finalQuantity: parseFloat(finalQuantity) || null }),
+                ...(finalAmount !== undefined && { finalAmount: parseFloat(finalAmount) || null }),
+                ...(finalMacadamStep !== undefined && { finalMacadamStep: finalMacadamStep || null }),
+            },
             include: { recommendations: true }
         });
+        await recalculateQuotationTotal(req.params.id);
         res.json(serializeItem(item));
     } catch (error) {
+        console.error('Update item error:', error);
         res.status(500).json({ error: 'Failed to update item' });
     }
 });
@@ -262,6 +301,7 @@ router.delete('/:id/items/:itemId', async (req, res) => {
         for (let i = 0; i < remaining.length; i++) {
             await prisma.quotationItem.update({ where: { id: remaining[i].id }, data: { sno: i + 1 } });
         }
+        await recalculateQuotationTotal(req.params.id);
         res.json({ message: 'Item deleted' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete item' });
@@ -334,6 +374,9 @@ router.put('/:id/final', async (req, res) => {
             }
         }
 
+        // Recalculate and persist grandTotal
+        await recalculateQuotationTotal(req.params.id);
+
         const quotation = await prisma.quotation.findUnique({
             where: { id: req.params.id },
             include: {
@@ -378,6 +421,9 @@ router.post('/:id/import-recommendation', async (req, res) => {
                 });
             }
         }
+
+        // Recalculate grandTotal after importing recommendation
+        await recalculateQuotationTotal(req.params.id);
 
         const quotation = await prisma.quotation.findUnique({
             where: { id: req.params.id },

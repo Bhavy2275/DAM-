@@ -1,25 +1,41 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Plus, Search, Eye, Edit, Download, Copy, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Search, Eye, Edit, Download, Copy, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { formatINR } from '../lib/formatCurrency';
 import { fadeUp, staggerContainer } from '../lib/animations';
 import StatusBadge from '../components/StatusBadge';
 
+// Simple debounce hook
+function useDebounce(value, delay) {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+        const t = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+}
+
 export default function Quotations() {
+    const navigate = useNavigate();
     const [quotations, setQuotations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [downloadingId, setDownloadingId] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
-    useEffect(() => { loadQuotations(); }, [search, statusFilter]);
+    const debouncedSearch = useDebounce(search, 300);
+
+    useEffect(() => { loadQuotations(); }, [debouncedSearch, statusFilter]);
 
     const loadQuotations = async () => {
         try {
             const params = {};
-            if (search) params.search = search;
+            if (debouncedSearch) params.search = debouncedSearch;
             if (statusFilter) params.status = statusFilter;
             const { data } = await api.get('/quotations', { params });
             setQuotations(data);
@@ -27,31 +43,43 @@ export default function Quotations() {
         finally { setLoading(false); }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm('Delete this quotation?')) return;
-        try { await api.delete(`/quotations/${id}`); toast.success('Quotation deleted'); loadQuotations(); }
-        catch (err) { toast.error('Failed to delete'); }
-    };
-
-    const handleDuplicate = async (id) => {
-        try { await api.post(`/quotations/${id}/duplicate`); toast.success('Quotation duplicated'); loadQuotations(); }
-        catch (err) { toast.error('Failed to duplicate'); }
-    };
-
-    const handleDownloadPDF = async (id, quoteNumber) => {
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        setDeleting(true);
         try {
-            const response = await api.get(`/quotations/${id}/pdf`, { responseType: 'blob' });
+            await api.delete(`/quotations/${deleteTarget.id}`);
+            toast.success(`${deleteTarget.quoteNumber} deleted`);
+            setDeleteTarget(null);
+            loadQuotations();
+        } catch (err) { toast.error('Failed to delete'); }
+        finally { setDeleting(false); }
+    };
+
+    const handleDuplicate = async (id, e) => {
+        e.stopPropagation();
+        if (!id) return toast.error('Invalid quotation ID');
+        try {
+            const res = await api.post(`/quotations/${id}/duplicate`);
+            toast.success(`Duplicated as ${res.data.quoteNumber}`);
+            loadQuotations();
+        } catch (err) { toast.error('Failed to duplicate'); }
+    };
+
+    const handleDownloadPDF = async (id, quoteNumber, e) => {
+        e.stopPropagation();
+        if (!id) return toast.error('Cannot download — quotation ID missing');
+        setDownloadingId(id);
+        try {
+            const response = await api.get(`/quotations/${id}/pdf?mode=final`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
-            link.href = url; link.setAttribute('download', `${quoteNumber}.pdf`);
+            link.href = url;
+            link.setAttribute('download', `${quoteNumber}.pdf`);
             document.body.appendChild(link); link.click(); link.remove();
-            toast.success('PDF downloaded');
-        } catch (err) { toast.error('PDF generation failed'); }
-    };
-
-    const getQuoteTotal = (q) => {
-        const recA = (q.recommendations || []).filter(r => r.label === 'RECOMMENDATION A');
-        return recA.reduce((s, r) => s + r.amount, 0);
+            window.URL.revokeObjectURL(url);
+            toast.success('PDF downloaded successfully');
+        } catch (err) { toast.error('PDF generation failed'); console.error(err); }
+        finally { setDownloadingId(null); }
     };
 
     if (loading) {
@@ -102,9 +130,9 @@ export default function Quotations() {
                                         <span className="tabular-nums" style={{ color: 'var(--color-accent)', fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}>{q.quoteNumber}</span>
                                         <StatusBadge status={q.status} />
                                     </div>
-                                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600 }}>{q.title || q.projectName}</div>
+                                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600 }}>{q.quoteTitle || q.projectName}</div>
                                     <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                                        {q.client?.name} · {q.client?.company}
+                                        {q.client?.fullName || q.client?.name} {q.client?.companyName ? `· ${q.client.companyName}` : ''}
                                     </div>
                                 </div>
                             </div>
@@ -114,31 +142,47 @@ export default function Quotations() {
                                     <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 2 }}>
                                         {new Date(q.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                                     </div>
-                                    <div className="font-display tabular-nums" style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)' }}>{formatINR(getQuoteTotal(q))}</div>
+                                    <div className="font-display tabular-nums" style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                                        {formatINR(q.grandTotal || 0)}
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-1" style={{ marginLeft: 12 }}>
-                                    {[
-                                        { icon: Eye, to: `/quotations/${q.id}`, color: 'var(--color-info)', tip: 'View' },
-                                        { icon: Edit, to: `/quotations/${q.id}/edit`, color: 'var(--color-accent)', tip: 'Edit' },
-                                    ].map(({ icon: I, to, color, tip }) => (
-                                        <Link key={tip} to={to} title={tip} style={{ padding: 8, borderRadius: 8, color: 'var(--color-text-muted)', display: 'flex', transition: 'all 0.15s' }}
-                                            onMouseEnter={e => { e.currentTarget.style.color = color; e.currentTarget.style.transform = 'scale(1.15)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
-                                            <I size={16} />
-                                        </Link>
-                                    ))}
-                                    {[
-                                        { icon: Download, action: () => handleDownloadPDF(q.id, q.quoteNumber), color: 'var(--color-status-accepted)', tip: 'PDF' },
-                                        { icon: Copy, action: () => handleDuplicate(q.id), color: 'var(--color-status-invoiced)', tip: 'Duplicate' },
-                                        { icon: Trash2, action: () => handleDelete(q.id), color: 'var(--color-danger)', tip: 'Delete' },
-                                    ].map(({ icon: I, action, color, tip }) => (
-                                        <button key={tip} onClick={action} title={tip} style={{ padding: 8, borderRadius: 8, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
-                                            onMouseEnter={e => { e.currentTarget.style.color = color; e.currentTarget.style.transform = 'scale(1.15)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
-                                            <I size={16} />
-                                        </button>
-                                    ))}
+                                    {/* View */}
+                                    <button onClick={(e) => { e.stopPropagation(); if (!q.id) return toast.error('Invalid ID'); navigate(`/quotations/${q.id}`); }}
+                                        title="View" style={{ padding: 8, borderRadius: 8, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-info)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                                        <Eye size={16} />
+                                    </button>
+                                    {/* Edit */}
+                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/quotations/${q.id}/edit`); }}
+                                        title="Edit" style={{ padding: 8, borderRadius: 8, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-accent)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                                        <Edit size={16} />
+                                    </button>
+                                    {/* Download */}
+                                    <button onClick={(e) => handleDownloadPDF(q.id, q.quoteNumber, e)} disabled={downloadingId === q.id}
+                                        title="Download PDF" style={{ padding: 8, borderRadius: 8, color: downloadingId === q.id ? 'var(--color-accent)' : 'var(--color-text-muted)', background: 'none', border: 'none', cursor: downloadingId === q.id ? 'wait' : 'pointer', display: 'flex', transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { if (downloadingId !== q.id) { e.currentTarget.style.color = 'var(--color-status-accepted)'; e.currentTarget.style.transform = 'scale(1.15)'; } }}
+                                        onMouseLeave={e => { e.currentTarget.style.color = downloadingId === q.id ? 'var(--color-accent)' : 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                                        {downloadingId === q.id ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={16} />}
+                                    </button>
+                                    {/* Duplicate */}
+                                    <button onClick={(e) => handleDuplicate(q.id, e)}
+                                        title="Duplicate" style={{ padding: 8, borderRadius: 8, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-status-invoiced)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                                        <Copy size={16} />
+                                    </button>
+                                    {/* Delete */}
+                                    <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(q); }}
+                                        title="Delete" style={{ padding: 8, borderRadius: 8, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-danger)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                                        <Trash2 size={16} />
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -152,6 +196,35 @@ export default function Quotations() {
                     </motion.div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {deleteTarget && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.88)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={() => !deleting && setDeleteTarget(null)}>
+                        <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderTop: '3px solid var(--color-danger)', borderRadius: 'var(--radius-xl)', padding: 32, width: '100%', maxWidth: 440 }}>
+                            <h3 className="font-display" style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Delete Quotation?</h3>
+                            <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 6 }}>
+                                Are you sure you want to delete <strong style={{ color: 'var(--color-text-primary)' }}>{deleteTarget.quoteNumber}</strong>?
+                            </p>
+                            <p style={{ color: 'var(--color-danger)', fontSize: 12, marginBottom: 24 }}>
+                                This will permanently delete the quotation and all its line items. This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setDeleteTarget(null)} className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} disabled={deleting}>Cancel</button>
+                                <button onClick={handleDelete} disabled={deleting}
+                                    style={{ flex: 1, justifyContent: 'center', padding: '10px 20px', background: 'var(--color-danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: deleting ? 'wait' : 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {deleting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+                                    Yes, Delete
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }

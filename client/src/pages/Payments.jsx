@@ -49,7 +49,7 @@ export default function Payments() {
     const exportCSV = () => {
         const csv = [
             'Date,Client,Amount,Method,Reference,Status',
-            ...payments.map(p => `${new Date(p.paymentDate).toLocaleDateString()},${p.quotation?.client?.name || ''},${p.amountPaid},${p.paymentMethod},${p.referenceNumber || ''},${p.status}`)
+            ...payments.map(p => `${new Date(p.paymentDate).toLocaleDateString()},${p.client?.fullName || ''},${p.amountPaid},${p.paymentMethod},${p.referenceNumber || ''},${p.status}`)
         ].join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -90,7 +90,7 @@ export default function Payments() {
                         {payments.map((p, i) => (
                             <motion.tr key={p.id} variants={fadeUp} custom={i}>
                                 <td>{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
-                                <td>{p.quotation?.client?.name || '-'}</td>
+                                <td>{p.client?.fullName || p.quotation?.client?.fullName || '-'}</td>
                                 <td style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{p.quotation?.quoteNumber || '-'}</td>
                                 <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-status-accepted)' }}>{formatINR(p.amountPaid)}</td>
                                 <td style={{ color: 'var(--color-text-secondary)' }}>{p.paymentMethod}</td>
@@ -118,7 +118,7 @@ export default function Payments() {
                                 <button onClick={() => setShowModal(false)} style={{ padding: 6, background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={18} /></button>
                             </div>
                             <div className="space-y-3">
-                                <div><label className="label">Quotation</label><select value={form.quotationId} onChange={e => setForm({ ...form, quotationId: e.target.value })} className="input-dark"><option value="">Select</option>{quotations.map(q => <option key={q.id} value={q.id}>{q.quoteNumber} — {q.client?.name}</option>)}</select></div>
+                                <div><label className="label">Quotation</label><select value={form.quotationId} onChange={e => setForm({ ...form, quotationId: e.target.value })} className="input-dark"><option value="">Select</option>{quotations.map(q => <option key={q.id} value={q.id}>{q.quoteNumber} — {q.client?.fullName || q.client?.name}</option>)}</select></div>
                                 <div><label className="label">Amount (₹)</label><input type="number" value={form.amountPaid} onChange={e => setForm({ ...form, amountPaid: e.target.value })} className="input-dark" /></div>
                                 <div><label className="label">Date</label><input type="date" value={form.paymentDate} onChange={e => setForm({ ...form, paymentDate: e.target.value })} className="input-dark" /></div>
                                 <div><label className="label">Method</label><select value={form.paymentMethod} onChange={e => setForm({ ...form, paymentMethod: e.target.value })} className="input-dark"><option value="BANK_TRANSFER">Bank Transfer</option><option value="UPI">UPI</option><option value="CASH">Cash</option><option value="CHEQUE">Cheque</option></select></div>
