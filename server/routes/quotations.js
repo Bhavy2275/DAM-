@@ -75,14 +75,26 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/quotations/recalculate-all (Temp Backfill Route)
+// GET /api/quotations/recalculate-all — recalculate and persist all quotation totals
 router.get('/recalculate-all', async (req, res) => {
     try {
-        const quotations = await prisma.quotation.findMany({ select: { id: true } });
+        const quotations = await prisma.quotation.findMany({
+            include: { lineItems: true }
+        });
+        let updated = 0;
         for (const q of quotations) {
-            await recalculateQuotationTotal(q.id);
+            const subtotal   = q.lineItems.reduce((s, i) => s + (i.finalAmount || 0), 0);
+            const gstAmount  = subtotal * ((q.gstRate || 18) / 100);
+            const grandTotal = subtotal + gstAmount;
+            if (Math.abs(q.grandTotal - grandTotal) > 0.01) {
+                await prisma.quotation.update({
+                    where: { id: q.id },
+                    data: { subtotal, gstAmount, grandTotal }
+                });
+                updated++;
+            }
         }
-        res.json({ message: `Successfully recalculated totals for ${quotations.length} quotations.` });
+        res.json({ success: true, updated, total: quotations.length });
     } catch (error) {
         console.error('Recalculate all error:', error);
         res.status(500).json({ error: 'Failed to recalculate totals' });
@@ -146,6 +158,10 @@ router.put('/:id', async (req, res) => {
             data: { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes },
             include: { client: true }
         });
+        // If gstRate changed, recalculate stored totals
+        if (gstRate !== undefined) {
+            await recalculateQuotationTotal(req.params.id);
+        }
         res.json(quotation);
     } catch (error) {
         console.error('Update quotation error:', error);

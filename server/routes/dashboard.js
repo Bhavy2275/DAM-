@@ -14,7 +14,6 @@ router.get('/stats', async (req, res) => {
             prisma.quotation.findMany({
                 include: {
                     client: { select: { fullName: true, companyName: true } },
-                    lineItems: true,
                 },
                 orderBy: { createdAt: 'desc' }
             }),
@@ -24,13 +23,10 @@ router.get('/stats', async (req, res) => {
         const pending = quotations.filter(q => q.status === 'DRAFT' || q.status === 'SENT').length;
         const accepted = quotations.filter(q => q.status === 'ACCEPTED').length;
 
-        // Revenue = sum of finalAmount across all line items for accepted/invoiced quotes
+        // Revenue = sum of stored grandTotal for accepted/invoiced quotes
         const totalRevenue = quotations
             .filter(q => q.status === 'ACCEPTED' || q.status === 'INVOICED')
-            .reduce((sum, q) => {
-                const lineTotal = q.lineItems.reduce((s, item) => s + (item.finalAmount || 0), 0);
-                return sum + lineTotal;
-            }, 0);
+            .reduce((sum, q) => sum + (q.grandTotal || 0), 0);
 
         const totalPaid = payments
             .filter(p => p.status === 'COMPLETED')
@@ -75,7 +71,7 @@ router.get('/stats', async (req, res) => {
             clientCompany: q.client?.companyName,
             status: q.status,
             createdAt: q.createdAt,
-            total: q.lineItems.reduce((s, item) => s + (item.finalAmount || 0), 0)
+            total: q.grandTotal || 0
         }));
 
         res.json({

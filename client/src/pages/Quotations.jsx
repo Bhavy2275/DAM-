@@ -31,8 +31,11 @@ export default function Quotations() {
     const debouncedSearch = useDebounce(search, 300);
 
     useEffect(() => { 
-        loadQuotations(); 
-        api.get('/quotations/recalculate-all').catch(() => {});
+        const init = async () => {
+            await api.get('/quotations/recalculate-all').catch(() => {});
+            loadQuotations();
+        };
+        init();
     }, [debouncedSearch, statusFilter]);
 
     const loadQuotations = async () => {
