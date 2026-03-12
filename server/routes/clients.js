@@ -56,11 +56,11 @@ router.get('/:id', async (req, res) => {
         });
         if (!client) return res.status(404).json({ error: 'Client not found' });
 
-        // Build financial summary
-        const totalQuoted = client.quotations.reduce((s, q) => s + (q.grandTotal || 0), 0);
+        // Build financial summary safely parsing floats
+        const totalQuoted = client.quotations.reduce((s, q) => s + (parseFloat(q.grandTotal) || 0), 0);
         const totalPaid = client.payments
-            .filter(p => p.status === 'COMPLETED')
-            .reduce((s, p) => s + p.amountPaid, 0);
+            .filter(p => !p.status || p.status.toUpperCase() === 'COMPLETED')
+            .reduce((s, p) => s + (parseFloat(p.amountPaid) || 0), 0);
         const outstanding = totalQuoted - totalPaid;
 
         res.json({
