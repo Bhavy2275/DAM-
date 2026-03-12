@@ -170,7 +170,7 @@ export default function QuotationDetail() {
                                     <tr key={item.id}>
                                         <td style={{ textAlign: 'center' }}>{item.sno}</td>
                                         <td style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{item.productCode}</td>
-                                        <td style={{ color: 'var(--color-text-muted)', width: 220, maxWidth: 220, minWidth: 220, fontSize: 11, wordBreak: 'break-all', whiteSpace: 'normal' }}>{item.description || '—'}</td>
+                                        <td style={{ color: 'var(--color-text-muted)', maxWidth: 200, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: 11 }} title={item.description}>{item.description || '—'}</td>
                                         <td style={{ textAlign: 'center' }}>{item.unit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
                                         {usedLabels.map(label => {
                                             const rec = (item.recommendations || []).find(r => r.label === label);
@@ -230,7 +230,7 @@ export default function QuotationDetail() {
                                     <tr key={item.id}>
                                         <td style={{ textAlign: 'center', padding: '12px 6px' }}>{item.sno}</td>
                                         <td style={{ fontWeight: 700, color: 'var(--color-accent)', padding: '12px 6px' }}>{item.productCode}</td>
-                                        <td style={{ color: 'var(--color-text-muted)', width: 175, maxWidth: 175, minWidth: 175, fontSize: 10, wordBreak: 'break-word', whiteSpace: 'normal', padding: '12px 6px' }}>{item.description ? item.description.substring(0, 80) : '—'}</td>
+                                        <td style={{ color: 'var(--color-text-muted)', maxWidth: 175, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: 10, padding: '12px 6px' }} title={item.description}>{item.description || '—'}</td>
                                         <td style={{ padding: '12px 6px' }}>{item.finalBrandName || '—'}</td>
                                         <td className="tabular-nums" style={{ padding: '12px 6px' }}>{item.finalListPrice != null ? formatINR(item.finalListPrice) : '—'}</td>
                                         <td className="tabular-nums" style={{ padding: '12px 6px' }}>{item.finalListPrice != null ? formatINR(item.finalListPrice * 1.18) : '—'}</td>
