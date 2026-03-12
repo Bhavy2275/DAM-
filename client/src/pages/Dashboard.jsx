@@ -143,7 +143,14 @@ export default function Dashboard() {
                         View All <ArrowRight size={14} />
                     </Link>
                 </div>
-                <table className="dark-table">
+                <table className="dark-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                    <colgroup>
+                        <col style={{ width: '16%' }} />
+                        <col style={{ width: '26%' }} />
+                        <col style={{ width: '24%' }} />
+                        <col style={{ width: '16%' }} />
+                        <col style={{ width: '18%' }} />
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Quote #</th>
@@ -156,9 +163,9 @@ export default function Dashboard() {
                     <tbody>
                         {(stats?.recentQuotations || []).map((q, i) => (
                             <motion.tr key={q.id} variants={fadeUp} custom={i}>
-                                <td><Link to={`/quotations/${q.id}`} style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none', fontSize: 13 }}>{q.quoteNumber}</Link></td>
-                                <td style={{ color: 'var(--color-text-primary)' }}>{q.projectName}</td>
-                                <td style={{ color: 'var(--color-text-secondary)' }}>{q.clientName}</td>
+                                <td><Link to={`/quotations/${q.id}`} style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none', fontSize: 13 }}>{q.quoteNumber || '—'}</Link></td>
+                                <td style={{ color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.projectName || '—'}</td>
+                                <td style={{ color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.clientName || '—'}</td>
                                 <td><StatusBadge status={q.status} /></td>
                                 <td style={{ textAlign: 'right', fontWeight: 600 }} className="tabular-nums">{formatINR(q.total)}</td>
                             </motion.tr>
