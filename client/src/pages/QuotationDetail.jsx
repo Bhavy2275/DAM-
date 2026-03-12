@@ -159,8 +159,11 @@ export default function QuotationDetail() {
                     <div style={{ overflowX: 'auto' }}>
                         <table className="dark-table" style={{ fontSize: 12 }}>
                             <thead><tr>
-                                <th>S.No</th><th>Code</th><th style={{ minWidth: 180 }}>Description</th><th>Unit</th>
-                                {usedLabels.map(label => <th key={label} colSpan={3} style={{ textAlign: 'center', color: REC_COLORS[label], borderLeft: '1px solid var(--color-border)' }}>Rec {label}</th>)}
+                                <th style={{ width: 60, textAlign: 'center' }}>S.No</th>
+                                <th style={{ width: 120 }}>Code</th>
+                                <th style={{ width: 220, minWidth: 220, maxWidth: 220 }}>Description</th>
+                                <th style={{ width: 80, textAlign: 'center' }}>Unit</th>
+                                {usedLabels.map(label => <th key={label} colSpan={3} style={{ textAlign: 'center', color: REC_COLORS[label], borderLeft: '1px solid var(--color-border)', width: 260 }}>Rec {label}</th>)}
                             </tr></thead>
                             <tbody>
                                 {quotation.lineItems.map((item, idx) => (
@@ -209,9 +212,18 @@ export default function QuotationDetail() {
                     <div style={{ overflowX: 'auto' }}>
                         <table className="dark-table" style={{ fontSize: 11 }}>
                             <thead><tr>
-                                <th>S.No</th><th>Code</th><th>Description</th><th>Brand</th>
-                                <th>LP</th><th>LP+18%</th><th>Disc%</th><th>Rate</th>
-                                <th>Unit</th><th>Qty</th><th>Amount</th><th>Macadam</th>
+                                <th style={{ width: 60, textAlign: 'center' }}>S.No</th>
+                                <th style={{ width: 120 }}>Code</th>
+                                <th style={{ width: 180, minWidth: 180, maxWidth: 180 }}>Description</th>
+                                <th style={{ width: 100 }}>Brand</th>
+                                <th style={{ width: 90 }}>LP</th>
+                                <th style={{ width: 90 }}>LP+18%</th>
+                                <th style={{ width: 70, textAlign: 'center' }}>Disc%</th>
+                                <th style={{ width: 90 }}>Rate</th>
+                                <th style={{ width: 70, textAlign: 'center' }}>Unit</th>
+                                <th style={{ width: 60, textAlign: 'center' }}>Qty</th>
+                                <th style={{ width: 110 }}>Amount</th>
+                                <th style={{ width: 100 }}>Macadam</th>
                             </tr></thead>
                             <tbody>
                                 {quotation.lineItems.map((item, idx) => (
@@ -234,18 +246,15 @@ export default function QuotationDetail() {
                             <tfoot>
                                 <tr style={{ background: 'var(--color-base)' }}>
                                     <td colSpan={10} style={{ textAlign: 'right', fontWeight: 600, padding: '8px' }}>Sub-Total</td>
-                                    <td className="tabular-nums" style={{ fontWeight: 700, padding: '8px' }}>{formatINR(finalSubtotal)}</td>
-                                    <td></td>
+                                    <td colSpan={2} className="tabular-nums" style={{ fontWeight: 700, padding: '8px' }}>{formatINR(finalSubtotal)}</td>
                                 </tr>
                                 <tr style={{ background: 'var(--color-base)' }}>
                                     <td colSpan={10} style={{ textAlign: 'right', padding: '4px 8px' }}>GST {quotation.gstRate}%</td>
-                                    <td className="tabular-nums" style={{ padding: '4px 8px' }}>{formatINR(finalGst)}</td>
-                                    <td></td>
+                                    <td colSpan={2} className="tabular-nums" style={{ padding: '4px 8px' }}>{formatINR(finalGst)}</td>
                                 </tr>
                                 <tr style={{ background: 'var(--color-accent)' }}>
                                     <td colSpan={10} style={{ textAlign: 'right', fontWeight: 800, padding: '10px 8px', color: 'var(--color-base)' }}>GRAND TOTAL</td>
-                                    <td className="tabular-nums" style={{ fontWeight: 800, padding: '10px 8px', color: 'var(--color-base)' }}>{formatINR(finalGrandTotal)}</td>
-                                    <td></td>
+                                    <td colSpan={2} className="tabular-nums" style={{ fontWeight: 800, padding: '10px 8px', color: 'var(--color-base)' }}>{formatINR(finalGrandTotal)}</td>
                                 </tr>
                             </tfoot>
                         </table>
