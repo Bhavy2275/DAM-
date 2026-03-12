@@ -163,7 +163,13 @@ export default function Dashboard() {
                     <tbody>
                         {(stats?.recentQuotations || []).map((q, i) => (
                             <motion.tr key={q.id} variants={fadeUp} custom={i}>
-                                <td><Link to={`/quotations/${q.id}`} style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none', fontSize: 13 }}>{q.quoteNumber || '—'}</Link></td>
+                                <td>
+                                    <Link to={`/quotations/${q.id}`} style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none', fontSize: 13 }}>
+                                        {q.quoteNumber && q.quoteNumber !== '—' ? q.quoteNumber : (
+                                            <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 11 }}>No number</span>
+                                        )}
+                                    </Link>
+                                </td>
                                 <td style={{ color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.projectName || '—'}</td>
                                 <td style={{ color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.clientName || '—'}</td>
                                 <td><StatusBadge status={q.status} /></td>

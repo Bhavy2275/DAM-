@@ -63,13 +63,13 @@ router.get('/stats', async (req, res) => {
 
         // Recent quotations (last 10)
         const recentQuotations = quotations.slice(0, 10).map(q => ({
-            id:           q.id,
-            quoteNumber:  q.quoteNumber  || '—',
-            projectName:  q.projectName  || '—',
-            clientName:   q.client?.companyName || q.client?.fullName || '—',
-            status:       q.status,
-            createdAt:    q.createdAt,
-            total:        q.grandTotal   || 0,
+            id: q.id,
+            quoteNumber: q.quoteNumber || '—',
+            projectName: q.projectName || '—',
+            clientName: q.client?.companyName || q.client?.fullName || '—',
+            status: q.status,
+            createdAt: q.createdAt,
+            total: q.grandTotal || q.subtotal || 0,
         }));
 
         res.json({
