@@ -307,6 +307,8 @@ body {
   font-size: 13px;
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
+  word-break: break-word;   /* Prevent long strings from blowing up columns */
+  white-space: normal;
 }
 
 .dark-table tbody tr {

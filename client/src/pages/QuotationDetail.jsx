@@ -167,7 +167,7 @@ export default function QuotationDetail() {
                                     <tr key={item.id}>
                                         <td style={{ textAlign: 'center' }}>{item.sno}</td>
                                         <td style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{item.productCode}</td>
-                                        <td style={{ color: 'var(--color-text-muted)', maxWidth: 200, fontSize: 11 }}>{item.description}</td>
+                                        <td style={{ color: 'var(--color-text-muted)', width: 220, maxWidth: 220, minWidth: 220, fontSize: 11, wordBreak: 'break-all', whiteSpace: 'normal' }}>{item.description || '—'}</td>
                                         <td style={{ textAlign: 'center' }}>{item.unit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
                                         {usedLabels.map(label => {
                                             const rec = (item.recommendations || []).find(r => r.label === label);
@@ -218,15 +218,15 @@ export default function QuotationDetail() {
                                     <tr key={item.id}>
                                         <td style={{ textAlign: 'center' }}>{item.sno}</td>
                                         <td style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{item.productCode}</td>
-                                        <td style={{ color: 'var(--color-text-muted)', maxWidth: 160, fontSize: 10 }}>{item.description?.substring(0, 60)}</td>
+                                        <td style={{ color: 'var(--color-text-muted)', width: 180, maxWidth: 180, minWidth: 180, fontSize: 10, wordBreak: 'break-all', whiteSpace: 'normal' }}>{item.description ? item.description.substring(0, 80) : '—'}</td>
                                         <td>{item.finalBrandName || '—'}</td>
-                                        <td className="tabular-nums">{item.finalListPrice ? formatINR(item.finalListPrice) : '—'}</td>
-                                        <td className="tabular-nums">{item.finalListPrice ? formatINR(item.finalListPrice * 1.18) : '—'}</td>
+                                        <td className="tabular-nums">{item.finalListPrice != null ? formatINR(item.finalListPrice) : '—'}</td>
+                                        <td className="tabular-nums">{item.finalListPrice != null ? formatINR(item.finalListPrice * 1.18) : '—'}</td>
                                         <td style={{ textAlign: 'center' }}>{item.finalDiscount != null ? `${item.finalDiscount}%` : '—'}</td>
-                                        <td className="tabular-nums">{item.finalRate ? formatINR(item.finalRate) : '—'}</td>
+                                        <td className="tabular-nums">{item.finalRate != null ? formatINR(item.finalRate) : '—'}</td>
                                         <td style={{ textAlign: 'center' }}>{item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
-                                        <td style={{ textAlign: 'center' }}>{item.finalQuantity || '—'}</td>
-                                        <td className="tabular-nums" style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{item.finalAmount ? formatINR(item.finalAmount) : '—'}</td>
+                                        <td style={{ textAlign: 'center' }}>{item.finalQuantity != null ? item.finalQuantity : '—'}</td>
+                                        <td className="tabular-nums" style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{item.finalAmount != null ? formatINR(item.finalAmount) : '—'}</td>
                                         <td><MacadamBadge step={item.finalMacadamStep} showSpace /></td>
                                     </tr>
                                 ))}
