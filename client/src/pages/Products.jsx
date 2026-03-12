@@ -133,9 +133,12 @@ export default function Products() {
         setForm({
             productCode: p.productCode, layoutCode: p.layoutCode || '', description: p.description,
             basePrice: p.basePrice || '',
-            bodyColours: p.bodyColours || [], reflectorColours: p.reflectorColours || [],
-            colourTemps: p.colourTemps || [], beamAngles: p.beamAngles || [], cri: p.cri || [],
-            customAttributes: p.customAttributes || [],
+            bodyColours: Array.isArray(p.bodyColours) ? p.bodyColours : [], 
+            reflectorColours: Array.isArray(p.reflectorColours) ? p.reflectorColours : [],
+            colourTemps: Array.isArray(p.colourTemps) ? p.colourTemps : [], 
+            beamAngles: Array.isArray(p.beamAngles) ? p.beamAngles : [], 
+            cri: Array.isArray(p.cri) ? p.cri : [],
+            customAttributes: Array.isArray(p.customAttributes) ? p.customAttributes : [],
         });
         setPolarFile(null);
         setShowModal(true);
@@ -428,11 +431,11 @@ export default function Products() {
                                         </button>
                                     </div>
                                     
-                                    {form.customAttributes.length === 0 ? (
+                                    {(!Array.isArray(form.customAttributes) || form.customAttributes.length === 0) ? (
                                         <p style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic', margin: 0 }}>No extra fields added. E.g. "Wattage", "Cutout", "Driver Type".</p>
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                            {form.customAttributes.map((attr, idx) => (
+                                            {(Array.isArray(form.customAttributes) ? form.customAttributes : []).map((attr, idx) => (
                                                 <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 8, alignItems: 'center' }}>
                                                     <input 
                                                         type="text" className="input-dark" placeholder="Field Name (e.g. Cutout)" 

@@ -34,6 +34,7 @@ function serializeProduct(p) {
         colourTemps: parseArr(p.colourTemps),
         beamAngles: parseArr(p.beamAngles),
         cri: parseArr(p.cri),
+        customAttributes: parseArr(p.customAttributes),
     };
 }
 
