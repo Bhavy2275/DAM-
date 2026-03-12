@@ -157,13 +157,13 @@ export default function QuotationDetail() {
                 <motion.div variants={fadeUp} className="card-surface" style={{ overflow: 'hidden', marginBottom: 24, cursor: 'default' }}>
                     <div style={{ padding: '14px 20px', background: 'var(--color-base)', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, letterSpacing: 1.5, borderBottom: '2px solid var(--color-accent)' }}>RECOMMENDATION COLUMNS</div>
                     <div style={{ overflowX: 'auto' }}>
-                        <table className="dark-table" style={{ fontSize: 12 }}>
+                        <table className="dark-table" style={{ fontSize: 12, tableLayout: 'fixed', width: '100%', minWidth: 800 }}>
                             <thead><tr>
-                                <th style={{ width: 60, textAlign: 'center' }}>S.No</th>
-                                <th style={{ width: 120 }}>Code</th>
-                                <th style={{ width: 220, minWidth: 220, maxWidth: 220 }}>Description</th>
-                                <th style={{ width: 80, textAlign: 'center' }}>Unit</th>
-                                {usedLabels.map(label => <th key={label} colSpan={3} style={{ textAlign: 'center', color: REC_COLORS[label], borderLeft: '1px solid var(--color-border)', width: 260 }}>Rec {label}</th>)}
+                                <th style={{ width: 48, textAlign: 'center' }}>S.No</th>
+                                <th style={{ width: 105 }}>Code</th>
+                                <th style={{ width: 200, minWidth: 200, maxWidth: 200 }}>Description</th>
+                                <th style={{ width: 70, textAlign: 'center' }}>Unit</th>
+                                {usedLabels.map(label => <th key={label} colSpan={3} style={{ textAlign: 'center', color: REC_COLORS[label], borderLeft: '1px solid var(--color-border)' }}>Rec {label}</th>)}
                             </tr></thead>
                             <tbody>
                                 {quotation.lineItems.map((item, idx) => (
@@ -210,36 +210,36 @@ export default function QuotationDetail() {
                         <CheckCircle size={16} style={{ color: '#10B981' }} /> FINAL WORKING QUOTATION
                     </div>
                     <div style={{ overflowX: 'auto' }}>
-                        <table className="dark-table" style={{ fontSize: 11 }}>
+                        <table className="dark-table" style={{ fontSize: 11, tableLayout: 'fixed', minWidth: 1200, width: '100%' }}>
                             <thead><tr>
-                                <th style={{ width: 60, textAlign: 'center' }}>S.No</th>
-                                <th style={{ width: 120 }}>Code</th>
-                                <th style={{ width: 180, minWidth: 180, maxWidth: 180 }}>Description</th>
-                                <th style={{ width: 100 }}>Brand</th>
-                                <th style={{ width: 90 }}>LP</th>
-                                <th style={{ width: 90 }}>LP+18%</th>
-                                <th style={{ width: 70, textAlign: 'center' }}>Disc%</th>
-                                <th style={{ width: 90 }}>Rate</th>
-                                <th style={{ width: 70, textAlign: 'center' }}>Unit</th>
-                                <th style={{ width: 60, textAlign: 'center' }}>Qty</th>
-                                <th style={{ width: 110 }}>Amount</th>
-                                <th style={{ width: 100 }}>Macadam</th>
+                                <th style={{ width: 44, textAlign: 'center', padding: '12px 6px' }}>S.No</th>
+                                <th style={{ width: 100, padding: '12px 6px' }}>Code</th>
+                                <th style={{ width: 175, minWidth: 175, maxWidth: 175, padding: '12px 6px' }}>Description</th>
+                                <th style={{ width: 80, padding: '12px 6px' }}>Brand</th>
+                                <th style={{ width: 85, padding: '12px 6px' }}>LP</th>
+                                <th style={{ width: 95, padding: '12px 6px' }}>LP+18%</th>
+                                <th style={{ width: 65, textAlign: 'center', padding: '12px 6px' }}>Disc%</th>
+                                <th style={{ width: 95, padding: '12px 6px' }}>Rate</th>
+                                <th style={{ width: 65, textAlign: 'center', padding: '12px 6px' }}>Unit</th>
+                                <th style={{ width: 50, textAlign: 'center', padding: '12px 6px' }}>Qty</th>
+                                <th style={{ width: 100, padding: '12px 6px' }}>Amount</th>
+                                <th style={{ width: 100, padding: '12px 6px' }}>Macadam</th>
                             </tr></thead>
                             <tbody>
                                 {quotation.lineItems.map((item, idx) => (
                                     <tr key={item.id}>
-                                        <td style={{ textAlign: 'center' }}>{item.sno}</td>
-                                        <td style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{item.productCode}</td>
-                                        <td style={{ color: 'var(--color-text-muted)', width: 180, maxWidth: 180, minWidth: 180, fontSize: 10, wordBreak: 'break-all', whiteSpace: 'normal' }}>{item.description ? item.description.substring(0, 80) : '—'}</td>
-                                        <td>{item.finalBrandName || '—'}</td>
-                                        <td className="tabular-nums">{item.finalListPrice != null ? formatINR(item.finalListPrice) : '—'}</td>
-                                        <td className="tabular-nums">{item.finalListPrice != null ? formatINR(item.finalListPrice * 1.18) : '—'}</td>
-                                        <td style={{ textAlign: 'center' }}>{item.finalDiscount != null ? `${item.finalDiscount}%` : '—'}</td>
-                                        <td className="tabular-nums">{item.finalRate != null ? formatINR(item.finalRate) : '—'}</td>
-                                        <td style={{ textAlign: 'center' }}>{item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
-                                        <td style={{ textAlign: 'center' }}>{item.finalQuantity != null ? item.finalQuantity : '—'}</td>
-                                        <td className="tabular-nums" style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{item.finalAmount != null ? formatINR(item.finalAmount) : '—'}</td>
-                                        <td><MacadamBadge step={item.finalMacadamStep} showSpace /></td>
+                                        <td style={{ textAlign: 'center', padding: '12px 6px' }}>{item.sno}</td>
+                                        <td style={{ fontWeight: 700, color: 'var(--color-accent)', padding: '12px 6px' }}>{item.productCode}</td>
+                                        <td style={{ color: 'var(--color-text-muted)', width: 175, maxWidth: 175, minWidth: 175, fontSize: 10, wordBreak: 'break-word', whiteSpace: 'normal', padding: '12px 6px' }}>{item.description ? item.description.substring(0, 80) : '—'}</td>
+                                        <td style={{ padding: '12px 6px' }}>{item.finalBrandName || '—'}</td>
+                                        <td className="tabular-nums" style={{ padding: '12px 6px' }}>{item.finalListPrice != null ? formatINR(item.finalListPrice) : '—'}</td>
+                                        <td className="tabular-nums" style={{ padding: '12px 6px' }}>{item.finalListPrice != null ? formatINR(item.finalListPrice * 1.18) : '—'}</td>
+                                        <td style={{ textAlign: 'center', padding: '12px 6px' }}>{item.finalDiscount != null ? `${item.finalDiscount}%` : '—'}</td>
+                                        <td className="tabular-nums" style={{ padding: '12px 6px' }}>{item.finalRate != null ? formatINR(item.finalRate) : '—'}</td>
+                                        <td style={{ textAlign: 'center', padding: '12px 6px' }}>{item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
+                                        <td style={{ textAlign: 'center', padding: '12px 6px' }}>{item.finalQuantity != null ? item.finalQuantity : '—'}</td>
+                                        <td className="tabular-nums" style={{ fontWeight: 700, color: 'var(--color-accent)', padding: '12px 6px' }}>{item.finalAmount != null ? formatINR(item.finalAmount) : '—'}</td>
+                                        <td style={{ padding: '12px 6px' }}><MacadamBadge step={item.finalMacadamStep} showSpace /></td>
                                     </tr>
                                 ))}
                             </tbody>
