@@ -4,7 +4,8 @@ const MACADAM_SPACE = { '1A': 40, '2A': 50, '3A': 75, '4A': 90, '5A': 100 };
 
 function fmt(n) {
     if (n == null || isNaN(n)) return '—';
-    return '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    if (n === 0) return '0';
+    return 'Rs. ' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 function num(n) { if (n == null || isNaN(n)) return '—'; return Number(n).toLocaleString('en-IN'); }
 
@@ -18,23 +19,24 @@ function coverPage(q, settings) {
     return `
   <div class="cover-page">
     <div class="cover-top">
-      <div class="cover-col">
-        <div class="cover-label">Developed &amp; Illuminated By</div>
+      <div class="cover-by">
+        <div class="cover-label">DEVELOPED &amp; ILLUMINATED BY</div>
         <div class="cover-company">${s.companyName || 'DAM Lighting Solution LLP'}</div>
         <div class="cover-sub">${s.phone || ''} &nbsp;|&nbsp; ${s.email || ''}</div>
         <div class="cover-sub">${s.website || ''}</div>
         <div class="cover-address">${s.address || ''}</div>
       </div>
-      <div class="cover-divider"></div>
-      <div class="cover-col">
-        <div class="cover-label">Developed &amp; Illuminated For</div>
+      <div class="cover-for">
+        <div class="cover-label">DEVELOPED &amp; ILLUMINATED FOR</div>
         <div class="cover-company">${q.client?.companyName || ''}</div>
         <div class="cover-sub">${q.client?.fullName || ''}</div>
         <div class="cover-address">${q.client?.address || ''}, ${q.client?.city || ''} — ${q.client?.pinCode || ''}</div>
       </div>
     </div>
     <div class="cover-bottom">
-      <div class="cover-quote-label">Light Quotation</div>
+      <div class="cover-quote-label">
+        <h1>Light<br>Quotation</h1>
+      </div>
       <div class="cover-dam">
         <div class="cover-dam-logo">DAM</div>
         <div class="cover-dam-tag">design. allocate. maintain.</div>
@@ -94,10 +96,10 @@ function allRecsPdf(q, settings) {
         `<th>Macadam</th><th>Rate</th><th>Amount</th>`).join('');
 
     return `
-  <div class="page-break"></div>
-  <div class="section-header">${q.projectName} — ${q.city} — LIGHTING QUOTATION</div>
-  <table class="main-table">
-    <thead>
+  <div class="products-wrapper">
+    <div class="section-header">${q.projectName} — ${q.city} — LIGHTING QUOTATION</div>
+    <table class="main-table">
+      <thead>
       <tr>
         <th rowspan="2">S.No</th>
         <th rowspan="2">Code</th>
@@ -116,6 +118,7 @@ function allRecsPdf(q, settings) {
       <thead><tr><th colspan="2">Brand</th><th>Sub-Total</th><th>GST (${q.gstRate}%)</th><th>Grand Total</th></tr></thead>
       <tbody>${summaryRows}</tbody>
     </table>
+  </div>
   </div>`;
 }
 
@@ -151,10 +154,10 @@ function finalPdf(q, settings) {
     const s = settings || {};
 
     return `
-  <div class="page-break"></div>
-  <div class="section-header">${q.projectName} — ${q.city} — LIGHTING QUOTATION</div>
-  <table class="main-table final-table">
-    <thead>
+  <div class="products-wrapper">
+    <div class="section-header">${q.projectName} — ${q.city} — LIGHTING QUOTATION</div>
+    <table class="main-table final-table">
+      <thead>
       <tr>
         <th>S.No</th><th>Code</th><th>Description</th>
         <th>Body</th><th>CCT</th><th>Beam</th><th>CRI</th><th>Layout</th>
@@ -188,24 +191,54 @@ function finalPdf(q, settings) {
         <div><span class="bank-label">Address:</span> ${s.bankAddress || ''}</div>
       </div>
     </div>
+  </div>
   </div>`;
 }
 
 const CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; color: #1a1a2e; background: #fff; }
-  .cover-page { min-height: 100vh; display: flex; flex-direction: column; }
-  .cover-top { display: flex; flex: 1; padding: 60px 50px; background: #fff; }
-  .cover-col { flex: 1; padding: 20px; }
-  .cover-divider { width: 1px; background: #ddd; margin: 20px 0; }
-  .cover-label { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
-  .cover-company { font-size: 22px; font-weight: 700; color: #070C18; margin-bottom: 8px; line-height: 1.3; }
-  .cover-sub { font-size: 11px; color: #444; margin-bottom: 4px; }
-  .cover-address { font-size: 10px; color: #666; margin-top: 12px; line-height: 1.5; }
-  .cover-bottom { background: #070C18; padding: 40px 50px; display: flex; justify-content: space-between; align-items: center; }
-  .cover-quote-label { font-family: 'Georgia', serif; font-size: 36px; color: #fff; font-style: italic; }
-  .cover-dam-logo { font-size: 28px; font-weight: 900; color: #F5A623; letter-spacing: 4px; }
-  .cover-dam-tag { font-size: 11px; color: #7B91B0; letter-spacing: 2px; margin-top: 4px; }
+  body { font-family: 'Noto Sans', 'Helvetica Neue', Arial, sans-serif; font-size: 9px; color: #1a1a2e; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .cover-page {
+    width: 210mm;
+    height: 297mm;
+    display: flex;
+    flex-direction: column;
+    page-break-after: always;
+    overflow: hidden;
+  }
+  
+  .cover-top {
+    display: flex;
+    flex: 0 0 40%;
+    padding: 60px 48px;
+    background: #ffffff;
+    gap: 40px;
+  }
+
+  .cover-by, .cover-for { flex: 1; }
+
+  .cover-label { font-size: 9px; font-weight: 700; color: #0A1628; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 15px; }
+  .cover-company { font-size: 16px; font-weight: 700; color: #070C18; margin-bottom: 10px; line-height: 1.3; }
+  .cover-sub { font-size: 11px; color: #444; margin-bottom: 6px; }
+  .cover-address { font-size: 11px; color: #666; margin-top: 10px; line-height: 1.5; }
+
+  .cover-bottom {
+    flex: 1;
+    background: #0A1628;
+    padding: 60px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .cover-quote-label h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 52px; font-weight: 700; color: #fff; line-height: 1.1; margin: 0; }
+  
+  .cover-dam { text-align: right; }
+  .cover-dam-logo { font-size: 44px; font-weight: 900; color: #F5A623; letter-spacing: -1px; line-height: 1; }
+  .cover-dam-tag { font-size: 10px; color: rgba(255,255,255,0.7); letter-spacing: 1px; margin-top: 6px; text-transform: lowercase; }
+
+  .products-wrapper { padding: 15mm 12mm; page-break-after: always; }
   .page-break { page-break-before: always; }
   .section-header { background: #070C18; color: #fff; padding: 12px 16px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
   .main-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
@@ -249,6 +282,7 @@ async function generatePDF(quotation, settings, mode = 'final') {
 <html>
 <head>
   <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
   <style>${CSS}</style>
 </head>
 <body>
@@ -259,16 +293,28 @@ async function generatePDF(quotation, settings, mode = 'final') {
 
     const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox', 
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--font-render-hinting=none'
+        ]
     });
     try {
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        await page.setViewport({ width: 794, height: 1123 });
+        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+        
+        // Ensure fonts are painted
+        await page.evaluateHandle('document.fonts.ready');
+
         const pdfBuffer = await page.pdf({
             format: 'A4',
             landscape: mode === 'all_recs',
             printBackground: true,
-            margin: { top: '15mm', right: '12mm', bottom: '15mm', left: '12mm' }
+            preferCSSPageSize: true,
+            margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
         });
         return pdfBuffer;
     } finally {
