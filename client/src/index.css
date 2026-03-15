@@ -204,6 +204,7 @@ body {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
   transition: all 0.2s ease;
 }
 
@@ -309,14 +310,24 @@ body {
   vertical-align: top;
   word-break: break-word;
   white-space: normal;
+  color: inherit;
 }
 
 .dark-table tbody tr {
   position: relative;
   transition: background 0.2s ease;
+  color: var(--color-text-primary);
 }
 
-.dark-table tbody tr::before {
+.dark-table tbody tr:hover {
+  background: var(--color-elevated);
+}
+
+.dark-table tbody td:first-child {
+  position: relative;
+}
+
+.dark-table tbody td:first-child::before {
   content: '';
   position: absolute;
   left: 0;
@@ -327,11 +338,7 @@ body {
   transition: width 0.2s ease;
 }
 
-.dark-table tbody tr:hover {
-  background: var(--color-elevated);
-}
-
-.dark-table tbody tr:hover::before {
+.dark-table tbody tr:hover td:first-child::before {
   width: 3px;
 }
 
@@ -377,4 +384,13 @@ body {
   background: var(--color-accent);
   margin-top: 8px;
   animation: underline-slide 0.5s ease-out forwards;
+}
+
+/* ── Force product cards always visible ── */
+.card-surface {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }

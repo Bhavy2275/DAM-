@@ -1,5 +1,5 @@
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const prisma = new PrismaClient();
@@ -13,63 +13,65 @@ router.get('/stats', async (req, res) => {
             prisma.quotation.count(),
             prisma.quotation.findMany({
                 include: {
-                    client: { select: { fullName: true, companyName: true } },
+                    client: { select: { fullName: true, companyName: true } }
                 },
                 orderBy: { createdAt: 'desc' }
             }),
             prisma.payment.findMany()
         ]);
 
-        const pending = quotations.filter(q => q.status === 'DRAFT' || q.status === 'SENT').length;
+        const pending  = quotations.filter(q => q.status === 'DRAFT' || q.status === 'SENT').length;
         const accepted = quotations.filter(q => q.status === 'ACCEPTED').length;
 
-        // Revenue = sum of stored grandTotal for accepted/invoiced quotes
         const totalRevenue = quotations
             .filter(q => q.status === 'ACCEPTED' || q.status === 'INVOICED')
             .reduce((sum, q) => sum + (q.grandTotal || 0), 0);
 
+        // Schema confirmed: Payment.amountPaid Float, status default "COMPLETED"
         const totalPaid = payments
             .filter(p => p.status === 'COMPLETED')
-            .reduce((s, p) => s + p.amountPaid, 0);
+            .reduce((s, p) => s + (p.amountPaid || 0), 0);
 
         const totalPendingPayments = payments
             .filter(p => p.status === 'PENDING')
-            .reduce((s, p) => s + p.amountPaid, 0);
+            .reduce((s, p) => s + (p.amountPaid || 0), 0);
 
-        // Monthly revenue (last 12 months) from payments
+        // Monthly revenue — last 12 months from payments
         const monthlyRevenue = [];
         const now = new Date();
         for (let i = 11; i >= 0; i--) {
-            const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-            const monthPayments = payments.filter(p => {
-                const pd = new Date(p.paymentDate);
-                return pd >= month && pd <= monthEnd;
-            });
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd   = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+            const amt = payments
+                .filter(p => {
+                    const d = new Date(p.paymentDate);
+                    return d >= monthStart && d <= monthEnd;
+                })
+                .reduce((s, p) => s + (p.amountPaid || 0), 0);
             monthlyRevenue.push({
-                month: month.toLocaleString('default', { month: 'short', year: 'numeric' }),
-                amount: monthPayments.reduce((s, p) => s + p.amountPaid, 0)
+                month: monthStart.toLocaleString('default', { month: 'short', year: 'numeric' }),
+                amount: amt
             });
         }
 
-        // Status distribution
         const statusCounts = {
-            DRAFT: quotations.filter(q => q.status === 'DRAFT').length,
-            SENT: quotations.filter(q => q.status === 'SENT').length,
+            DRAFT:    quotations.filter(q => q.status === 'DRAFT').length,
+            SENT:     quotations.filter(q => q.status === 'SENT').length,
             ACCEPTED: quotations.filter(q => q.status === 'ACCEPTED').length,
             REJECTED: quotations.filter(q => q.status === 'REJECTED').length,
-            INVOICED: quotations.filter(q => q.status === 'INVOICED').length
+            INVOICED: quotations.filter(q => q.status === 'INVOICED').length,
         };
 
-        // Recent quotations (last 10)
+        // Schema confirmed: Quotation has quoteNumber, projectName, grandTotal
+        // Client has companyName, fullName
         const recentQuotations = quotations.slice(0, 10).map(q => ({
-            id: q.id,
-            quoteNumber: q.quoteNumber || '—',
+            id:          q.id,
+            quoteNumber: q.quoteNumber,          // always exists — @unique @required
             projectName: q.projectName || '—',
-            clientName: q.client?.companyName || q.client?.fullName || '—',
-            status: q.status,
-            createdAt: q.createdAt,
-            total: q.grandTotal || q.subtotal || 0,
+            clientName:  q.client?.companyName || q.client?.fullName || '—',
+            status:      q.status,
+            createdAt:   q.createdAt,
+            total:       q.grandTotal || 0,      // Float @default(0)
         }));
 
         res.json({
@@ -81,8 +83,9 @@ router.get('/stats', async (req, res) => {
             totalPendingPayments,
             monthlyRevenue,
             statusCounts,
-            recentQuotations
+            recentQuotations,
         });
+
     } catch (error) {
         console.error('Dashboard stats error:', error);
         res.status(500).json({ error: 'Failed to fetch dashboard stats' });

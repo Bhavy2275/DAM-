@@ -77,13 +77,26 @@ export default function ClientDetail() {
             <motion.div variants={fadeUp} className="card-surface" style={{ overflow: 'hidden', marginBottom: 24, cursor: 'default' }}>
                 <div style={{ padding: '14px 20px', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, borderBottom: '1px solid var(--color-border)' }}>Quotations ({client.quotations?.length || 0})</div>
                 {client.quotations?.length > 0 ? (
-                    <table className="dark-table">
+                    <table className="dark-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                        <colgroup>
+                            <col style={{ width: '18%' }} />
+                            <col style={{ width: '30%' }} />
+                            <col style={{ width: '18%' }} />
+                            <col style={{ width: '16%' }} />
+                            <col style={{ width: '18%' }} />
+                        </colgroup>
                         <thead><tr><th>Quote #</th><th>Project</th><th>Status</th><th style={{ textAlign: 'right' }}>Total</th><th>Date</th></tr></thead>
                         <tbody>
                             {client.quotations.map(q => (
                                 <tr key={q.id}>
-                                    <td><Link to={`/quotations/${q.id}`} style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none' }}>{q.quoteNumber}</Link></td>
-                                    <td>{q.projectName}</td>
+                                    <td>
+                                        <Link to={`/quotations/${q.id}`} style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none', fontSize: 13 }}>
+                                            {q.quoteNumber && q.quoteNumber !== '—' ? q.quoteNumber : (
+                                                <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 11 }}>No number</span>
+                                            )}
+                                        </Link>
+                                    </td>
+                                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.projectName}</td>
                                     <td><StatusBadge status={q.status} /></td>
                                     <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600 }}>{formatINR(q.grandTotal || 0)}</td>
                                     <td style={{ color: 'var(--color-text-muted)' }}>{new Date(q.createdAt).toLocaleDateString('en-IN')}</td>
@@ -98,14 +111,21 @@ export default function ClientDetail() {
             {client.payments?.length > 0 && (
                 <motion.div variants={fadeUp} className="card-surface" style={{ overflow: 'hidden', cursor: 'default' }}>
                     <div style={{ padding: '14px 20px', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, borderBottom: '1px solid var(--color-border)' }}>Payment History</div>
-                    <table className="dark-table">
+                    <table className="dark-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                        <colgroup>
+                            <col style={{ width: '18%' }} />
+                            <col style={{ width: '22%' }} />
+                            <col style={{ width: '20%' }} />
+                            <col style={{ width: '20%' }} />
+                            <col style={{ width: '20%' }} />
+                        </colgroup>
                         <thead><tr><th>Date</th><th>Quote #</th><th>Method</th><th style={{ textAlign: 'right' }}>Amount</th><th>Status</th></tr></thead>
                         <tbody>
                             {client.payments.map(p => (
                                 <tr key={p.id}>
-                                    <td>{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
+                                    <td style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
                                     <td style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{p.quotation?.quoteNumber || '—'}</td>
-                                    <td>{p.paymentMethod}</td>
+                                    <td style={{ color: 'var(--color-text-primary)' }}>{p.paymentMethod}</td>
                                     <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-status-accepted)' }}>{formatINR(p.amountPaid)}</td>
                                     <td><StatusBadge status={p.status} /></td>
                                 </tr>

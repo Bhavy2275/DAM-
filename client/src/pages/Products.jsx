@@ -312,8 +312,8 @@ export default function Products() {
                                 variants={fadeUp}
                                 className="card-surface"
                                 style={{ padding: 20, position: 'relative', overflow: 'hidden', cursor: 'default' }}
-                                whileHover={{ y: -4, boxShadow: '0 0 0 1px var(--color-accent), 0 8px 30px var(--color-accent-glow)' }}
-                                transition={{ duration: 0.2 }}
+                                whileHover={{ y: -4, boxShadow: '0 0 0 1px var(--color-accent), 0 8px 30px rgba(245,166,35,0.15)' }}
+                                whileTap={{ scale: 0.98 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                             >
                                 {/* Amber glow corner */}

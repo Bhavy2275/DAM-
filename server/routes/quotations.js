@@ -75,25 +75,29 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/quotations/recalculate-all — recalculate and persist all quotation totals
+// GET /api/quotations/recalculate-all
 router.get('/recalculate-all', async (req, res) => {
     try {
         const quotations = await prisma.quotation.findMany({
             include: { lineItems: true }
         });
+
         let updated = 0;
+
         for (const q of quotations) {
             const subtotal   = q.lineItems.reduce((s, i) => s + (i.finalAmount || 0), 0);
             const gstAmount  = subtotal * ((q.gstRate || 18) / 100);
             const grandTotal = subtotal + gstAmount;
-            if (Math.abs(q.grandTotal - grandTotal) > 0.01) {
-                await prisma.quotation.update({
-                    where: { id: q.id },
-                    data: { subtotal, gstAmount, grandTotal }
-                });
-                updated++;
-            }
+
+            // ONLY update financial fields — never touch quoteNumber here
+            // quoteNumber already exists for all records (it has @unique constraint)
+            await prisma.quotation.update({
+                where: { id: q.id },
+                data: { subtotal, gstAmount, grandTotal }
+            });
+            updated++;
         }
+
         res.json({ success: true, updated, total: quotations.length });
     } catch (error) {
         console.error('Recalculate all error:', error);

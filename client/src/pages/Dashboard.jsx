@@ -145,11 +145,11 @@ export default function Dashboard() {
                 </div>
                 <table className="dark-table" style={{ tableLayout: 'fixed', width: '100%' }}>
                     <colgroup>
-                        <col style={{ width: '16%' }} />
-                        <col style={{ width: '26%' }} />
-                        <col style={{ width: '24%' }} />
-                        <col style={{ width: '16%' }} />
-                        <col style={{ width: '18%' }} />
+                        <col style={{ width: '150px' }} />
+                        <col style={{ width: 'auto' }} />
+                        <col style={{ width: '200px' }} />
+                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '140px' }} />
                     </colgroup>
                     <thead>
                         <tr>
