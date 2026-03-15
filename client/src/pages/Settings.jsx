@@ -92,9 +92,9 @@ export default function Settings() {
                                     {[
                                         { key: 'companyName', label: 'Company Name' },
                                         { key: 'gstNumber', label: 'GST Number' },
-                                        { key: 'companyAddress', label: 'Address' },
-                                        { key: 'companyPhone', label: 'Phone' },
-                                        { key: 'companyEmail', label: 'Email' },
+                                        { key: 'address', label: 'Address' },
+                                        { key: 'phone', label: 'Phone' },
+                                        { key: 'email', label: 'Email' },
                                         { key: 'website', label: 'Website' },
                                     ].map(f => (
                                         <div key={f.key}>
@@ -116,7 +116,7 @@ export default function Settings() {
                                         { key: 'bankName', label: 'Bank Name' },
                                         { key: 'accountNumber', label: 'Account Number' },
                                         { key: 'ifscCode', label: 'IFSC Code' },
-                                        { key: 'upiId', label: 'UPI ID' },
+                                        { key: 'bankAddress', label: 'Bank Address' },
                                     ].map(f => (
                                         <div key={f.key}>
                                             <label htmlFor={`settings-${f.key}`} className="label">{f.label}</label>
@@ -133,8 +133,8 @@ export default function Settings() {
                                 <h3 className="font-display" style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>Default Terms & Conditions</h3>
                                 <div className="space-y-4">
                                     <div>
-                                        <label htmlFor="settings-defaultGST" className="label">Default GST Rate (%)</label>
-                                        <input id="settings-defaultGST" name="defaultGST" type="number" value={settings.defaultGST || ''} onChange={e => setSettings({ ...settings, defaultGST: parseFloat(e.target.value) })} className="input-dark" style={{ width: 120 }} />
+                                        <label htmlFor="settings-defaultGst" className="label">Default GST Rate (%)</label>
+                                        <input id="settings-defaultGst" name="defaultGst" type="number" value={settings.defaultGst || ''} onChange={e => setSettings({ ...settings, defaultGst: parseFloat(e.target.value) || 0 })} className="input-dark" style={{ width: 120 }} />
                                     </div>
                                     <div>
                                         <label htmlFor="settings-defaultTerms" className="label">Default Terms</label>

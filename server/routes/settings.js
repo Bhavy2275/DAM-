@@ -51,9 +51,11 @@ router.put('/', requireRole('ADMIN'), async (req, res) => {
         const settings = await prisma.companySettings.findFirst();
         if (!settings) return res.status(404).json({ error: 'Settings not found' });
 
+        const { id, ...updateData } = req.body;
+
         const updated = await prisma.companySettings.update({
             where: { id: settings.id },
-            data: req.body
+            data: updateData
         });
         res.json(updated);
     } catch (error) {
