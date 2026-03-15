@@ -75,25 +75,31 @@ export default function Login() {
 
                     <form onSubmit={handleSubmit}>
                         <div style={{ marginBottom: 20 }}>
-                            <label className="label">Email</label>
+                            <label htmlFor="login-email" className="label">Email</label>
                             <div className="relative">
                                 <Mail size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                                 <input
+                                    id="login-email"
+                                    name="email"
                                     type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                                     className="input-dark" style={{ paddingLeft: 38 }}
                                     placeholder="admin@damlighting.com" required
+                                    autoComplete="email"
                                 />
                             </div>
                         </div>
 
                         <div style={{ marginBottom: 24 }}>
-                            <label className="label">Password</label>
+                            <label htmlFor="login-password" className="label">Password</label>
                             <div className="relative">
                                 <Lock size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                                 <input
+                                    id="login-password"
+                                    name="password"
                                     type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                                     className="input-dark" style={{ paddingLeft: 38 }}
                                     placeholder="••••••••" required
+                                    autoComplete="current-password"
                                 />
                             </div>
                         </div>

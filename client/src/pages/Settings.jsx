@@ -38,8 +38,8 @@ export default function Settings() {
     };
 
     const handleInvite = async () => {
-        try { await api.post('/users', inviteForm); toast.success('User invited'); setShowInviteModal(false); loadUsers(); }
-        catch (err) { toast.error(err.response?.data?.error || 'Failed to invite'); }
+        try { await api.post('/users/invite', inviteForm); toast.success('User created'); setShowInviteModal(false); setInviteForm({ name: '', email: '', password: '', role: 'MEMBER' }); loadUsers(); }
+        catch (err) { toast.error(err.response?.data?.error || 'Failed to create user'); }
     };
 
     const handleDeleteUser = async (uid) => {
@@ -98,8 +98,8 @@ export default function Settings() {
                                         { key: 'website', label: 'Website' },
                                     ].map(f => (
                                         <div key={f.key}>
-                                            <label className="label">{f.label}</label>
-                                            <input type="text" value={settings[f.key] || ''} onChange={e => setSettings({ ...settings, [f.key]: e.target.value })} className="input-dark" />
+                                            <label htmlFor={`settings-${f.key}`} className="label">{f.label}</label>
+                                            <input id={`settings-${f.key}`} name={f.key} type="text" value={settings[f.key] || ''} onChange={e => setSettings({ ...settings, [f.key]: e.target.value })} className="input-dark" />
                                         </div>
                                     ))}
                                 </div>
@@ -119,8 +119,8 @@ export default function Settings() {
                                         { key: 'upiId', label: 'UPI ID' },
                                     ].map(f => (
                                         <div key={f.key}>
-                                            <label className="label">{f.label}</label>
-                                            <input type="text" value={settings[f.key] || ''} onChange={e => setSettings({ ...settings, [f.key]: e.target.value })} className="input-dark" />
+                                            <label htmlFor={`settings-${f.key}`} className="label">{f.label}</label>
+                                            <input id={`settings-${f.key}`} name={f.key} type="text" value={settings[f.key] || ''} onChange={e => setSettings({ ...settings, [f.key]: e.target.value })} className="input-dark" />
                                         </div>
                                     ))}
                                 </div>
@@ -133,12 +133,12 @@ export default function Settings() {
                                 <h3 className="font-display" style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>Default Terms & Conditions</h3>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="label">Default GST Rate (%)</label>
-                                        <input type="number" value={settings.defaultGST || ''} onChange={e => setSettings({ ...settings, defaultGST: parseFloat(e.target.value) })} className="input-dark" style={{ width: 120 }} />
+                                        <label htmlFor="settings-defaultGST" className="label">Default GST Rate (%)</label>
+                                        <input id="settings-defaultGST" name="defaultGST" type="number" value={settings.defaultGST || ''} onChange={e => setSettings({ ...settings, defaultGST: parseFloat(e.target.value) })} className="input-dark" style={{ width: 120 }} />
                                     </div>
                                     <div>
-                                        <label className="label">Default Terms</label>
-                                        <textarea value={settings.defaultTerms || ''} onChange={e => setSettings({ ...settings, defaultTerms: e.target.value })} className="input-dark" style={{ height: 260, resize: 'none' }} />
+                                        <label htmlFor="settings-defaultTerms" className="label">Default Terms</label>
+                                        <textarea id="settings-defaultTerms" name="defaultTerms" value={settings.defaultTerms || ''} onChange={e => setSettings({ ...settings, defaultTerms: e.target.value })} className="input-dark" style={{ height: 260, resize: 'none' }} />
                                     </div>
                                 </div>
                                 <button onClick={handleSave} className="btn-primary" style={{ marginTop: 24 }}><Save size={16} /> Save Changes</button>
@@ -197,10 +197,10 @@ export default function Settings() {
                                 <button onClick={() => setShowInviteModal(false)} style={{ padding: 6, background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={18} /></button>
                             </div>
                             <div className="space-y-3">
-                                <div><label className="label">Name</label><input type="text" value={inviteForm.name} onChange={e => setInviteForm({ ...inviteForm, name: e.target.value })} className="input-dark" /></div>
-                                <div><label className="label">Email</label><input type="email" value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} className="input-dark" /></div>
-                                <div><label className="label">Password</label><input type="password" value={inviteForm.password} onChange={e => setInviteForm({ ...inviteForm, password: e.target.value })} className="input-dark" /></div>
-                                <div><label className="label">Role</label><select value={inviteForm.role} onChange={e => setInviteForm({ ...inviteForm, role: e.target.value })} className="input-dark"><option value="ADMIN">Admin</option><option value="MEMBER">Member</option></select></div>
+                                <div><label htmlFor="invite-name" className="label">Name</label><input id="invite-name" name="name" type="text" value={inviteForm.name} onChange={e => setInviteForm({ ...inviteForm, name: e.target.value })} className="input-dark" autoComplete="off" /></div>
+                                <div><label htmlFor="invite-email" className="label">Email</label><input id="invite-email" name="email" type="email" value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} className="input-dark" autoComplete="off" /></div>
+                                <div><label htmlFor="invite-password" className="label">Password</label><input id="invite-password" name="password" type="password" value={inviteForm.password} onChange={e => setInviteForm({ ...inviteForm, password: e.target.value })} className="input-dark" autoComplete="new-password" /></div>
+                                <div><label htmlFor="invite-role" className="label">Role</label><select id="invite-role" name="role" value={inviteForm.role} onChange={e => setInviteForm({ ...inviteForm, role: e.target.value })} className="input-dark"><option value="ADMIN">Admin</option><option value="MEMBER">Member</option></select></div>
                             </div>
                             <div className="flex gap-3" style={{ marginTop: 24 }}>
                                 <button onClick={() => setShowInviteModal(false)} className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>

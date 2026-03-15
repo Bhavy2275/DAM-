@@ -15,8 +15,9 @@ const CRI_OPTIONS = ['>70', '>80', '>90'];
 
 const emptyForm = {
     productCode: '', layoutCode: '', description: '', basePrice: '',
+    brandName: '', listPrice: '', discountPercent: '',
     bodyColours: [], reflectorColours: [], colourTemps: [], beamAngles: [], cri: [],
-    customAttributes: [], // Array of { key: '', value: '' }
+    customAttributes: [],
 };
 
 function MultiCheckGroup({ label, options, selected, onChange, formatLabel }) {
@@ -136,6 +137,9 @@ export default function Products() {
         setForm({
             productCode: p.productCode, layoutCode: p.layoutCode || '', description: p.description,
             basePrice: p.basePrice || '',
+            brandName: p.brandName || '',
+            listPrice: p.listPrice != null ? p.listPrice : '',
+            discountPercent: p.discountPercent != null ? p.discountPercent : '',
             bodyColours: Array.isArray(p.bodyColours) ? p.bodyColours : [], 
             reflectorColours: Array.isArray(p.reflectorColours) ? p.reflectorColours : [],
             colourTemps: Array.isArray(p.colourTemps) ? p.colourTemps : [], 
@@ -161,6 +165,9 @@ export default function Products() {
             fd.append('layoutCode',       form.layoutCode.trim());
             fd.append('description',      form.description.trim());
             fd.append('basePrice',        form.basePrice || '0');
+            fd.append('brandName',        form.brandName || '');
+            if (form.listPrice !== '')       fd.append('listPrice',       form.listPrice);
+            if (form.discountPercent !== '') fd.append('discountPercent', form.discountPercent);
             fd.append('bodyColours',      JSON.stringify(form.bodyColours));
             fd.append('reflectorColours', JSON.stringify(form.reflectorColours));
             fd.append('colourTemps',      JSON.stringify(form.colourTemps));
@@ -322,9 +329,19 @@ export default function Products() {
                                                 Layout: {product.layoutCode}
                                             </div>
                                         )}
-                                        {product.basePrice > 0 && (
-                                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', marginTop: 4 }}>
-                                                ₹{product.basePrice.toLocaleString('en-IN')}
+                                        {product.brandName && (
+                                            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                                                {product.brandName}
+                                            </div>
+                                        )}
+                                        {product.listPrice > 0 && (
+                                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-accent)', marginTop: 4 }}>
+                                                LP: ₹{product.listPrice.toLocaleString('en-IN')}
+                                                {product.discountPercent > 0 && (
+                                                    <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: 11 }}>
+                                                        {' '}— {product.discountPercent}% off
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -377,26 +394,47 @@ export default function Products() {
                             <div style={{ padding: 24 }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
                                     <div>
-                                        <label className="label">Product Code *</label>
-                                        <input type="text" value={form.productCode} onChange={e => updateField('productCode', e.target.value)}
+                                        <label htmlFor="prod-productCode" className="label">Product Code *</label>
+                                        <input id="prod-productCode" name="productCode" type="text" value={form.productCode} onChange={e => updateField('productCode', e.target.value)}
                                             className="input-dark" placeholder="e.g. C1, PF1, W1" />
                                     </div>
                                     <div>
-                                        <label className="label">Layout Code</label>
-                                        <input type="text" value={form.layoutCode} onChange={e => updateField('layoutCode', e.target.value)}
+                                        <label htmlFor="prod-layoutCode" className="label">Layout Code</label>
+                                        <input id="prod-layoutCode" name="layoutCode" type="text" value={form.layoutCode} onChange={e => updateField('layoutCode', e.target.value)}
                                             className="input-dark" placeholder="e.g. LC-01" />
                                     </div>
                                     <div>
-                                        <label className="label">Base Price (₹)</label>
-                                        <input type="number" min="0" step="0.01" value={form.basePrice} onChange={e => updateField('basePrice', e.target.value)}
+                                        <label htmlFor="prod-basePrice" className="label">Base Price (₹)</label>
+                                        <input id="prod-basePrice" name="basePrice" type="number" min="0" step="0.01" value={form.basePrice} onChange={e => updateField('basePrice', e.target.value)}
                                             className="input-dark tabular-nums" placeholder="0.00" />
                                     </div>
                                 </div>
                                 <div style={{ marginBottom: 16 }}>
-                                    <label className="label">Description *</label>
-                                    <textarea value={form.description} onChange={e => updateField('description', e.target.value)}
+                                    <label htmlFor="prod-description" className="label">Description *</label>
+                                    <textarea id="prod-description" name="description" value={form.description} onChange={e => updateField('description', e.target.value)}
                                         className="input-dark" style={{ height: 100, resize: 'none' }}
                                         placeholder="Full specification paragraph..." />
+                                </div>
+
+                                {/* ── Pricing fields ── */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16,
+                                    padding: 16, background: 'var(--color-elevated)', borderRadius: 'var(--radius-md)',
+                                    border: '1px solid var(--color-accent)33' }}>
+                                    <div>
+                                        <label className="label" style={{ color: 'var(--color-accent)' }}>Default Brand</label>
+                                        <input type="text" value={form.brandName} onChange={e => updateField('brandName', e.target.value)}
+                                            className="input-dark" placeholder="e.g. Hybec Elite" />
+                                    </div>
+                                    <div>
+                                        <label className="label" style={{ color: 'var(--color-accent)' }}>List Price (₹)</label>
+                                        <input type="number" min="0" step="0.01" value={form.listPrice} onChange={e => updateField('listPrice', e.target.value)}
+                                            className="input-dark tabular-nums" placeholder="0" />
+                                    </div>
+                                    <div>
+                                        <label className="label" style={{ color: 'var(--color-accent)' }}>Default Discount %</label>
+                                        <input type="number" min="0" max="100" step="0.1" value={form.discountPercent} onChange={e => updateField('discountPercent', e.target.value)}
+                                            className="input-dark tabular-nums" placeholder="0" />
+                                    </div>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
                                     {/* Polar Diagram Upload */}

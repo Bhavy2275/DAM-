@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Eye, Edit, Download, Copy, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Download, Copy, Trash2, Loader2, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { formatINR } from '../lib/formatCurrency';
 import { fadeUp, staggerContainer } from '../lib/animations';
 import StatusBadge from '../components/StatusBadge';
+import * as XLSX from 'xlsx';
 
 // Simple debounce hook
 function useDebounce(value, delay) {
@@ -88,6 +89,29 @@ export default function Quotations() {
         finally { setDownloadingId(null); }
     };
 
+    const handleExportExcel = () => {
+        if (!quotations.length) return toast.error('No quotations to export');
+        const rows = quotations.map(q => ({
+            'Quote #':      q.quoteNumber || '—',
+            'Title':        q.quoteTitle  || '—',
+            'Project':      q.projectName || '—',
+            'Client':       q.client?.companyName || q.client?.fullName || '—',
+            'City':         q.client?.city || '—',
+            'Status':       q.status,
+            'GST %':        q.gstRate,
+            'Grand Total':  q.grandTotal || 0,
+            'Created':      new Date(q.createdAt).toLocaleDateString('en-IN'),
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Quotations');
+        // Auto column widths
+        const colWidths = Object.keys(rows[0] || {}).map(k => ({ wch: Math.max(k.length, 16) }));
+        ws['!cols'] = colWidths;
+        XLSX.writeFile(wb, `DAM-Quotations-${new Date().toISOString().slice(0,10)}.xlsx`);
+        toast.success('Exported to Excel!');
+    };
+
     if (loading) {
         return (
             <div style={{ padding: 32 }}>
@@ -105,7 +129,12 @@ export default function Quotations() {
                     <h1 className="font-display heading-underline" style={{ fontSize: '2.4rem', fontWeight: 700 }}>Quotations</h1>
                     <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginTop: 12 }}>Manage your lighting quotations</p>
                 </div>
-                <Link to="/quotations/new" className="btn-primary"><Plus size={16} /> New Quotation</Link>
+                <div className="flex gap-3">
+                    <button onClick={handleExportExcel} className="btn-ghost" title="Export to Excel">
+                        <FileSpreadsheet size={16} /> Export
+                    </button>
+                    <Link to="/quotations/new" className="btn-primary"><Plus size={16} /> New Quotation</Link>
+                </div>
             </motion.div>
 
             {/* Filters */}

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -23,6 +23,9 @@ model Product {
   layoutCode      String?
   description     String
   basePrice       Float           @default(0) // Added base price
+  brandName       String?                      // Default brand for auto-fill
+  listPrice       Float?                       // LP for auto-fill in quotation
+  discountPercent Float?                       // Default discount %
   polarDiagramUrl String?
   productImageUrl String?
 

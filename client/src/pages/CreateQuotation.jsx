@@ -25,7 +25,7 @@ export default function CreateQuotation() {
     const [settings, setSettings] = useState(null);
 
     const [form, setForm] = useState({
-        title: '', clientId: '', projectName: '', projectLocation: '',
+        title: '', clientId: '', projectName: '',
         validDays: 30, gstRate: 18, notes: '',
         lineItems: [emptyItem()],
         recommendations: []
@@ -165,7 +165,6 @@ export default function CreateQuotation() {
                             { key: 'title', label: 'Quote Title', placeholder: 'Ramada Encore — Lighting Quotation' },
                             { key: 'clientId', label: 'Client', type: 'select' },
                             { key: 'projectName', label: 'Project Name', placeholder: 'Ground Floor Lighting' },
-                            { key: 'projectLocation', label: 'Location', placeholder: 'Noida, UP' },
                             { key: 'validDays', label: 'Valid Days', type: 'number' },
                             { key: 'gstRate', label: 'GST Rate (%)', type: 'number' },
                         ].map(f => (

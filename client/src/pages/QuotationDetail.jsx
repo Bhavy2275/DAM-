@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Mail, ArrowLeft, Edit, CreditCard, X, FileText, CheckCircle } from 'lucide-react';
+import { Download, Mail, ArrowLeft, Edit, X, FileText, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { formatINR } from '../lib/formatCurrency';
@@ -31,13 +31,8 @@ export default function QuotationDetail() {
     const navigate = useNavigate();
     const [quotation, setQuotation] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showPdfModal, setShowPdfModal] = useState(false);
     const [pdfLoading, setPdfLoading] = useState(null);
-    const [paymentForm, setPaymentForm] = useState({
-        amountPaid: '', paymentDate: new Date().toISOString().split('T')[0],
-        paymentMethod: 'BANK_TRANSFER', referenceNumber: '', notes: ''
-    });
 
     useEffect(() => { loadQuotation(); }, [id]);
 
@@ -165,10 +160,6 @@ export default function QuotationDetail() {
                         <button onClick={handleSendEmail} className="btn-ghost"
                             style={{ padding: '8px 14px', borderColor: 'var(--color-info)', color: 'var(--color-info)' }}>
                             <Mail size={14} /> Email
-                        </button>
-                        <button onClick={() => setShowPaymentModal(true)} className="btn-ghost"
-                            style={{ padding: '8px 14px', borderColor: 'var(--color-status-accepted)', color: 'var(--color-status-accepted)' }}>
-                            <CreditCard size={14} /> Payment
                         </button>
                     </div>
                 </div>
@@ -593,43 +584,6 @@ export default function QuotationDetail() {
                                         </div>
                                     </button>
                                 ))}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* ── Payment Modal ──────────────────────────────────────────── */}
-            <AnimatePresence>
-                {showPaymentModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => setShowPaymentModal(false)}>
-                        <motion.div variants={scaleIn} initial="hidden" animate="visible" exit="hidden"
-                            onClick={e => e.stopPropagation()}
-                            style={{ background: 'var(--color-elevated)', border: '2px solid var(--color-status-accepted)', borderRadius: 'var(--radius-xl)', padding: 32, width: '100%', maxWidth: 440 }}>
-                            <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
-                                <h3 className="font-display" style={{ fontSize: 20, fontWeight: 600 }}>Add Payment</h3>
-                                <button onClick={() => setShowPaymentModal(false)} style={{ padding: 6, background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={18} /></button>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                <div><label className="label">Amount (₹)</label>
-                                    <input type="number" value={paymentForm.amountPaid} onChange={e => setPaymentForm({ ...paymentForm, amountPaid: e.target.value })} className="input-dark" /></div>
-                                <div><label className="label">Date</label>
-                                    <input type="date" value={paymentForm.paymentDate} onChange={e => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} className="input-dark" /></div>
-                                <div><label className="label">Method</label>
-                                    <select value={paymentForm.paymentMethod} onChange={e => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })} className="input-dark">
-                                        <option value="BANK_TRANSFER">Bank Transfer</option>
-                                        <option value="UPI">UPI</option>
-                                        <option value="CASH">Cash</option>
-                                        <option value="CHEQUE">Cheque</option>
-                                    </select></div>
-                                <div><label className="label">Reference</label>
-                                    <input type="text" value={paymentForm.referenceNumber} onChange={e => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })} className="input-dark" /></div>
-                            </div>
-                            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                                <button onClick={() => setShowPaymentModal(false)} className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
-                                <button onClick={handleAddPayment} className="btn-primary" style={{ flex: 1, justifyContent: 'center', background: 'var(--color-status-accepted)' }}>Save Payment</button>
                             </div>
                         </motion.div>
                     </motion.div>

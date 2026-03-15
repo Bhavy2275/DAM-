@@ -11,7 +11,6 @@ import QuotationWizard from './pages/QuotationWizard';
 import QuotationDetail from './pages/QuotationDetail';
 import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
-import Payments from './pages/Payments';
 import Settings from './pages/Settings';
 import Products from './pages/Products';
 
@@ -98,7 +97,6 @@ export default function App() {
             <Route path="/quotations/:id/edit" element={<QuotationWizard />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
-            <Route path="/payments" element={<Payments />} />
             <Route path="/products" element={<Products />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

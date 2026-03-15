@@ -86,7 +86,7 @@ export default function Clients() {
             <motion.div variants={fadeUp} style={{ marginBottom: 24 }}>
                 <div className="relative">
                     <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-accent)' }} />
-                    <input type="text" placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)}
+                    <input id="client-search" name="client-search" type="text" placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)}
                         className="input-dark" style={{ paddingLeft: 40, height: 44 }} />
                 </div>
             </motion.div>
@@ -187,8 +187,8 @@ export default function Clients() {
                                     { key: 'companyAddress', label: 'Company Address', span: 2 },
                                 ].map(f => (
                                     <div key={f.key} style={{ gridColumn: f.span === 2 ? 'span 2' : 'auto' }}>
-                                        <label className="label">{f.label}</label>
-                                        <input type={f.type || 'text'} value={form[f.key] || ''}
+                                        <label htmlFor={`client-${f.key}`} className="label">{f.label}</label>
+                                        <input id={`client-${f.key}`} name={f.key} type={f.type || 'text'} value={form[f.key] || ''}
                                             onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="input-dark" />
                                     </div>
                                 ))}

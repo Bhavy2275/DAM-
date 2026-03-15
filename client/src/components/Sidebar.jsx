@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-    LayoutDashboard, FileText, Users, CreditCard, Settings,
+    LayoutDashboard, FileText, Users, Settings,
     ChevronLeft, ChevronRight, Lightbulb
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -13,7 +13,6 @@ const navItems = [
     { path: '/quotations', icon: FileText, label: 'Quotations' },
     { path: '/clients', icon: Users, label: 'Clients' },
     { path: '/products', icon: Lightbulb, label: 'Products' },
-    { path: '/payments', icon: CreditCard, label: 'Payments' },
     { path: '/settings', icon: Settings, label: 'Settings', adminOnly: true },
 ];
 
