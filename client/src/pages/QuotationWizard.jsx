@@ -495,7 +495,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                     <td style={{ padding: '8px 8px', position: 'relative', minWidth: 160 }}>
                                         <input
                                             type="text"
-                                            value={searchVal || item.productCode || ''}
+                                            value={searches[idx] !== undefined ? searches[idx] : (item.productCode || '')}
                                             placeholder="Search product..."
                                             onChange={e => { setSearches(s => ({ ...s, [idx]: e.target.value })); setOpenSearch(idx); }}
                                             onFocus={() => setOpenSearch(idx)}
@@ -533,13 +533,13 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                         <InlineInput value={item.finalBrandName || ''} onChange={v => updateFinal(idx, 'finalBrandName', v)} placeholder="Brand" />
                                     </td>
                                     <td style={{ padding: '8px 6px' }}>
-                                        <InlineInput type="number" value={item.finalListPrice || ''} onChange={v => updateFinal(idx, 'finalListPrice', v)} placeholder="0" />
+                                        <InlineInput type="number" value={item.finalListPrice != null ? item.finalListPrice : ''} onChange={v => updateFinal(idx, 'finalListPrice', v)} placeholder="0" />
                                     </td>
                                     <td style={{ padding: '8px 6px', fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
                                         {lpGst ? formatINR(lpGst) : '—'}
                                     </td>
                                     <td style={{ padding: '8px 6px' }}>
-                                        <InlineInput type="number" value={item.finalDiscount || ''} onChange={v => updateFinal(idx, 'finalDiscount', v)} placeholder="0" />
+                                        <InlineInput type="number" value={item.finalDiscount != null ? item.finalDiscount : ''} onChange={v => updateFinal(idx, 'finalDiscount', v)} placeholder="0" />
                                     </td>
                                     <td style={{ padding: '8px 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
                                         {item.finalRate ? formatINR(parseFloat(item.finalRate)) : '—'}
@@ -551,7 +551,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                         </select>
                                     </td>
                                     <td style={{ padding: '8px 6px' }}>
-                                        <InlineInput type="number" value={item.finalQuantity || ''} onChange={v => updateFinal(idx, 'finalQuantity', v)} placeholder="0" />
+                                        <InlineInput type="number" value={item.finalQuantity != null ? item.finalQuantity : ''} onChange={v => updateFinal(idx, 'finalQuantity', v)} placeholder="0" />
                                     </td>
                                     <td style={{ padding: '8px 6px', fontWeight: 700, color: 'var(--color-accent)', fontSize: 12, whiteSpace: 'nowrap' }}>
                                         {item.finalAmount ? formatINR(parseFloat(item.finalAmount)) : '—'}
@@ -647,23 +647,50 @@ export default function QuotationWizard() {
     const loadExisting = async () => {
         try {
             const { data } = await api.get(`/quotations/${id}`);
-            setForm({ quoteTitle: data.quoteTitle, clientId: data.clientId, projectName: data.projectName, city: data.city || '', state: data.state || '', validDays: data.validDays, gstRate: data.gstRate });
+            setForm({
+                quoteTitle:  data.quoteTitle,
+                clientId:    data.clientId,
+                projectName: data.projectName,
+                city:        data.city   || '',
+                state:       data.state  || '',
+                validDays:   data.validDays,
+                gstRate:     data.gstRate
+            });
             setNotes(data.notes || '');
-            // Rebuild items with recommendations as map
+
             const loadedItems = (data.lineItems || []).map(item => {
                 const recMap = {};
                 REC_LABELS.forEach(l => {
-                    const found = item.recommendations.find(r => r.label === l);
+                    const found = (item.recommendations || []).find(r => r.label === l);
                     recMap[l] = found ? { ...found } : emptyRecommendation(l);
                 });
                 return {
                     ...item,
                     _tempId: item.id,
                     recommendations: recMap,
+                    // Ensure all final fields always exist with correct types
+                    finalBrandName:   item.finalBrandName   || '',
+                    finalProductCode: item.finalProductCode || '',
+                    finalListPrice:   item.finalListPrice   ?? 0,
+                    finalDiscount:    item.finalDiscount     ?? 0,
+                    finalRate:        item.finalRate         ?? 0,
+                    finalUnit:        item.finalUnit         || item.unit || 'NUMBERS',
+                    finalQuantity:    item.finalQuantity     ?? 0,
+                    finalAmount:      item.finalAmount       ?? 0,
+                    finalMacadamStep: item.finalMacadamStep  || '',
                 };
             });
+
             setItems(loadedItems);
-            // Detect which labels are active
+
+            // FIX: Pre-populate searches so product code shows in the input on load
+            const initialSearches = {};
+            loadedItems.forEach((item, idx) => {
+                initialSearches[idx] = item.productCode || '';
+            });
+            setSearches(initialSearches);
+
+            // Detect active rec labels
             const usedLabels = new Set();
             loadedItems.forEach(item => {
                 REC_LABELS.forEach(l => { if (item.recommendations[l]?.brandName) usedLabels.add(l); });
