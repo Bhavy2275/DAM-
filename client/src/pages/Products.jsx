@@ -442,36 +442,90 @@ export default function Products() {
                                         <label className="label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                                             <Upload size={13} /> Polar Diagram
                                         </label>
-                                        <input 
-                                            type="file" 
+
+                                        {editProduct?.polarDiagramUrl && !polarFile && (
+                                            <div style={{ marginBottom: 10 }}>
+                                                <img
+                                                    src={editProduct.polarDiagramUrl}
+                                                    alt="Current Polar Diagram"
+                                                    style={{ width: '100%', maxHeight: 120, objectFit: 'contain', borderRadius: 6, background: '#fff', border: '1px solid var(--color-border)', padding: 4 }}
+                                                    onError={e => e.target.style.display = 'none'}
+                                                />
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                                                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Current polar diagram</span>
+                                                    <a href={editProduct.polarDiagramUrl} target="_blank" rel="noreferrer"
+                                                        style={{ fontSize: 11, color: 'var(--color-accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                        Open full size ↗
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <input
+                                            type="file"
                                             accept="image/png,image/jpeg,image/webp,application/pdf"
                                             onChange={e => setPolarFile(e.target.files[0])}
                                             style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: '100%' }}
                                         />
-                                        {polarFile && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-accent)' }}>📎 {polarFile.name}</div>}
-                                        {editProduct?.polarDiagramUrl && !polarFile && (
-                                            <a href={`${API_BASE}${editProduct.polarDiagramUrl}`} target="_blank" rel="noreferrer"
-                                                style={{ marginTop: 6, display: 'block', fontSize: 11, color: 'var(--color-accent)', textDecoration: 'none' }}>
-                                                View existing ↗
-                                            </a>
+                                        {polarFile && (
+                                            <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                📎 {polarFile.name}
+                                                <button type="button" onClick={() => setPolarFile(null)}
+                                                    style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 11 }}>
+                                                    ✕ Remove
+                                                </button>
+                                            </div>
+                                        )}
+                                        {editProduct?.polarDiagramUrl && (
+                                            <p style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 6 }}>
+                                                {polarFile ? '⚠️ New file will replace current image' : 'Upload new file to replace'}
+                                            </p>
                                         )}
                                     </div>
+
                                     {/* Product Image Upload */}
                                     <div style={{ padding: 14, border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-elevated)' }}>
                                         <label className="label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                                             <Upload size={13} /> Product Image
                                         </label>
-                                        <input 
-                                            type="file" 
+
+                                        {editProduct?.productImageUrl && !imageFile && (
+                                            <div style={{ marginBottom: 10 }}>
+                                                <img
+                                                    src={editProduct.productImageUrl}
+                                                    alt="Current Product Image"
+                                                    style={{ width: '100%', maxHeight: 120, objectFit: 'contain', borderRadius: 6, background: '#fff', border: '1px solid var(--color-border)', padding: 4 }}
+                                                    onError={e => e.target.style.display = 'none'}
+                                                />
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                                                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Current product image</span>
+                                                    <a href={editProduct.productImageUrl} target="_blank" rel="noreferrer"
+                                                        style={{ fontSize: 11, color: 'var(--color-accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                        Open full size ↗
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <input
+                                            type="file"
                                             accept="image/png,image/jpeg,image/webp"
                                             onChange={e => setImageFile(e.target.files[0])}
                                             style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: '100%' }}
                                         />
-                                        {imageFile && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-accent)' }}>📎 {imageFile.name}</div>}
-                                        {editProduct?.productImageUrl && !imageFile && (
-                                            <img src={`${API_BASE}${editProduct.productImageUrl}`} alt="Product"
-                                                style={{ marginTop: 6, maxHeight: 60, maxWidth: '100%', objectFit: 'contain', borderRadius: 4 }}
-                                                onError={e => e.target.style.display = 'none'} />
+                                        {imageFile && (
+                                            <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                📎 {imageFile.name}
+                                                <button type="button" onClick={() => setImageFile(null)}
+                                                    style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 11 }}>
+                                                    ✕ Remove
+                                                </button>
+                                            </div>
+                                        )}
+                                        {editProduct?.productImageUrl && (
+                                            <p style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 6 }}>
+                                                {imageFile ? '⚠️ New file will replace current image' : 'Upload new file to replace'}
+                                            </p>
                                         )}
                                     </div>
                                 </div>

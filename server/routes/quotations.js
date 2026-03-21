@@ -29,12 +29,27 @@ function serializeItem(item) {
 // Recalculate and persist quotation totals after any item change
 async function recalculateQuotationTotal(quotationId) {
     try {
-        const items = await prisma.quotationItem.findMany({ where: { quotationId } });
-        const subtotal = items.reduce((sum, i) => sum + (i.finalAmount || 0), 0);
+        const items = await prisma.quotationItem.findMany({ 
+            where: { quotationId },
+            include: { recommendations: true }
+        });
+        
+        let subtotal = items.reduce((sum, i) => sum + (Number(i.finalAmount) || 0), 0);
+        
+        // If Final Quote is totally empty (0), fallback to REC A total so the dashboard isn't 0
+        if (subtotal === 0) {
+            subtotal = items.reduce((sum, item) => {
+                const recA = item.recommendations.find(r => r.label === 'A');
+                return sum + (recA ? (Number(recA.amount) || 0) : 0);
+            }, 0);
+        }
+
         const quotation = await prisma.quotation.findUnique({ where: { id: quotationId } });
         if (!quotation) return;
-        const gstAmount = subtotal * ((quotation.gstRate || 18) / 100);
+        
+        const gstAmount = subtotal * ((Number(quotation.gstRate) || 18) / 100);
         const grandTotal = subtotal + gstAmount;
+        
         await prisma.quotation.update({
             where: { id: quotationId },
             data: { grandTotal, subtotal, gstAmount }
@@ -79,14 +94,23 @@ router.get('/', async (req, res) => {
 router.get('/recalculate-all', async (req, res) => {
     try {
         const quotations = await prisma.quotation.findMany({
-            include: { lineItems: true }
+            include: { lineItems: { include: { recommendations: true } } }
         });
 
         let updated = 0;
 
         for (const q of quotations) {
-            const subtotal   = q.lineItems.reduce((s, i) => s + (i.finalAmount || 0), 0);
-            const gstAmount  = subtotal * ((q.gstRate || 18) / 100);
+            let subtotal = q.lineItems.reduce((s, i) => s + (Number(i.finalAmount) || 0), 0);
+            
+            // Fallback to REC A if Final Quote is empty
+            if (subtotal === 0) {
+                subtotal = q.lineItems.reduce((sum, item) => {
+                    const recA = item.recommendations.find(r => r.label === 'A');
+                    return sum + (recA ? (Number(recA.amount) || 0) : 0);
+                }, 0);
+            }
+
+            const gstAmount  = subtotal * ((Number(q.gstRate) || 18) / 100);
             const grandTotal = subtotal + gstAmount;
 
             // ONLY update financial fields — never touch quoteNumber here
@@ -373,6 +397,10 @@ router.put('/:id/items/:itemId/recommendations', async (req, res) => {
             where: { id: req.params.itemId },
             include: { recommendations: { orderBy: { label: 'asc' } } }
         });
+        
+        // Ensure the main quotation total updates to reflect this new recommendation!
+        await recalculateQuotationTotal(req.params.id);
+        
         res.json(serializeItem(item));
     } catch (error) {
         console.error('Save recommendations error:', error);

@@ -1,0 +1,76 @@
+{
+  "subtotal": 52920,
+  "items": [
+    {
+      "id": "0cf9b0ec-8e5e-4a67-9fae-7c5b6dab6e3e",
+      "quotationId": "5636fa18-15da-427a-bdb4-d248b94c8062",
+      "sno": 1,
+      "productId": "0f4b2b0b-3605-433b-82ae-2a4903218dac",
+      "productCode": "TEST-100",
+      "layoutCode": null,
+      "description": "High Lumen Architectural Downlight, 15W",
+      "basePrice": 0,
+      "polarDiagramUrl": "https://res.cloudinary.com/dre9lnm0t/image/upload/v1774096732/dam-lighting/polar-diagrams/polarDiagram-1774096730523-ptlkgct5x6i.png",
+      "productImageUrl": "https://res.cloudinary.com/dre9lnm0t/image/upload/v1774096732/dam-lighting/product-images/productImage-1774096730524-gly5im1p4y.png",
+      "bodyColours": [
+        "BLACK"
+      ],
+      "reflectorColours": [
+        "WHITE"
+      ],
+      "colourTemps": [
+        "3000K"
+      ],
+      "beamAngles": [
+        "36DEG"
+      ],
+      "cri": [
+        ">90"
+      ],
+      "unit": "NUMBERS",
+      "finalBrandName": "Philip ",
+      "finalProductCode": null,
+      "finalListPrice": 1200,
+      "finalDiscount": 10,
+      "finalRate": 1080,
+      "finalQuantity": 49,
+      "finalAmount": 52920,
+      "finalMacadamStep": "",
+      "finalUnit": "NUMBERS",
+      "recommendations": [
+        {
+          "id": "7460eea0-417c-499d-83a5-087792ffc3f5",
+          "quotationItemId": "0cf9b0ec-8e5e-4a67-9fae-7c5b6dab6e3e",
+          "label": "A",
+          "brandName": "Philip ",
+          "productCode": "",
+          "listPrice": 1200,
+          "listPriceWithGst": 1416,
+          "discountPercent": 10,
+          "rate": 1080,
+          "unit": "NUMBERS",
+          "quantity": 49,
+          "amount": 52920,
+          "macadamStep": ""
+        }
+      ],
+      "recommendationsByLabel": {
+        "A": {
+          "id": "7460eea0-417c-499d-83a5-087792ffc3f5",
+          "quotationItemId": "0cf9b0ec-8e5e-4a67-9fae-7c5b6dab6e3e",
+          "label": "A",
+          "brandName": "Philip ",
+          "productCode": "",
+          "listPrice": 1200,
+          "listPriceWithGst": 1416,
+          "discountPercent": 10,
+          "rate": 1080,
+          "unit": "NUMBERS",
+          "quantity": 49,
+          "amount": 52920,
+          "macadamStep": ""
+        }
+      }
+    }
+  ]
+}

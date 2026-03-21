@@ -2,39 +2,19 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
-const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const prisma = new PrismaClient();
 
-router.use(authenticate);
+// ─── Cloudinary multer upload ──────────────────────────────────────────────
+const { uploadProductFiles } = require('../utils/cloudinary');
 
-// ─── Multer: single uploads dir with field-type prefix in filename ─────────
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const dir = path.join(__dirname, '../uploads/products');
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        const prefix = file.fieldname === 'polarDiagram' ? 'polar' : 'img';
-        const id = req.params.id || 'new';
-        cb(null, `${id}-${prefix}-${Date.now()}${ext}`);
-    }
-});
-const fileFilter = (req, file, cb) => {
-    const ok = ['.png', '.jpg', '.jpeg', '.webp', '.svg', '.pdf'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(ok.includes(ext) ? null : new Error(`File type ${ext} not allowed`), ok.includes(ext));
-};
-const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
-
-// Fields config used on POST and PUT
-const productUpload = upload.fields([
+// Fields config reused on POST and PUT
+const productUpload = uploadProductFiles.fields([
     { name: 'polarDiagram', maxCount: 1 },
     { name: 'productImage', maxCount: 1 },
 ]);
+
+router.use(authenticate);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 function parseArr(val) {
@@ -55,8 +35,10 @@ function serializeProduct(p) {
         customAttributes: parseArr(p.customAttributes),
     };
 }
+
+// Build the Prisma data object from request body + uploaded files
 function buildData(body, files) {
-    return {
+    const data = {
         productCode:      body.productCode,
         layoutCode:       body.layoutCode || null,
         description:      body.description || '',
@@ -70,13 +52,17 @@ function buildData(body, files) {
         beamAngles:       JSON.stringify(parseArr(body.beamAngles)),
         cri:              JSON.stringify(parseArr(body.cri)),
         customAttributes: JSON.stringify(parseArr(body.customAttributes)),
-        ...(files?.polarDiagram?.[0]
-            ? { polarDiagramUrl: `/uploads/products/${files.polarDiagram[0].filename}` }
-            : {}),
-        ...(files?.productImage?.[0]
-            ? { productImageUrl: `/uploads/products/${files.productImage[0].filename}` }
-            : {}),
     };
+
+    // Cloudinary gives back the public HTTPS URL in file.path
+    if (files?.polarDiagram?.[0]) {
+        data.polarDiagramUrl = files.polarDiagram[0].path;
+    }
+    if (files?.productImage?.[0]) {
+        data.productImageUrl = files.productImage[0].path;
+    }
+
+    return data;
 }
 
 // GET /api/products
@@ -118,8 +104,19 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST /api/products — accepts JSON or multipart/form-data (with optional files)
-router.post('/', productUpload, async (req, res) => {
+// ── Wraps multer so its errors surface in the terminal ──────────────────────
+function runUpload(req, res, next) {
+    productUpload(req, res, (err) => {
+        if (err) {
+            console.error('🔴 UPLOAD MIDDLEWARE ERROR:', err);
+            return res.status(500).json({ error: `Upload failed: ${err.message}` });
+        }
+        next();
+    });
+}
+
+// POST /api/products — accepts multipart/form-data with optional Cloudinary uploads
+router.post('/', runUpload, async (req, res) => {
     try {
         const product = await prisma.product.create({ data: buildData(req.body, req.files) });
         res.status(201).json(serializeProduct(product));
@@ -130,8 +127,8 @@ router.post('/', productUpload, async (req, res) => {
     }
 });
 
-// PUT /api/products/:id — accepts JSON or multipart/form-data (with optional files)
-router.put('/:id', productUpload, async (req, res) => {
+// PUT /api/products/:id — accepts multipart/form-data with optional Cloudinary uploads
+router.put('/:id', runUpload, async (req, res) => {
     try {
         const product = await prisma.product.update({
             where: { id: req.params.id },
@@ -151,30 +148,6 @@ router.delete('/:id', async (req, res) => {
         res.json({ message: 'Product deleted' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete product' });
-    }
-});
-
-// Legacy: POST /api/products/:id/polar — still supported
-router.post('/:id/polar', upload.single('polar'), async (req, res) => {
-    try {
-        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-        const url = `/uploads/products/${req.file.filename}`;
-        const product = await prisma.product.update({ where: { id: req.params.id }, data: { polarDiagramUrl: url } });
-        res.json({ url, product: serializeProduct(product) });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to upload polar diagram' });
-    }
-});
-
-// Legacy: POST /api/products/:id/image — still supported
-router.post('/:id/image', upload.single('image'), async (req, res) => {
-    try {
-        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-        const url = `/uploads/products/${req.file.filename}`;
-        const product = await prisma.product.update({ where: { id: req.params.id }, data: { productImageUrl: url } });
-        res.json({ url, product: serializeProduct(product) });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to upload product image' });
     }
 });
 

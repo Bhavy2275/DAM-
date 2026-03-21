@@ -1,0 +1,84 @@
+{
+  "version": "2.0",
+  "template": "FINAL_WORKING_QUOTATION",
+  "coverPage": {
+    "topSection": {
+      "background": "#FFFFFF",
+      "heightPercent": 35,
+      "developedBy": {
+        "label": "DEVELOPED & ILLUMINATED BY",
+        "fields": ["companyName", "phone", "email", "website", "address"]
+      },
+      "developedFor": {
+        "label": "DEVELOPED & ILLUMINATED FOR",
+        "fields": ["clientCompanyName", "clientFullName", "clientAddress", "clientCity", "clientPinCode"]
+      }
+    },
+    "bottomSection": {
+      "background": "#0D1E40",
+      "heightPercent": 65,
+      "leftText": "Light\nQuotation",
+      "leftFont": "EB Garamond",
+      "leftFontSize": 52,
+      "rightLogo": "DAM",
+      "rightTagline": "design. allocate. maintain."
+    }
+  },
+  "productTable": {
+    "format": "A3",
+    "orientation": "landscape",
+    "headerBanner": {
+      "background": "#0D1E40",
+      "textColor": "#FFFFFF",
+      "format": "{projectName} — {city} — LIGHTING QUOTATION"
+    },
+    "columns": [
+      { "key": "sno",              "header": "S.NO",               "width": 26,  "align": "center" },
+      { "key": "layoutCode",       "header": "LAYOUT CODE",        "width": 50,  "align": "center" },
+      { "key": "productCode",      "header": "PRODUCT CODE",       "width": 50,  "align": "center" },
+      { "key": "description",      "header": "PRODUCT DESCRIPTION","width": 130, "align": "left" },
+      { "key": "polarDiagram",     "header": "POLAR DIAGRAM",      "width": 52,  "align": "center", "type": "image" },
+      { "key": "productImage",     "header": "PRODUCT IMAGE",      "width": 52,  "align": "center", "type": "image" },
+      { "key": "bodyColours",      "header": "BODY COLOUR",        "width": 52,  "align": "center", "type": "tags" },
+      { "key": "reflectorColours", "header": "REFLECTOR COLOUR",   "width": 60,  "align": "center", "type": "tags" },
+      { "key": "colourTemps",      "header": "COLOUR TEMPERATURE", "width": 56,  "align": "center", "type": "tags" },
+      { "key": "beamAngles",       "header": "BEAM ANGLE",         "width": 50,  "align": "center", "type": "tags" },
+      { "key": "cri",              "header": "CRI",                "width": 32,  "align": "center", "type": "tags" },
+      { "key": "finalProductCode", "header": "PRODUCT CODE",       "width": 52,  "align": "center" },
+      { "key": "finalListPrice",   "header": "LIST PRICE",         "width": 62,  "align": "right",  "type": "currency" },
+      { "key": "finalDiscount",    "header": "DISCOUNT %",         "width": 46,  "align": "center", "type": "percent" },
+      { "key": "finalRate",        "header": "RATE",               "width": 60,  "align": "right",  "type": "currency" },
+      { "key": "finalUnit",        "header": "UNIT",               "width": 44,  "align": "center", "type": "unit" },
+      { "key": "finalQuantity",    "header": "QUANTITY",           "width": 38,  "align": "center" },
+      { "key": "finalAmount",      "header": "AMOUNT",             "width": 66,  "align": "right",  "type": "currency" },
+      { "key": "finalMacadamStep", "header": "MACADAM",            "width": 50,  "align": "center", "type": "macadam" }
+    ],
+    "brandHeader": {
+      "show": true,
+      "columnSpan": 8,
+      "startColumn": "finalProductCode",
+      "background": "#E8F0FE",
+      "textColor": "#0D1E40"
+    }
+  },
+  "macadamMap": {
+    "5A": "100%",
+    "4A": "90%",
+    "3A": "75%",
+    "2A": "50%",
+    "1A": "40%"
+  },
+  "summaryTable": {
+    "columns": ["sno", "quantity", "unit", "productCode"],
+    "recColumns": ["brandName", "amount"],
+    "totalRows": ["SUM", "GST", "TOTAL"]
+  },
+  "termsSection": {
+    "show": true,
+    "source": "quotation.notes OR companySettings.defaultTerms"
+  },
+  "bankSection": {
+    "show": true,
+    "fields": ["accountName", "bankName", "accountNumber", "ifscCode", "gstNumber", "phone"]
+  }
+}

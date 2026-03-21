@@ -735,16 +735,18 @@ export default function QuotationWizard() {
                 let itemId = item.id;
                 if (!itemId) {
                     const { data: createdItem } = await api.post(`/quotations/${quotationId}/items`, {
-                        productId: item.productId,
-                        productCode: item.productCode,
-                        layoutCode: item.layoutCode,
-                        description: item.description,
-                        bodyColours: item.bodyColours,
+                        productId:        item.productId,
+                        productCode:      item.productCode,
+                        layoutCode:       item.layoutCode,
+                        description:      item.description,
+                        polarDiagramUrl:  item.polarDiagramUrl  || null,
+                        productImageUrl:  item.productImageUrl  || null,
+                        bodyColours:      item.bodyColours,
                         reflectorColours: item.reflectorColours,
-                        colourTemps: item.colourTemps,
-                        beamAngles: item.beamAngles,
-                        cri: item.cri,
-                        unit: item.unit,
+                        colourTemps:      item.colourTemps,
+                        beamAngles:       item.beamAngles,
+                        cri:              item.cri,
+                        unit:             item.unit,
                     });
                     itemId = createdItem.id;
                     // Update local item with real id
@@ -767,6 +769,11 @@ export default function QuotationWizard() {
 
     // Save Step 5 (final)
     const saveFinal = async () => {
+        // Wait! We are on Step 2 (Recommendations). The user just filled it out.
+        // We MUST save their recommendations before finishing the quote!
+        const ok = await saveRecommendations();
+        if (!ok) return;
+
         setSaving(true);
         try {
             const itemsWithIds = items.filter(it => it.id);
