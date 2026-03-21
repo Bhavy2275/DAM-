@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Plus, Trash2, X, ChevronDown, Save, Download, Copy } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Trash2, X, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { formatINR } from '../lib/formatCurrency';
@@ -18,7 +18,7 @@ const UNIT_OPTIONS = [{ value: 'NUMBERS', label: 'Nos.' }, { value: 'METERS', la
 const REC_COLORS = { A: '#F5A623', B: '#10B981', C: '#6c63ff', D: '#f43f5e', E: '#06b6d4', F: '#8b5cf6' };
 const STEPS = ['Quote Info', 'Final Quote', 'Recommendations'];
 
-// ─── Input utility ─────────────────────────────────────────────────────────
+// ─── Input utility ──────────────────────────────────────────────────────────
 function InlineInput({ value, onChange, type = 'text', placeholder = '', style = {}, disabled = false }) {
     return (
         <input
@@ -33,7 +33,7 @@ function InlineInput({ value, onChange, type = 'text', placeholder = '', style =
     );
 }
 
-// ─── Step 3: Quote Info ─────────────────────────────────────────────────────
+// ─── Step 1: Quote Info ─────────────────────────────────────────────────────
 function Step3QuoteInfo({ form, setForm, clients }) {
     const updateField = (k, v) => setForm(f => ({ ...f, [k]: v }));
     return (
@@ -71,8 +71,6 @@ function RecCell({ label, rec, onChange }) {
     const color = REC_COLORS[label] || 'var(--color-accent)';
     const handleChange = (key, val) => {
         const updated = { ...rec, [key]: val };
-        // Always recalculate so that rate & amount are guaranteed to be evaluated
-        // even if the user only types a brandName while listPrice was set by a template
         const recalculated = recalcRec(updated);
         onChange(recalculated);
     };
@@ -125,7 +123,7 @@ function RecCell({ label, rec, onChange }) {
     );
 }
 
-// ─── Step 4: Recommendation Table ─────────────────────────────────────────
+// ─── Step 3: Recommendations ────────────────────────────────────────────────
 function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstRate, products, quotationId }) {
     const [productSearch, setProductSearch] = useState('');
     const [showProductPicker, setShowProductPicker] = useState(false);
@@ -181,7 +179,6 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
     const updateItemField = (idx, key, val) => setItems(prev => prev.map((it, i) => i === idx ? { ...it, [key]: val } : it));
     const updateRec = (itemIdx, label, rec) => setItems(prev => prev.map((it, i) => i === itemIdx ? { ...it, recommendations: { ...it.recommendations, [label]: rec } } : it));
 
-    // Per-column totals
     const colTotals = activeLabels.map(label => {
         const sum = items.reduce((acc, item) => acc + (parseFloat(item.recommendations[label]?.amount) || 0), 0);
         const gst = sum * (gstRate / 100);
@@ -190,21 +187,21 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
 
     return (
         <div>
-            {/* Active recommendation toggles */}
             <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 12, color: 'var(--color-text-muted)', marginRight: 4 }}>Active Columns:</span>
                 {REC_LABELS.map(label => (
                     <button key={label} onClick={() => toggleLabel(label)}
-                        style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+                        style={{
+                            padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
                             border: `2px solid ${REC_COLORS[label]}`,
                             background: activeLabels.includes(label) ? REC_COLORS[label] : 'transparent',
-                            color: activeLabels.includes(label) ? '#fff' : REC_COLORS[label] }}>
+                            color: activeLabels.includes(label) ? '#fff' : REC_COLORS[label]
+                        }}>
                         Rec {label}
                     </button>
                 ))}
             </div>
 
-            {/* Product row filter (filter rows already added) */}
             <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
                 {[
                     { key: 'bodyColour', opts: BODY_COLOURS },
@@ -220,7 +217,6 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                 ))}
             </div>
 
-            {/* Wide scrollable table */}
             <div style={{ overflowX: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
                 <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900 }}>
                     <thead>
@@ -238,7 +234,6 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                     <tbody>
                         <AnimatePresence>
                             {items.map((item, idx) => {
-                                // Filter rows by attribute if filter is active
                                 const show = (
                                     (!filterAttr.bodyColour || (item.bodyColours || []).includes(filterAttr.bodyColour)) &&
                                     (!filterAttr.cct || (item.colourTemps || []).includes(filterAttr.cct)) &&
@@ -250,7 +245,6 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                                     <motion.tr key={item._tempId || item.id || idx}
                                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, height: 0 }}
                                         style={{ borderBottom: '1px solid var(--color-border)', background: idx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-base)' }}>
-                                        {/* Product info */}
                                         <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
                                             <div style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
                                                 <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--color-accent)' }}>{item.productCode}</span>
@@ -259,23 +253,18 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                                             <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 6, maxWidth: 260 }}>{item.description}</p>
                                             <AttributeTagPills bodyColours={item.bodyColours} colourTemps={item.colourTemps} beamAngles={item.beamAngles} cri={item.cri} small />
                                         </td>
-                                        {/* Unit */}
                                         <td style={{ padding: '10px 6px', verticalAlign: 'top', textAlign: 'center' }}>
                                             <select value={item.unit} onChange={e => updateItemField(idx, 'unit', e.target.value)}
                                                 style={{ padding: '3px 6px', borderRadius: 4, background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', fontSize: 11 }}>
                                                 {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                             </select>
                                         </td>
-                                        {/* Recommendation columns */}
                                         {activeLabels.map(label => (
-                                            <RecCell
-                                                key={label}
-                                                label={label}
+                                            <RecCell key={label} label={label}
                                                 rec={item.recommendations[label] || emptyRecommendation(label)}
                                                 onChange={rec => updateRec(idx, label, rec)}
                                             />
                                         ))}
-                                        {/* Delete */}
                                         <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>
                                             <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: 4, borderRadius: 4, transition: 'color 0.15s' }}
                                                 onMouseEnter={e => e.currentTarget.style.color = 'var(--color-danger)'}
@@ -287,7 +276,6 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                             })}
                         </AnimatePresence>
                     </tbody>
-                    {/* Column totals */}
                     {colTotals.some(t => t.sum > 0) && (
                         <tfoot>
                             {[
@@ -300,7 +288,7 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                                     {activeLabels.map(label => {
                                         const t = colTotals.find(c => c.label === label);
                                         return (
-                                            <td key={label} colSpan={1} style={{ padding: '8px 4px', fontSize: 11, fontWeight: row.bold ? 700 : 500, color: row.bold ? 'var(--color-base)' : 'var(--color-text-primary)', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                                            <td key={label} style={{ padding: '8px 4px', fontSize: 11, fontWeight: row.bold ? 700 : 500, color: row.bold ? 'var(--color-base)' : 'var(--color-text-primary)', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
                                                 {formatINR(t[row.key])}
                                             </td>
                                         );
@@ -313,7 +301,6 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                 </table>
             </div>
 
-            {/* Add product row buttons */}
             <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
                 <button onClick={() => setShowProductPicker(true)} className="btn-primary" style={{ fontSize: 12 }}>
                     <Plus size={14} /> Add from Library
@@ -323,7 +310,6 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                 </button>
             </div>
 
-            {/* Product picker modal */}
             <AnimatePresence>
                 {showProductPicker && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -363,14 +349,12 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
     );
 }
 
-// ─── Step 5: Final Working Quotation ─────────────────────────────────────────
-function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, setNotes, settings, products = [] }) {
-    const [importing, setImporting] = useState(null);
-    const [searches, setSearches] = useState({});
+// ─── Step 2: Final Working Quotation ────────────────────────────────────────
+// searches & setSearches are lifted to parent so they persist across re-renders
+function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, setNotes, settings, products = [], searches, setSearches }) {
     const [openSearch, setOpenSearch] = useState(null);
 
     const importFromRec = (label) => {
-        setImporting(label);
         setItems(prev => prev.map(item => {
             const rec = item.recommendations[label];
             if (!rec || !rec.brandName) return item;
@@ -388,37 +372,35 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
             };
         }));
         toast.success(`Imported Rec ${label} into Final Quotation`);
-        setImporting(null);
     };
 
-    // Auto-fill row from product library
     const applyProduct = (idx, product) => {
-        const lp   = product.listPrice       || 0;
-        const disc = product.discountPercent  || 0;
+        const lp = parseFloat(product.listPrice) || 0;
+        const disc = parseFloat(product.discountPercent) || 0;
         const rate = parseFloat((lp * (1 - disc / 100)).toFixed(2));
-        const qty  = parseFloat(items[idx]?.finalQuantity) || 1;
+        const qty = parseFloat(items[idx]?.finalQuantity) || 1;
         setItems(prev => prev.map((it, i) => i !== idx ? it : {
             ...it,
-            productId:       product.id,
-            productCode:     product.productCode     || '',
-            layoutCode:      product.layoutCode      || '',
-            description:     product.description     || '',
+            productId: product.id,
+            productCode: product.productCode || '',
+            layoutCode: product.layoutCode || '',
+            description: product.description || '',
             polarDiagramUrl: product.polarDiagramUrl || '',
             productImageUrl: product.productImageUrl || '',
-            bodyColours:     product.bodyColours     || [],
-            reflectorColours:product.reflectorColours|| [],
-            colourTemps:     product.colourTemps     || [],
-            beamAngles:      product.beamAngles      || [],
-            cri:             product.cri             || [],
-            unit:            product.unit            || 'NUMBERS',
-            finalBrandName:  product.brandName       || '',
-            finalListPrice:  lp,
-            finalDiscount:   disc,
-            finalRate:       rate,
-            finalUnit:       product.unit            || 'NUMBERS',
-            finalQuantity:   qty,
-            finalAmount:     parseFloat((rate * qty).toFixed(2)),
-            finalMacadamStep:'',
+            bodyColours: product.bodyColours || [],
+            reflectorColours: product.reflectorColours || [],
+            colourTemps: product.colourTemps || [],
+            beamAngles: product.beamAngles || [],
+            cri: product.cri || [],
+            unit: product.unit || 'NUMBERS',
+            finalBrandName: product.brandName || '',
+            finalListPrice: lp,
+            finalDiscount: disc,
+            finalRate: rate,
+            finalUnit: product.unit || 'NUMBERS',
+            finalQuantity: qty,
+            finalAmount: parseFloat((rate * qty).toFixed(2)),
+            finalMacadamStep: '',
         }));
         setSearches(s => ({ ...s, [idx]: product.productCode }));
         setOpenSearch(null);
@@ -427,8 +409,8 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
         }
     };
 
-    // Add a fresh empty row (no product pre-selected)
     const addRow = () => {
+        const newIdx = items.length;
         setItems(prev => [...prev, {
             _tempId: Date.now(),
             productId: null, productCode: 'CUSTOM', layoutCode: '',
@@ -439,13 +421,14 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
             finalBrandName: '', finalListPrice: 0, finalDiscount: 0,
             finalRate: 0, finalUnit: 'NUMBERS', finalQuantity: 1, finalAmount: 0, finalMacadamStep: '',
         }]);
+        // Initialize search for new row
+        setSearches(s => ({ ...s, [newIdx]: '' }));
     };
 
     const updateFinal = (idx, key, val) => {
         setItems(prev => prev.map((item, i) => {
             if (i !== idx) return item;
             const updated = { ...item, [key]: val };
-            // Recalculate if pricing field changes
             if (key === 'finalListPrice' || key === 'finalDiscount' || key === 'finalQuantity') {
                 const lp = parseFloat(key === 'finalListPrice' ? val : item.finalListPrice) || 0;
                 const disc = parseFloat(key === 'finalDiscount' ? val : item.finalDiscount) || 0;
@@ -463,14 +446,21 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
 
     return (
         <div>
-            {/* Toolbar */}
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <button onClick={addRow} className="btn-primary" style={{ fontSize: 12, padding: '6px 16px' }}>
                     <Plus size={14} /> Add Row
                 </button>
+                {/* Import from rec buttons */}
+                {activeLabels.map(label => (
+                    <button key={label} onClick={() => importFromRec(label)}
+                        style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${REC_COLORS[label]}`, background: 'transparent', color: REC_COLORS[label], transition: 'all 0.15s' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = REC_COLORS[label]; e.currentTarget.style.color = '#fff'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = REC_COLORS[label]; }}>
+                        Import Rec {label}
+                    </button>
+                ))}
             </div>
 
-            {/* Final table */}
             <div style={{ overflowX: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', marginBottom: 20 }}>
                 <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1100 }}>
                     <thead>
@@ -483,30 +473,38 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                     <tbody>
                         {items.map((item, idx) => {
                             const lpGst = item.finalListPrice ? calcLPWithGst(parseFloat(item.finalListPrice)) : null;
-                            const searchVal = searches[idx] ?? '';
+                            // Use searches[idx] if set, otherwise fall back to item.productCode
+                            const searchVal = searches[idx] !== undefined ? searches[idx] : (item.productCode || '');
                             const filteredProd = searchVal
                                 ? products.filter(p =>
                                     p.productCode.toLowerCase().includes(searchVal.toLowerCase()) ||
                                     p.description.toLowerCase().includes(searchVal.toLowerCase()))
                                 : products.slice(0, 10);
+
                             return (
                                 <tr key={item._tempId || item.id || idx} style={{ borderBottom: '1px solid var(--color-border)', background: idx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-base)' }}>
                                     <td style={{ padding: '8px 8px', fontSize: 12, textAlign: 'center' }}>{idx + 1}</td>
                                     <td style={{ padding: '8px 8px', position: 'relative', minWidth: 160 }}>
                                         <input
                                             type="text"
-                                            value={searches[idx] !== undefined ? searches[idx] : (item.productCode || '')}
+                                            value={searchVal}
                                             placeholder="Search product..."
-                                            onChange={e => { setSearches(s => ({ ...s, [idx]: e.target.value })); setOpenSearch(idx); }}
+                                            onChange={e => {
+                                                setSearches(s => ({ ...s, [idx]: e.target.value }));
+                                                setOpenSearch(idx);
+                                            }}
                                             onFocus={() => setOpenSearch(idx)}
+                                            onBlur={() => setTimeout(() => setOpenSearch(null), 200)}
                                             className="input-dark"
                                             style={{ padding: '3px 8px', fontSize: 11, width: '100%' }}
                                         />
                                         {openSearch === idx && filteredProd.length > 0 && (
-                                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+                                            <div style={{
+                                                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
                                                 background: 'var(--color-elevated)', border: '1px solid var(--color-border)',
                                                 borderRadius: 8, maxHeight: 220, overflowY: 'auto',
-                                                boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                                                boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                                            }}>
                                                 {filteredProd.map(p => (
                                                     <div key={p.id}
                                                         onMouseDown={e => { e.preventDefault(); applyProduct(idx, p); }}
@@ -525,12 +523,12 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                         )}
                                     </td>
                                     <td style={{ padding: '8px 8px', maxWidth: 220 }}>
-                                        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 4 }}>{item.description.substring(0, 70)}</div>
+                                        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 4 }}>{(item.description || '').substring(0, 70)}</div>
                                         <AttributeTagPills bodyColours={item.bodyColours} colourTemps={item.colourTemps} beamAngles={item.beamAngles} cri={item.cri} small />
                                     </td>
                                     <td style={{ padding: '8px 6px', fontSize: 10, color: 'var(--color-text-muted)' }}>{item.layoutCode || '—'}</td>
                                     <td style={{ padding: '8px 6px' }}>
-                                        <InlineInput value={item.finalBrandName || ''} onChange={v => updateFinal(idx, 'finalBrandName', v)} placeholder="Brand" />
+                                        <InlineInput value={item.finalBrandName ?? ''} onChange={v => updateFinal(idx, 'finalBrandName', v)} placeholder="Brand" />
                                     </td>
                                     <td style={{ padding: '8px 6px' }}>
                                         <InlineInput type="number" value={item.finalListPrice != null ? item.finalListPrice : ''} onChange={v => updateFinal(idx, 'finalListPrice', v)} placeholder="0" />
@@ -584,7 +582,6 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                 </table>
             </div>
 
-            {/* Terms */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div className="card-surface" style={{ padding: 20, cursor: 'default' }}>
                     <label className="label" style={{ marginBottom: 8 }}>Terms &amp; Conditions</label>
@@ -628,33 +625,42 @@ export default function QuotationWizard() {
     const [items, setItems] = useState([]);
     const [notes, setNotes] = useState('');
 
+    // ── searches lifted here so they survive step changes & pre-populate on edit ──
+    const [searches, setSearches] = useState({});
+
     useEffect(() => {
         loadClients();
         loadProducts();
         loadSettings();
-        if (id) loadExisting();
-    }, [id]);
+        // Only load existing if we have a real UUID (not 'new' or undefined)
+        if (id && id !== 'new' && id !== 'undefined') {
+            loadExisting();
+        }
+    }, []); // run once on mount only
 
     const loadClients = async () => { try { const { data } = await api.get('/clients'); setClients(data); } catch { } };
     const loadProducts = async () => { try { const { data } = await api.get('/products'); setProducts(data); } catch { } };
+
     const loadSettings = async () => {
         try {
             const { data } = await api.get('/settings');
             setSettings(data);
-            if (!id) setNotes(data.defaultTerms || '');
+            if (!id || id === 'new') setNotes(data.defaultTerms || '');
         } catch { }
     };
+
     const loadExisting = async () => {
         try {
             const { data } = await api.get(`/quotations/${id}`);
+
             setForm({
-                quoteTitle:  data.quoteTitle,
-                clientId:    data.clientId,
-                projectName: data.projectName,
-                city:        data.city   || '',
-                state:       data.state  || '',
-                validDays:   data.validDays,
-                gstRate:     data.gstRate
+                quoteTitle: data.quoteTitle || '',
+                clientId: data.clientId || '',
+                projectName: data.projectName || '',
+                city: data.city || '',
+                state: data.state || '',
+                validDays: data.validDays || 30,
+                gstRate: data.gstRate || 18,
             });
             setNotes(data.notes || '');
 
@@ -668,62 +674,70 @@ export default function QuotationWizard() {
                     ...item,
                     _tempId: item.id,
                     recommendations: recMap,
-                    // Ensure all final fields always exist with correct types
-                    finalBrandName:   item.finalBrandName   || '',
-                    finalProductCode: item.finalProductCode || '',
-                    finalListPrice:   item.finalListPrice   ?? 0,
-                    finalDiscount:    item.finalDiscount     ?? 0,
-                    finalRate:        item.finalRate         ?? 0,
-                    finalUnit:        item.finalUnit         || item.unit || 'NUMBERS',
-                    finalQuantity:    item.finalQuantity     ?? 0,
-                    finalAmount:      item.finalAmount       ?? 0,
-                    finalMacadamStep: item.finalMacadamStep  || '',
+                    // ── Ensure all final fields are populated from saved data ──
+                    finalBrandName: item.finalBrandName ?? '',
+                    finalProductCode: item.finalProductCode ?? '',
+                    finalListPrice: item.finalListPrice ?? 0,
+                    finalDiscount: item.finalDiscount ?? 0,
+                    finalRate: item.finalRate ?? 0,
+                    finalUnit: item.finalUnit || item.unit || 'NUMBERS',
+                    finalQuantity: item.finalQuantity ?? 0,
+                    finalAmount: item.finalAmount ?? 0,
+                    finalMacadamStep: item.finalMacadamStep ?? '',
                 };
             });
 
             setItems(loadedItems);
 
-            // FIX: Pre-populate searches so product code shows in the input on load
+            // ── Pre-populate search boxes with saved product codes ──
             const initialSearches = {};
             loadedItems.forEach((item, idx) => {
                 initialSearches[idx] = item.productCode || '';
             });
             setSearches(initialSearches);
 
-            // Detect active rec labels
+            // ── Detect which rec labels were used ──
             const usedLabels = new Set();
             loadedItems.forEach(item => {
-                REC_LABELS.forEach(l => { if (item.recommendations[l]?.brandName) usedLabels.add(l); });
+                REC_LABELS.forEach(l => {
+                    if (item.recommendations[l]?.brandName) usedLabels.add(l);
+                });
             });
             if (usedLabels.size > 0) setActiveLabels([...usedLabels]);
-        } catch { toast.error('Failed to load quotation'); }
+
+        } catch (err) {
+            console.error('loadExisting failed:', {
+                id,
+                status: err.response?.status,
+                message: err.response?.data?.error || err.message,
+            });
+            toast.error(`Failed to load quotation: ${err.response?.data?.error || err.message}`);
+        }
     };
 
     const toggleLabel = (label) => {
         setActiveLabels(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label].sort());
     };
 
-    // Save final-quote items without navigating (step 1 → 2 transition)
     const saveFinalDraft = async () => {
         if (!quotationId) return true;
         setSaving(true);
         try {
-            // Only send items that actually have final quote data — never wipe records the user hasn't touched
             const itemsWithIds = items.filter(it => it.id && (it.finalBrandName || it.finalRate || it.finalAmount));
-            if (itemsWithIds.length === 0) return true; // nothing to save yet
+            if (itemsWithIds.length === 0) return true;
             await api.put(`/quotations/${quotationId}/final`, {
                 notes,
                 items: itemsWithIds.map(it => ({
                     id: it.id,
-                    finalBrandName:   it.finalBrandName,
+                    finalBrandName: it.finalBrandName,
                     finalProductCode: it.finalProductCode || it.productCode,
-                    finalListPrice:   it.finalListPrice,
-                    finalDiscount:    it.finalDiscount,
-                    finalRate:        it.finalRate,
-                    finalQuantity:    it.finalQuantity,
-                    finalAmount:      it.finalAmount,
+                    finalListPrice: it.finalListPrice,
+                    finalDiscount: it.finalDiscount,
+                    finalRate: it.finalRate,
+                    finalQuantity: it.finalQuantity,
+                    finalAmount: it.finalAmount,
                     finalMacadamStep: it.finalMacadamStep,
-                    finalUnit:        it.finalUnit,
+                    finalUnit: it.finalUnit,
                 }))
             });
             return true;
@@ -733,7 +747,6 @@ export default function QuotationWizard() {
         } finally { setSaving(false); }
     };
 
-    // Save Step 3 (header)
     const saveHeader = async () => {
         if (!form.quoteTitle || !form.clientId || !form.projectName) {
             toast.error('Please fill in Quote Title, Client, and Project Name');
@@ -754,34 +767,30 @@ export default function QuotationWizard() {
         } finally { setSaving(false); }
     };
 
-    // Save Step 4 (recommendations)
     const saveRecommendations = async () => {
-        if (!quotationId) return true; // Will be saved when we save header first
+        if (!quotationId) return true;
         setSaving(true);
         try {
-            // First, ensure all items are saved (create or sync)
             for (const item of items) {
                 let itemId = item.id;
                 if (!itemId) {
                     const { data: createdItem } = await api.post(`/quotations/${quotationId}/items`, {
-                        productId:        item.productId,
-                        productCode:      item.productCode,
-                        layoutCode:       item.layoutCode,
-                        description:      item.description,
-                        polarDiagramUrl:  item.polarDiagramUrl  || null,
-                        productImageUrl:  item.productImageUrl  || null,
-                        bodyColours:      item.bodyColours,
+                        productId: item.productId,
+                        productCode: item.productCode,
+                        layoutCode: item.layoutCode,
+                        description: item.description,
+                        polarDiagramUrl: item.polarDiagramUrl || null,
+                        productImageUrl: item.productImageUrl || null,
+                        bodyColours: item.bodyColours,
                         reflectorColours: item.reflectorColours,
-                        colourTemps:      item.colourTemps,
-                        beamAngles:       item.beamAngles,
-                        cri:              item.cri,
-                        unit:             item.unit,
+                        colourTemps: item.colourTemps,
+                        beamAngles: item.beamAngles,
+                        cri: item.cri,
+                        unit: item.unit,
                     });
                     itemId = createdItem.id;
-                    // Update local item with real id
                     setItems(prev => prev.map(it => it._tempId === item._tempId ? { ...it, id: itemId } : it));
                 }
-                // Save recommendations for this item
                 const recs = activeLabels.map(label => {
                     const rec = item.recommendations[label];
                     return rec && rec.brandName ? { ...rec, label } : null;
@@ -796,10 +805,7 @@ export default function QuotationWizard() {
         } finally { setSaving(false); }
     };
 
-    // Save Step 5 (final)
     const saveFinal = async () => {
-        // Wait! We are on Step 2 (Recommendations). The user just filled it out.
-        // We MUST save their recommendations before finishing the quote!
         const ok = await saveRecommendations();
         if (!ok) return;
 
@@ -833,7 +839,6 @@ export default function QuotationWizard() {
             const ok = await saveHeader();
             if (ok) setStep(1);
         } else if (step === 1) {
-            // Step 1 is now Final Quote — save draft then go to Recommendations
             const ok = await saveFinalDraft();
             if (ok) setStep(2);
         }
@@ -843,18 +848,16 @@ export default function QuotationWizard() {
 
     return (
         <motion.div variants={staggerContainer} initial="hidden" animate="visible" style={{ padding: 32, maxWidth: 1600, margin: '0 auto' }}>
-            {/* Header */}
             <motion.div variants={fadeUp} className="flex items-center justify-between" style={{ marginBottom: 24 }}>
                 <div>
                     <h1 className="font-display" style={{ fontSize: '2.2rem', fontWeight: 700 }}>
-                        {id ? 'Edit Quotation' : 'New Quotation'}
+                        {id && id !== 'new' ? 'Edit Quotation' : 'New Quotation'}
                     </h1>
                     <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4 }}>Step {step + 1} of {STEPS.length}</p>
                 </div>
                 <button onClick={() => navigate('/quotations')} className="btn-ghost"><ArrowLeft size={16} /> Back</button>
             </motion.div>
 
-            {/* Step progress */}
             <motion.div variants={fadeUp} className="flex items-center gap-2" style={{ marginBottom: 28 }}>
                 {STEPS.map((s, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -873,31 +876,39 @@ export default function QuotationWizard() {
                 ))}
             </motion.div>
 
-            {/* Step content */}
             <AnimatePresence mode="wait">
                 <motion.div key={step} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-                    {step === 0 && <Step3QuoteInfo form={form} setForm={setForm} clients={clients} />}
+                    {step === 0 && (
+                        <Step3QuoteInfo form={form} setForm={setForm} clients={clients} />
+                    )}
                     {step === 1 && (
                         <Step5FinalQuotation
-                            items={items} setItems={setItems}
-                            gstRate={form.gstRate} activeLabels={activeLabels}
-                            notes={notes} setNotes={setNotes}
+                            items={items}
+                            setItems={setItems}
+                            gstRate={form.gstRate}
+                            activeLabels={activeLabels}
+                            notes={notes}
+                            setNotes={setNotes}
                             settings={settings}
                             products={products}
+                            searches={searches}
+                            setSearches={setSearches}
                         />
                     )}
                     {step === 2 && (
                         <Step4Recommendations
-                            items={items} setItems={setItems}
-                            activeLabels={activeLabels} toggleLabel={toggleLabel}
-                            gstRate={form.gstRate} products={products}
+                            items={items}
+                            setItems={setItems}
+                            activeLabels={activeLabels}
+                            toggleLabel={toggleLabel}
+                            gstRate={form.gstRate}
+                            products={products}
                             quotationId={quotationId}
                         />
                     )}
                 </motion.div>
             </AnimatePresence>
 
-            {/* Navigation */}
             <div className="flex items-center justify-between" style={{ marginTop: 32 }}>
                 <button onClick={handleBack} disabled={step === 0} className="btn-ghost" style={{ opacity: step === 0 ? 0.3 : 1 }}>
                     <ArrowLeft size={16} /> Previous
