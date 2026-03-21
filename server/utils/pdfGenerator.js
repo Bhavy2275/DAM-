@@ -1,434 +1,868 @@
-const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
+const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
 
-const MACADAM_SPACE = { '1A': 40, '2A': 50, '3A': 75, '4A': 90, '5A': 100 };
+const MACADAM_MAP = {
+  "5A": "100%",
+  "4A": "90%",
+  "3A": "75%",
+  "2A": "50%",
+  "1A": "40%",
+};
 
-function fmt(n) {
-    if (n == null || n === '' || isNaN(Number(n))) return '—';
-    const num = Number(n);
-    if (num === 0) return '0';
-    return 'Rs.\u00A0' + num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+function fmt(amount) {
+  if (amount == null || amount === "") return "—";
+  const n = Number(amount);
+  if (isNaN(n)) return "—";
+  return (
+    "Rs.\u00A0" +
+    n.toLocaleString("en-IN", {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+    })
+  );
 }
 
-function num(n) {
-    if (n == null || isNaN(n)) return '—';
-    return Number(n).toLocaleString('en-IN');
-}
-
-function pillHtml(arr) {
-    if (!Array.isArray(arr) || arr.length === 0) return '—';
-    return arr.map(v => `<span class="pill">${v.replace('DEG', '°').replace(/_/g, ' ')}</span>`).join(' ');
-}
-
-// Convert a local /uploads/... path to a base64 data URI for Puppeteer embedding
-function imageToBase64(imageUrl) {
-    if (!imageUrl) return null;
+function parseArr(val) {
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
     try {
-        // Strip leading slash and resolve against server root
-        const relative = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
-        const fullPath = path.join(__dirname, '..', relative);
-        if (fs.existsSync(fullPath)) {
-            const buffer = fs.readFileSync(fullPath);
-            const ext = path.extname(fullPath).slice(1).toLowerCase();
-            const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
-            return `data:${mime};base64,${buffer.toString('base64')}`;
-        }
-    } catch (err) {
-        console.error('imageToBase64 error:', imageUrl, err.message);
+      const p = JSON.parse(val);
+      return Array.isArray(p) ? p : [];
+    } catch {
+      return [];
     }
-    return null;
+  }
+  return [];
 }
 
-function coverPage(q, settings) {
-    const s = settings || {};
-    return `
-  <div class="cover-page">
-    <div class="cover-top">
-      <div class="cover-by">
-        <div class="cover-label">DEVELOPED &amp; ILLUMINATED BY</div>
-        <div class="cover-company">${s.companyName || 'DAM Lighting Solution LLP'}</div>
-        <div class="cover-sub">${s.phone || ''} &nbsp;|&nbsp; ${s.email || ''}</div>
-        <div class="cover-sub">${s.website || ''}</div>
-        <div class="cover-address">${s.address || ''}</div>
-      </div>
-      <div class="cover-for">
-        <div class="cover-label">DEVELOPED &amp; ILLUMINATED FOR</div>
-        <div class="cover-company">${q.client?.companyName || ''}</div>
-        <div class="cover-sub">${q.client?.fullName || ''}</div>
-        <div class="cover-address">${q.client?.address || ''}, ${q.client?.city || ''} — ${q.client?.pinCode || ''}</div>
-      </div>
-    </div>
-    <div class="cover-bottom">
-      <div class="cover-quote-label">
-        <h1>Light<br>Quotation</h1>
-      </div>
-      <div class="cover-dam">
-        <div class="cover-dam-logo">DAM</div>
-        <div class="cover-dam-tag">design. allocate. maintain.</div>
-      </div>
-    </div>
-  </div>`;
+function tagCell(val) {
+  const items = parseArr(val);
+  if (!items.length) return "—";
+  return items
+    .map(
+      (v) =>
+        '<span style="display:inline-block;font-size:6.5px;background:#EDF2FF;border-radius:2px;padding:1px 4px;margin:1px;color:#0D1E40">' +
+        v.replace(/DEG/g, "°").replace(/_/g, " ") +
+        "</span>",
+    )
+    .join("");
 }
 
-function allRecsPdf(q, settings) {
-    const labels = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const activeLabels = [];
-    for (const label of labels) {
-        if (q.lineItems.some(item => (item.recommendations || []).some(r => r.label === label && r.brandName))) {
-            activeLabels.push(label);
-        }
+function macadamCell(step) {
+  if (!step) return "—";
+  const pct = MACADAM_MAP[step] || "";
+  return (
+    '<div style="font-weight:700;font-size:8px">' +
+    step +
+    "</div>" +
+    '<div style="font-size:6.5px;color:#666;margin-top:1px">' +
+    pct +
+    "</div>"
+  );
+}
+
+const https = require("https");
+const http = require("http");
+
+function toBase64(imageUrl) {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+    return new Promise((resolve) => {
+      const pdfUrl = imageUrl.includes("res.cloudinary.com")
+        ? imageUrl.replace("/upload/", "/upload/w_200,q_auto,f_auto/")
+        : imageUrl;
+      const client = pdfUrl.startsWith("https") ? https : http;
+      client
+        .get(pdfUrl, (res) => {
+          const chunks = [];
+          res.on("data", (chunk) => chunks.push(chunk));
+          res.on("end", () => {
+            const buffer = Buffer.concat(chunks);
+            const mime = res.headers["content-type"] || "image/png";
+            resolve("data:" + mime + ";base64," + buffer.toString("base64"));
+          });
+          res.on("error", () => resolve(null));
+        })
+        .on("error", () => resolve(null));
+    });
+  }
+  try {
+    const relative = imageUrl.startsWith("/") ? imageUrl.slice(1) : imageUrl;
+    const fullPath = path.join(__dirname, "..", relative);
+    if (fs.existsSync(fullPath)) {
+      const buffer = fs.readFileSync(fullPath);
+      const ext = path.extname(fullPath).slice(1).toLowerCase();
+      const mime =
+        ext === "jpg" || ext === "jpeg"
+          ? "image/jpeg"
+          : ext === "svg"
+            ? "image/svg+xml"
+            : "image/" + ext;
+      return "data:" + mime + ";base64," + buffer.toString("base64");
     }
-
-    // Totals per active recommendation column
-    const recTotals = activeLabels.map(label => {
-        const sum = q.lineItems.reduce((acc, item) => {
-            const r = (item.recommendations || []).find(r => r.label === label);
-            return acc + (r ? (r.amount || 0) : 0);
-        }, 0);
-        const gst = sum * ((q.gstRate || 18) / 100);
-        return { label, sum, gst, total: sum + gst };
-    });
-
-    // Main product rows
-    const rowsHtml = q.lineItems.map((item, i) => {
-        const polarSrc = imageToBase64(item.polarDiagramUrl);
-        const polarCell = polarSrc
-            ? `<img src="${polarSrc}" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto;" />`
-            : '—';
-
-        const recCells = activeLabels.map(label => {
-            const r = (item.recommendations || []).find(r => r.label === label);
-            if (!r || !r.brandName) return `<td class="rec-cell" colspan="3">—</td>`;
-            const space = MACADAM_SPACE[r.macadamStep] != null ? MACADAM_SPACE[r.macadamStep] + '%' : '—';
-            return `
-              <td class="rec-cell">${r.macadamStep || '—'}</td>
-              <td class="rec-cell mono">${fmt(r.rate)}</td>
-              <td class="rec-cell mono">${fmt(r.amount)}<br><small>${space}</small></td>`;
-        }).join('');
-
-        return `<tr class="${i % 2 === 0 ? 'row-even' : 'row-odd'}">
-          <td>${item.sno}</td>
-          <td><strong>${item.productCode}</strong></td>
-          <td class="center">${polarCell}</td>
-          <td class="desc">${(item.description || '').substring(0, 70)}</td>
-          <td>${item.unit === 'NUMBERS' ? 'Nos.' : 'Mtr.'}</td>
-          ${recCells}
-        </tr>`;
-    }).join('');
-
-    // Summary table (Ramada-format): S.No | Qty | Unit | Code | REC A (brand+amount) | REC B | ...
-    const summaryItemRows = q.lineItems.map((item, idx) => {
-        const recCells = activeLabels.map(label => {
-            const r = (item.recommendations || []).find(r => r.label === label);
-            if (!r || !r.brandName) return `<td class="summary-cell">—</td>`;
-            return `<td class="summary-cell">
-              <span class="summary-brand">${r.brandName}</span><br>
-              <span class="summary-amount">${fmt(r.amount)}</span>
-            </td>`;
-        }).join('');
-
-        return `<tr class="${idx % 2 === 0 ? 'row-even' : 'row-odd'}">
-          <td class="center">${idx + 1}</td>
-          <td class="center">${item.unit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
-          <td class="code">${item.productCode || ''}</td>
-          ${recCells}
-        </tr>`;
-    }).join('');
-
-    const recHeaders = activeLabels.map(l => `<th colspan="3" class="rec-header">REC ${l}</th>`).join('');
-    const recSubHeaders = activeLabels.map(() => `<th>Macadam</th><th>Rate</th><th>Amount</th>`).join('');
-    const summaryRecHeaders = activeLabels.map(l => `<th>REC ${l}<br><small>(Brand / Amount)</small></th>`).join('');
-
-    const totalRows = [
-        { label: 'SUB-TOTAL', key: 'sum', cls: 'subtotal-row' },
-        { label: `GST ${q.gstRate || 18}%`, key: 'gst', cls: 'subtotal-row' },
-        { label: 'GRAND TOTAL', key: 'total', cls: 'total-row' },
-    ].map(({ label, key, cls }) => `
-      <tr class="${cls}">
-        <td colspan="3" class="right bold">${label}</td>
-        ${recTotals.map(t => `<td class="num bold">${fmt(t[key])}</td>`).join('')}
-      </tr>`).join('');
-
-    return `
-  <div class="products-wrapper">
-    <div class="section-header">${q.projectName} — ${q.city} — RECOMMENDATION COLUMNS</div>
-    <table class="main-table">
-      <thead>
-        <tr>
-          <th rowspan="2">S.No</th>
-          <th rowspan="2">Code</th>
-          <th rowspan="2">Polar</th>
-          <th rowspan="2">Description</th>
-          <th rowspan="2">Unit</th>
-          ${recHeaders}
-        </tr>
-        <tr>${recSubHeaders}</tr>
-      </thead>
-      <tbody>${rowsHtml}</tbody>
-    </table>
-
-    <div class="summary-section">
-      <div class="summary-title">RECOMMENDATION SUMMARY</div>
-      <table class="summary-table">
-        <thead>
-          <tr>
-            <th>S.No</th>
-            <th>Unit</th>
-            <th>Code</th>
-            ${summaryRecHeaders}
-          </tr>
-        </thead>
-        <tbody>
-          ${summaryItemRows}
-          ${totalRows}
-        </tbody>
-      </table>
-    </div>
-  </div>`;
+  } catch (err) {
+    console.error("toBase64 local error:", err.message);
+  }
+  return null;
 }
 
-function finalPdf(q, settings) {
-    const items = q.lineItems;
-    const subtotal = items.reduce((acc, i) => acc + (i.finalAmount || 0), 0);
-    const gstAmt = subtotal * ((q.gstRate || 18) / 100);
-    const grandTotal = subtotal + gstAmt;
+const TABLE_STYLE =
+  "width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px;";
+const TH =
+  "border:0.5px solid #bbb;padding:5px 3px;text-align:center;font-weight:700;font-size:7px;color:#0D1E40;background:#f0f0f0;vertical-align:middle;line-height:1.2;";
+const TD =
+  "border:0.5px solid #ddd;padding:4px 3px;vertical-align:middle;line-height:1.3;font-size:7.5px;";
 
-    const rowsHtml = items.map((item, i) => {
-        const polarSrc = imageToBase64(item.polarDiagramUrl);
-        const polarCell = polarSrc
-            ? `<img src="${polarSrc}" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto;" />`
-            : '—';
+// ── COVER PAGE ─────────────────────────────────────────────────────────────
+function coverHTML(quotation, settings) {
+  const client = quotation.client || {};
 
-        return `<tr class="${i % 2 === 0 ? 'row-even' : 'row-odd'}">
-          <td>${item.sno}</td>
-          <td><strong>${item.productCode}</strong></td>
-          <td class="center">${polarCell}</td>
-          <td class="desc">${(item.description || '').substring(0, 90)}</td>
-          <td>${pillHtml(Array.isArray(item.bodyColours) ? item.bodyColours : [])}</td>
-          <td>${pillHtml(Array.isArray(item.colourTemps) ? item.colourTemps : [])}</td>
-          <td>${pillHtml(Array.isArray(item.beamAngles) ? item.beamAngles : [])}</td>
-          <td>${pillHtml(Array.isArray(item.cri) ? item.cri : [])}</td>
-          <td>${item.layoutCode || '—'}</td>
-          <td>${item.finalBrandName || '—'}</td>
-          <td class="mono">${fmt(item.finalListPrice)}</td>
-          <td class="mono">${fmt(item.finalListPrice ? item.finalListPrice * 1.18 : null)}</td>
-          <td>${item.finalDiscount != null ? item.finalDiscount + '%' : '—'}</td>
-          <td class="mono">${fmt(item.finalRate)}</td>
-          <td>${item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
-          <td>${num(item.finalQuantity)}</td>
-          <td class="mono"><strong>${fmt(item.finalAmount)}</strong></td>
-          <td>${item.finalMacadamStep || '—'}</td>
-        </tr>`;
-    }).join('');
+  const companyName =
+    settings && settings.companyName
+      ? settings.companyName
+      : "Dam Lighting Solution LLP";
+  const companyPhone = settings && settings.phone ? settings.phone : "";
+  const companyEmail = settings && settings.email ? settings.email : "";
+  const companyWebsite = settings && settings.website ? settings.website : "";
+  const companyAddress = settings && settings.address ? settings.address : "";
 
-    const terms = (q.notes || '').split('\n').map(t => t.trim()).filter(Boolean);
-    const s = settings || {};
+  const clientName = client.companyName || client.fullName || "";
+  const clientPerson =
+    client.companyName && client.fullName ? client.fullName : "";
 
-    return `
-  <div class="products-wrapper">
-    <div class="section-header">${q.projectName} — ${q.city} — FINAL LIGHTING QUOTATION</div>
-    <table class="main-table final-table">
-      <thead>
-        <tr>
-          <th>S.No</th><th>Code</th><th>Polar</th><th>Description</th>
-          <th>Body</th><th>CCT</th><th>Beam</th><th>CRI</th><th>Layout</th>
-          <th>Brand</th><th>LP</th><th>LP+18%</th><th>Disc%</th><th>Rate</th>
-          <th>Unit</th><th>Qty</th><th>Amount</th><th>Macadam</th>
-        </tr>
-      </thead>
-      <tbody>${rowsHtml}</tbody>
-    </table>
+  const cityParts = [];
+  if (client.city) cityParts.push(client.city);
+  if (client.state) cityParts.push(client.state);
+  if (client.pinCode) cityParts.push("— " + client.pinCode);
+  const clientCityPin = cityParts.join(", ");
 
-    <div class="summary-section">
-      <table class="totals-table">
-        <tr><td>Sub-Total</td><td class="mono">${fmt(subtotal)}</td></tr>
-        <tr><td>GST (${q.gstRate}%)</td><td class="mono">${fmt(gstAmt)}</td></tr>
-        <tr class="grand-total"><td>GRAND TOTAL</td><td class="mono">${fmt(grandTotal)}</td></tr>
-      </table>
-    </div>
+  const clientPersonLine = clientPerson
+    ? '<p style="font-size:13px;color:#555;margin:0 0 6px 0">' +
+      clientPerson +
+      "</p>"
+    : "";
+  const clientAddressLine = client.address
+    ? '<p style="font-size:13px;color:#555;margin:0 0 4px 0">' +
+      client.address +
+      "</p>"
+    : "";
+  const companyAddrFormatted = companyAddress
+    ? companyAddress
+        .split(",")
+        .map(function (s) {
+          return s.trim();
+        })
+        .filter(Boolean)
+        .join("<br>")
+    : "";
 
-    <div class="footer-section">
-      ${terms.length ? `<div class="terms-title">Terms &amp; Conditions</div>
-      <ol class="terms-list">${terms.map(t => `<li>${t.replace(/^\d+\.\s*/, '')}</li>`).join('')}</ol>` : ''}
-
-      <div class="bank-section">
-        <div class="bank-title">Bank Details</div>
-        <div class="bank-grid">
-          <div><span class="bank-label">Account Name:</span> ${s.accountName || ''}</div>
-          <div><span class="bank-label">Bank:</span> ${s.bankName || ''}</div>
-          <div><span class="bank-label">Account No:</span> ${s.accountNumber || ''}</div>
-          <div><span class="bank-label">IFSC:</span> ${s.ifscCode || ''}</div>
-          <div><span class="bank-label">GST No:</span> ${s.gstNumber || ''}</div>
-          <div><span class="bank-label">Address:</span> ${s.bankAddress || ''}</div>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  // Two-row full-page layout using an absolutely positioned structure
+  return (
+    "" +
+    '<div style="position:relative;width:100%;height:100%;background:#fff">' +
+    // ── TOP WHITE AREA (38% height) ──
+    '<div style="position:absolute;top:0;left:0;right:0;height:38%;padding:32px 32px 0 32px;box-sizing:border-box">' +
+    '<div style="border:1px solid #ccc;height:100%;padding:40px 48px;box-sizing:border-box;display:flex">' +
+    // Left col
+    '<div style="flex:1;padding-right:36px;border-right:1px solid #e0e0e0">' +
+    '<p style="font-size:11px;font-weight:700;color:#0D1E40;letter-spacing:2px;text-transform:uppercase;margin:0 0 18px 0">Developed &amp; Illuminated By</p>' +
+    '<p style="font-size:20px;font-weight:700;color:#111;margin:0 0 18px 0">' +
+    companyName +
+    "</p>" +
+    '<p style="font-size:14px;color:#555;line-height:1.9;margin:0 0 18px 0">' +
+    companyPhone +
+    "<br>" +
+    companyEmail +
+    "<br>" +
+    companyWebsite +
+    "</p>" +
+    '<p style="font-size:14px;color:#555;line-height:1.7;margin:0">' +
+    companyAddrFormatted +
+    "</p>" +
+    "</div>" +
+    // Right col
+    '<div style="flex:1;padding-left:48px">' +
+    '<p style="font-size:11px;font-weight:700;color:#0D1E40;letter-spacing:2px;text-transform:uppercase;margin:0 0 18px 0">Developed &amp; Illuminated For</p>' +
+    '<p style="font-size:20px;font-weight:700;color:#111;margin:0 0 18px 0">' +
+    clientName +
+    "</p>" +
+    clientPersonLine +
+    clientAddressLine +
+    '<p style="font-size:14px;color:#555;margin:0">' +
+    clientCityPin +
+    "</p>" +
+    "</div>" +
+    "</div>" + // inner border box
+    "</div>" + // top area
+    // ── BOTTOM NAVY AREA (remaining 62%) ──
+    '<div style="position:absolute;bottom:0;left:0;right:0;height:62%;background:#0D1E40;display:flex;align-items:flex-end;justify-content:space-between;padding:56px 72px;box-sizing:border-box">' +
+    '<div style="font-family:Georgia,serif;font-size:80px;font-weight:700;color:#fff;line-height:1.0;letter-spacing:-2px">Light<br>Quotation</div>' +
+    '<div style="text-align:right">' +
+    '<div style="font-family:Arial Black,Arial,sans-serif;font-size:76px;font-weight:900;color:#fff;letter-spacing:-4px;line-height:1">DAM</div>' +
+    '<div style="font-size:16px;color:rgba(255,255,255,0.7);letter-spacing:2px;margin-top:10px">design. allocate. maintain.</div>' +
+    "</div>" +
+    "</div>" + // navy area
+    "</div>"
+  ); // root
 }
 
-const CSS = `
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 9px; color: #1a1a2e; background: #fff;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-  }
+// ── TERMS + BANK ───────────────────────────────────────────────────────────
+function termsAndBankHTML(quotation, settings) {
+  const s = settings || {};
+  const rawTerms = quotation.notes || s.defaultTerms || "";
+  const terms = rawTerms
+    .split("\n")
+    .map(function (t) {
+      return t.trim();
+    })
+    .filter(Boolean);
+  const termsList = terms.length
+    ? '<ol style="padding-left:14px;line-height:1.8;color:#333;font-size:8px;margin:0">' +
+      terms
+        .map(function (t) {
+          return (
+            '<li style="margin-bottom:3px">' +
+            t.replace(/^\d+\.\s*/, "") +
+            "</li>"
+          );
+        })
+        .join("") +
+      "</ol>"
+    : '<p style="font-size:8px;color:#999">No terms specified.</p>';
 
-  /* ── COVER PAGE: exact A4, no internal breaks ── */
-  .cover-page {
-    width: 210mm;
-    height: 297mm;
-    min-height: 297mm;
-    max-height: 297mm;
-    display: flex;
-    flex-direction: column;
-    page-break-inside: avoid;
-    break-inside: avoid;
-    page-break-after: always;
-    break-after: page;
-    overflow: hidden;
-    position: relative;
-  }
+  const bankFields = [
+    ["Account Name", s.accountName || ""],
+    ["Bank Name", s.bankName || ""],
+    ["Account Number", s.accountNumber || ""],
+    ["IFSC Code", s.ifscCode || ""],
+    ["GST No.", s.gstNumber || ""],
+    ["Contact", s.phone || ""],
+  ];
+  const bankRows = bankFields
+    .map(function (row) {
+      return (
+        "<tr>" +
+        '<td style="padding:3px 7px;border:0.5px solid #ddd;font-weight:600;color:#0D1E40;background:#f5f5f5;white-space:nowrap;width:115px;font-size:8px">' +
+        row[0] +
+        "</td>" +
+        '<td style="padding:3px 7px;border:0.5px solid #ddd;font-size:8px">' +
+        row[1] +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
 
-  .cover-top {
-    display: flex;
-    flex: 0 0 35%;
-    padding: 55px 48px;
-    background: #ffffff;
-    gap: 40px;
-    overflow: hidden;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
+  return (
+    '<div style="display:flex;gap:36px;margin:18px 12px 10px;font-family:Arial,sans-serif">' +
+    '<div style="flex:1.3"><div style="font-weight:700;font-size:9px;color:#0D1E40;border-bottom:1.5px solid #0D1E40;padding-bottom:3px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Terms &amp; Conditions</div>' +
+    termsList +
+    "</div>" +
+    '<div style="flex:0.9"><div style="font-weight:700;font-size:9px;color:#0D1E40;border-bottom:1.5px solid #0D1E40;padding-bottom:3px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Bank Details</div><table style="width:100%;border-collapse:collapse">' +
+    bankRows +
+    "</table></div>" +
+    "</div>"
+  );
+}
 
-  .cover-by, .cover-for { flex: 1; }
+// ── FINAL TABLE ────────────────────────────────────────────────────────────
+async function finalTableHTML(quotation) {
+  var items = quotation.lineItems || [];
+  var subtotal = items.reduce(function (s, i) {
+    return s + (Number(i.finalAmount) || 0);
+  }, 0);
 
-  .cover-label { font-size: 9px; font-weight: 700; color: #0A1628; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; }
-  .cover-company { font-size: 15px; font-weight: 700; color: #070C18; margin-bottom: 10px; line-height: 1.3; }
-  .cover-sub { font-size: 10px; color: #444; margin-bottom: 5px; }
-  .cover-address { font-size: 10px; color: #666; margin-top: 8px; line-height: 1.5; }
-
-  .cover-bottom {
-    flex: 1;
-    background: #0A1628;
-    padding: 50px 48px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    overflow: hidden;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  .cover-quote-label h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 48px; font-weight: 700; color: #fff; line-height: 1.1; margin: 0; }
-  .cover-dam { text-align: right; }
-  .cover-dam-logo { font-size: 40px; font-weight: 900; color: #F5A623; letter-spacing: -1px; line-height: 1; }
-  .cover-dam-tag { font-size: 10px; color: rgba(255,255,255,0.7); letter-spacing: 1px; margin-top: 6px; text-transform: lowercase; }
-
-  /* ── CONTENT SECTIONS ── */
-  .products-wrapper { padding: 14mm 10mm; }
-  .page-break { page-break-before: always; break-before: page; }
-  .section-header { background: #070C18; color: #fff; padding: 10px 14px; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; }
-
-  /* ── TABLES ── */
-  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-  .main-table th { background: #0E1629; color: #7B91B0; font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px; padding: 5px 3px; text-align: center; border: 1px solid #1E2D47; }
-  .main-table td { padding: 4px 3px; border: 1px solid #e8ebf0; font-size: 8px; text-align: center; vertical-align: middle; }
-  .desc { text-align: left !important; font-size: 7.5px; }
-  .code { text-align: left !important; font-weight: 600; font-size: 8px; }
-  .center { text-align: center; }
-  .right { text-align: right !important; }
-  .num { text-align: right !important; font-variant-numeric: tabular-nums; }
-  .bold { font-weight: 700; }
-  .row-even { background: #fff; }
-  .row-odd { background: #F8F9FC; }
-  .rec-header { background: #152035 !important; color: #F5A623 !important; }
-  .rec-cell { font-size: 7.5px; }
-  .mono { font-variant-numeric: tabular-nums; }
-  .pill { display: inline-block; padding: 1px 4px; border-radius: 3px; background: #EDF2FF; font-size: 6.5px; color: #0E1629; margin: 1px; }
-
-  /* ── SUMMARY TABLE ── */
-  .summary-section { margin: 14px 0; }
-  .summary-title { font-weight: 700; font-size: 9px; color: #070C18; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #F5A623; padding-bottom: 3px; }
-  .summary-table { width: 100%; border-collapse: collapse; }
-  .summary-table th { background: #0E1629; color: #7B91B0; padding: 5px 6px; font-size: 8px; font-weight: 600; border: 1px solid #1E2D47; text-align: center; }
-  .summary-table td { padding: 4px 6px; border: 1px solid #e8ebf0; font-size: 8px; }
-  .summary-cell { padding: 4px 6px !important; vertical-align: middle; }
-  .summary-brand { font-size: 7.5px; color: #333; font-weight: 600; display: block; }
-  .summary-amount { font-size: 8px; font-weight: 700; color: #0D1E40; font-variant-numeric: tabular-nums; display: block; }
-  .subtotal-row td { background: #f0f4ff; font-weight: 600; font-size: 8px; }
-  .total-row td { background: #070C18; color: #F5A623; font-weight: 700; font-size: 9px; }
-
-  /* ── FINAL TOTALS ── */
-  .totals-table { margin-left: auto; border-collapse: collapse; min-width: 280px; }
-  .totals-table td { padding: 5px 10px; border: 1px solid #e8ebf0; font-size: 9px; }
-  .totals-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-  .grand-total td { background: #070C18; color: #F5A623; font-weight: 700; font-size: 11px; }
-
-  /* ── FOOTER ── */
-  .footer-section { margin-top: 20px; padding-top: 14px; border-top: 2px solid #F5A623; }
-  .terms-title { font-weight: 700; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 7px; color: #070C18; }
-  .terms-list { padding-left: 16px; margin-bottom: 18px; }
-  .terms-list li { margin-bottom: 3px; font-size: 8.5px; color: #333; line-height: 1.4; }
-  .bank-section { margin-top: 14px; }
-  .bank-title { font-weight: 700; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 7px; color: #070C18; }
-  .bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; }
-  .bank-grid > div { font-size: 8.5px; color: #333; }
-  .bank-label { font-weight: 600; color: #555; }
-
-  /* ── FINAL TABLE specifics ── */
-  .final-table th { font-size: 7px; padding: 4px 2px; }
-  .final-table td { font-size: 7.5px; padding: 3px 2px; }
-`;
-
-async function generatePDF(quotation, settings, mode = 'final') {
-    const bodyContent = mode === 'all_recs'
-        ? allRecsPdf(quotation, settings)
-        : finalPdf(quotation, settings);
-
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>${CSS}</style>
-</head>
-<body>
-  ${coverPage(quotation, settings)}
-  ${bodyContent}
-</body>
-</html>`;
-
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--font-render-hinting=none'
-        ]
-    });
-    try {
-        const page = await browser.newPage();
-        await page.setViewport({ width: 794, height: 1123 });
-        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
-
-        // Ensure fonts are fully painted before PDF generation
-        await page.evaluateHandle('document.fonts.ready');
-
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            landscape: mode === 'all_recs',
-            printBackground: true,
-            preferCSSPageSize: true,
-            margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+  if (subtotal === 0) {
+    items = items.map(function (item) {
+      var recA = (item.recommendations || []).find(function (r) {
+        return r.label === "A";
+      });
+      if (recA)
+        return Object.assign({}, item, {
+          finalBrandName: recA.brandName || item.finalBrandName,
+          finalProductCode: recA.productCode || item.finalProductCode,
+          finalListPrice: recA.listPrice,
+          finalDiscount: recA.discountPercent,
+          finalRate: recA.rate,
+          finalUnit: recA.unit,
+          finalQuantity: recA.quantity,
+          finalAmount: recA.amount,
+          finalMacadamStep: recA.macadamStep,
         });
-        return pdfBuffer;
-    } finally {
-        await browser.close();
+      return item;
+    });
+    subtotal = items.reduce(function (s, i) {
+      return s + (Number(i.finalAmount) || 0);
+    }, 0);
+  }
+
+  var gstAmt = subtotal * ((quotation.gstRate || 18) / 100);
+  var grand = subtotal + gstAmt;
+
+  var polarB64s = await Promise.all(
+    items.map(function (i) {
+      return Promise.resolve(toBase64(i.polarDiagramUrl));
+    }),
+  );
+  var productB64s = await Promise.all(
+    items.map(function (i) {
+      return Promise.resolve(toBase64(i.productImageUrl));
+    }),
+  );
+
+  var groups = [];
+  var current = null;
+  for (var gi = 0; gi < items.length; gi++) {
+    var brand = items[gi].finalBrandName || "";
+    if (!current || current.brand !== brand) {
+      current = { brand: brand, items: [] };
+      groups.push(current);
     }
+    current.items.push(items[gi]);
+  }
+
+  var globalIdx = 0;
+  var rowsHTML = "";
+  for (var g = 0; g < groups.length; g++) {
+    var group = groups[g];
+    rowsHTML +=
+      '<tr><td colspan="11" style="' +
+      TD +
+      ' background:#f7f8fa"></td><td colspan="8" style="' +
+      TD +
+      ' background:#E8F0FE;color:#0D1E40;text-align:center;font-weight:700;font-size:8px;letter-spacing:0.5px">' +
+      (group.brand || "BRAND") +
+      "</td></tr>";
+    for (var ii = 0; ii < group.items.length; ii++) {
+      var item = group.items[ii];
+      var itemIdx = items.indexOf(item);
+      var rowBg = globalIdx % 2 === 0 ? "#fff" : "#f7f8fa";
+      globalIdx++;
+      var polarB64 = polarB64s[itemIdx];
+      var productB64 = productB64s[itemIdx];
+      var polarCell = polarB64
+        ? '<img src="' +
+          polarB64 +
+          '" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto"/>'
+        : "—";
+      var prodImgCell = productB64
+        ? '<img src="' +
+          productB64 +
+          '" style="width:40px;height:40px;object-fit:contain;display:block;margin:auto"/>'
+        : "—";
+      rowsHTML +=
+        '<tr style="background:' +
+        rowBg +
+        '">' +
+        '<td style="' +
+        TD +
+        ' text-align:center">' +
+        (item.sno || globalIdx) +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center;font-size:7px">' +
+        (item.layoutCode || "—") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' font-weight:700;color:#0D1E40;text-align:center;font-size:7px">' +
+        (item.productCode || "") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' font-size:7px;line-height:1.4;color:#333">' +
+        (item.description || "").slice(0, 220) +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center;padding:3px">' +
+        polarCell +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center;padding:3px">' +
+        prodImgCell +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center">' +
+        tagCell(item.bodyColours) +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center">' +
+        tagCell(item.reflectorColours) +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center">' +
+        tagCell(item.colourTemps) +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center">' +
+        tagCell(item.beamAngles) +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center">' +
+        tagCell(item.cri) +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center;font-size:7px">' +
+        (item.finalProductCode || "—") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:right;font-variant-numeric:tabular-nums">' +
+        (item.finalListPrice != null ? fmt(item.finalListPrice) : "—") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center">' +
+        (item.finalDiscount != null ? item.finalDiscount + "%" : "—") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:right;font-weight:600;font-variant-numeric:tabular-nums">' +
+        (item.finalRate != null ? fmt(item.finalRate) : "—") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center;font-size:7px">' +
+        (item.finalUnit === "METERS" ? "Mtr." : "Nos.") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center;font-weight:700">' +
+        (item.finalQuantity != null ? item.finalQuantity : "—") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:right;font-weight:700;color:#0D1E40;font-variant-numeric:tabular-nums">' +
+        (item.finalAmount != null ? fmt(item.finalAmount) : "—") +
+        "</td>" +
+        '<td style="' +
+        TD +
+        ' text-align:center">' +
+        macadamCell(item.finalMacadamStep) +
+        "</td>" +
+        "</tr>";
+    }
+  }
+
+  var gstRate = quotation.gstRate || 18;
+  var banner =
+    (quotation.projectName || "") +
+    " \u2014 " +
+    (quotation.city || "") +
+    " \u2014 LIGHTING QUOTATION";
+
+  return (
+    '<div style="padding:8px 10px;font-family:Arial,sans-serif;font-size:8px">' +
+    '<div style="background:#0D1E40;color:#fff;text-align:center;font-weight:700;font-size:10.5px;padding:8px 12px;letter-spacing:1px">' +
+    banner +
+    "</div>" +
+    '<table style="' +
+    TABLE_STYLE +
+    '"><colgroup>' +
+    '<col style="width:26px"><col style="width:50px"><col style="width:50px"><col style="width:130px">' +
+    '<col style="width:52px"><col style="width:52px"><col style="width:52px"><col style="width:60px">' +
+    '<col style="width:56px"><col style="width:50px"><col style="width:32px"><col style="width:52px">' +
+    '<col style="width:62px"><col style="width:46px"><col style="width:60px"><col style="width:44px">' +
+    '<col style="width:38px"><col style="width:66px"><col style="width:50px">' +
+    "</colgroup><thead><tr>" +
+    '<th style="' +
+    TH +
+    '">S.NO</th><th style="' +
+    TH +
+    '">LAYOUT<br>CODE</th><th style="' +
+    TH +
+    '">PRODUCT<br>CODE</th>' +
+    '<th style="' +
+    TH +
+    '">PRODUCT DESCRIPTION</th><th style="' +
+    TH +
+    '">POLAR<br>DIAGRAM</th>' +
+    '<th style="' +
+    TH +
+    '">PRODUCT<br>IMAGE</th><th style="' +
+    TH +
+    '">BODY<br>COLOUR</th>' +
+    '<th style="' +
+    TH +
+    '">REFLECTOR<br>COLOUR</th><th style="' +
+    TH +
+    '">COLOUR<br>TEMP.</th>' +
+    '<th style="' +
+    TH +
+    '">BEAM<br>ANGLE</th><th style="' +
+    TH +
+    '">CRI</th>' +
+    '<th style="' +
+    TH +
+    '">PRODUCT<br>CODE</th><th style="' +
+    TH +
+    '">LIST<br>PRICE</th>' +
+    '<th style="' +
+    TH +
+    '">DISC.<br>%</th><th style="' +
+    TH +
+    '">RATE</th>' +
+    '<th style="' +
+    TH +
+    '">UNIT</th><th style="' +
+    TH +
+    '">QTY</th>' +
+    '<th style="' +
+    TH +
+    '">AMOUNT</th><th style="' +
+    TH +
+    '">MACADAM</th>' +
+    "</tr></thead><tbody>" +
+    rowsHTML +
+    "</tbody><tfoot>" +
+    '<tr><td colspan="17" style="' +
+    TD +
+    ' text-align:right;font-weight:700;background:#f0f0f4;font-size:8px">Sub-Total</td><td style="' +
+    TD +
+    ' text-align:right;font-weight:700;background:#f0f0f4;font-variant-numeric:tabular-nums">' +
+    fmt(subtotal) +
+    '</td><td style="' +
+    TD +
+    ' background:#f0f0f4"></td></tr>' +
+    '<tr><td colspan="17" style="' +
+    TD +
+    ' text-align:right;background:#f0f0f4;font-size:8px">GST (' +
+    gstRate +
+    '%)</td><td style="' +
+    TD +
+    ' text-align:right;background:#f0f0f4;font-variant-numeric:tabular-nums">' +
+    fmt(gstAmt) +
+    '</td><td style="' +
+    TD +
+    ' background:#f0f0f4"></td></tr>' +
+    '<tr><td colspan="17" style="' +
+    TD +
+    ' text-align:right;font-weight:700;background:#0D1E40;color:#fff;font-size:9px">GRAND TOTAL</td><td style="' +
+    TD +
+    ' text-align:right;font-weight:700;background:#0D1E40;color:#fff;font-size:9px;font-variant-numeric:tabular-nums">' +
+    fmt(grand) +
+    '</td><td style="' +
+    TD +
+    ' background:#0D1E40"></td></tr>' +
+    "</tfoot></table></div>"
+  );
+}
+
+// ── ALL RECS TABLE ─────────────────────────────────────────────────────────
+async function allRecsTableHTML(quotation) {
+  var items = quotation.lineItems || [];
+  var labels = ["A", "B", "C", "D", "E", "F"];
+  var activeLabels = labels.filter(function (label) {
+    return items.some(function (item) {
+      return (item.recommendations || []).some(function (r) {
+        return r.label === label && r.brandName;
+      });
+    });
+  });
+  var recTotals = activeLabels.map(function (label) {
+    var sum = items.reduce(function (acc, item) {
+      var r = (item.recommendations || []).find(function (r) {
+        return r.label === label;
+      });
+      return acc + (r ? Number(r.amount) || 0 : 0);
+    }, 0);
+    var gst = sum * ((quotation.gstRate || 18) / 100);
+    return { label: label, sum: sum, gst: gst, total: sum + gst };
+  });
+  var recHeaders = activeLabels
+    .map(function (l) {
+      return (
+        '<th colspan="3" style="' +
+        TH +
+        ' background:#E8F0FE;color:#0D1E40">REC ' +
+        l +
+        "</th>"
+      );
+    })
+    .join("");
+  var recSubHeaders = activeLabels
+    .map(function () {
+      return (
+        '<th style="' +
+        TH +
+        '">MACADAM</th><th style="' +
+        TH +
+        '">RATE</th><th style="' +
+        TH +
+        '">AMOUNT</th>'
+      );
+    })
+    .join("");
+  var polarB64s = await Promise.all(
+    items.map(function (i) {
+      return Promise.resolve(toBase64(i.polarDiagramUrl));
+    }),
+  );
+  var rowsHTML = "";
+  for (var idx = 0; idx < items.length; idx++) {
+    var item = items[idx];
+    var polarB64 = polarB64s[idx];
+    var polarCell = polarB64
+      ? '<img src="' +
+        polarB64 +
+        '" style="width:42px;height:42px;object-fit:contain;display:block;margin:auto"/>'
+      : "—";
+    var recCells = "";
+    for (var li = 0; li < activeLabels.length; li++) {
+      var label = activeLabels[li];
+      var r = (item.recommendations || []).find(function (rec) {
+        return rec.label === label;
+      });
+      if (!r || !r.brandName) {
+        recCells +=
+          '<td style="' +
+          TD +
+          ' text-align:center">—</td><td style="' +
+          TD +
+          '">—</td><td style="' +
+          TD +
+          '">—</td>';
+      } else {
+        recCells +=
+          '<td style="' +
+          TD +
+          ' text-align:center">' +
+          macadamCell(r.macadamStep) +
+          '</td><td style="' +
+          TD +
+          ' text-align:right;font-variant-numeric:tabular-nums">' +
+          fmt(r.rate) +
+          '</td><td style="' +
+          TD +
+          ' text-align:right;font-weight:700;font-variant-numeric:tabular-nums">' +
+          fmt(r.amount) +
+          "</td>";
+      }
+    }
+    var rowBg = idx % 2 === 0 ? "#fff" : "#f7f8fa";
+    rowsHTML +=
+      '<tr style="background:' +
+      rowBg +
+      '"><td style="' +
+      TD +
+      ' text-align:center">' +
+      (item.sno || idx + 1) +
+      '</td><td style="' +
+      TD +
+      ' font-weight:700;color:#0D1E40;font-size:7px">' +
+      (item.productCode || "") +
+      '</td><td style="' +
+      TD +
+      ' font-size:7px;line-height:1.4;color:#333">' +
+      (item.description || "").slice(0, 150) +
+      '</td><td style="' +
+      TD +
+      ' text-align:center;padding:3px">' +
+      polarCell +
+      '</td><td style="' +
+      TD +
+      ' text-align:center;font-size:7px">' +
+      (item.finalUnit === "METERS" ? "Mtr." : "Nos.") +
+      '</td><td style="' +
+      TD +
+      ' text-align:center;font-weight:700">' +
+      (item.finalQuantity != null ? item.finalQuantity : "—") +
+      "</td>" +
+      recCells +
+      "</tr>";
+  }
+  var gstRate = quotation.gstRate || 18;
+  var banner =
+    (quotation.projectName || "") +
+    " \u2014 " +
+    (quotation.city || "") +
+    " \u2014 ALL RECOMMENDATIONS";
+  var totalRowsHTML = "";
+  var totalDefs = [
+    { label: "SUB-TOTAL", key: "sum", bg: "#f0f0f4", color: "#333" },
+    { label: "GST " + gstRate + "%", key: "gst", bg: "#f0f0f4", color: "#333" },
+    { label: "GRAND TOTAL", key: "total", bg: "#0D1E40", color: "#fff" },
+  ];
+  for (var ti = 0; ti < totalDefs.length; ti++) {
+    var def = totalDefs[ti];
+    totalRowsHTML +=
+      '<tr><td colspan="6" style="' +
+      TD +
+      " text-align:right;font-weight:700;background:" +
+      def.bg +
+      ";color:" +
+      def.color +
+      ';font-size:8.5px">' +
+      def.label +
+      "</td>";
+    for (var ri = 0; ri < recTotals.length; ri++) {
+      var t = recTotals[ri];
+      totalRowsHTML +=
+        '<td style="' +
+        TD +
+        " background:" +
+        def.bg +
+        ";color:" +
+        def.color +
+        '"></td><td style="' +
+        TD +
+        " background:" +
+        def.bg +
+        ";color:" +
+        def.color +
+        '"></td><td style="' +
+        TD +
+        " text-align:right;font-weight:700;background:" +
+        def.bg +
+        ";color:" +
+        def.color +
+        ';font-variant-numeric:tabular-nums">' +
+        fmt(t[def.key]) +
+        "</td>";
+    }
+    totalRowsHTML += "</tr>";
+  }
+  return (
+    '<div style="padding:8px 10px;font-family:Arial,sans-serif;font-size:8px"><div style="background:#0D1E40;color:#fff;text-align:center;font-weight:700;font-size:10.5px;padding:8px 12px;letter-spacing:1px">' +
+    banner +
+    '</div><table style="' +
+    TABLE_STYLE +
+    '"><thead><tr><th rowspan="2" style="' +
+    TH +
+    '">S.NO</th><th rowspan="2" style="' +
+    TH +
+    '">CODE</th><th rowspan="2" style="' +
+    TH +
+    '">DESCRIPTION</th><th rowspan="2" style="' +
+    TH +
+    '">POLAR</th><th rowspan="2" style="' +
+    TH +
+    '">UNIT</th><th rowspan="2" style="' +
+    TH +
+    '">QTY</th>' +
+    recHeaders +
+    "</tr><tr>" +
+    recSubHeaders +
+    "</tr></thead><tbody>" +
+    rowsHTML +
+    "</tbody><tfoot>" +
+    totalRowsHTML +
+    "</tfoot></table></div>"
+  );
+}
+
+// ── MAIN EXPORT ────────────────────────────────────────────────────────────
+async function generatePDF(quotation, settings, mode) {
+  mode = mode || "final";
+  var cover = coverHTML(quotation, settings);
+  var terms = termsAndBankHTML(quotation, settings);
+  var tableHTML =
+    mode === "all_recs"
+      ? await allRecsTableHTML(quotation)
+      : await finalTableHTML(quotation);
+
+  var html =
+    '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
+    "<style>" +
+    "* { margin:0; padding:0; box-sizing:border-box; }" +
+    "html,body { margin:0; padding:0; width:100%; }" +
+    "body { font-family:Arial,sans-serif; font-size:8.5px; color:#222; -webkit-print-color-adjust:exact; print-color-adjust:exact; background:#fff; }" +
+    "@page { margin:0; size:A3 landscape; }" +
+    "@page :first { size:A4 portrait; }" +
+    "</style></head><body>" +
+    // Cover — full A4 portrait page
+    '<div style="width:100vw;height:100vh;page-break-after:always;break-after:page;overflow:hidden;position:relative">' +
+    cover +
+    "</div>" +
+    // Table — A3 landscape
+    '<div style="page-break-before:always;break-before:page">' +
+    tableHTML +
+    terms +
+    "</div>" +
+    "</body></html>";
+
+  var browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--font-render-hinting=none",
+    ],
+  });
+
+  try {
+    var page = await browser.newPage();
+    await page.setViewport({ width: 794, height: 1123 });
+    await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
+    await page.evaluateHandle("document.fonts.ready");
+
+    // Generate cover as A4 portrait
+    var coverPdf = await page.pdf({
+      format: "A4",
+      landscape: false,
+      printBackground: true,
+      margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+      pageRanges: "1",
+    });
+
+    // Generate table as A3 landscape
+    await page.setViewport({ width: 1587, height: 1123 });
+    var tablePdf = await page.pdf({
+      format: "A3",
+      landscape: true,
+      printBackground: true,
+      margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+      pageRanges: "2-",
+    });
+
+    // Merge PDFs using pdf-lib if available, otherwise return table pdf with cover embedded
+    try {
+      const { PDFDocument } = require("pdf-lib");
+      const coverDoc = await PDFDocument.load(coverPdf);
+      const tableDoc = await PDFDocument.load(tablePdf);
+      const mergedDoc = await PDFDocument.create();
+
+      const coverPages = await mergedDoc.copyPages(
+        coverDoc,
+        coverDoc.getPageIndices(),
+      );
+      coverPages.forEach((p) => mergedDoc.addPage(p));
+
+      const tablePages = await mergedDoc.copyPages(
+        tableDoc,
+        tableDoc.getPageIndices(),
+      );
+      tablePages.forEach((p) => mergedDoc.addPage(p));
+
+      const mergedBytes = await mergedDoc.save();
+      return Buffer.from(mergedBytes);
+    } catch (pdfLibErr) {
+      // pdf-lib not available — generate as single A3 landscape PDF
+      console.log("pdf-lib not available, generating single format PDF");
+      await page.setViewport({ width: 1587, height: 1123 });
+      const singlePdf = await page.pdf({
+        format: "A3",
+        landscape: true,
+        printBackground: true,
+        margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+      });
+      return singlePdf;
+    }
+  } finally {
+    await browser.close();
+  }
 }
 
 module.exports = { generatePDF };
