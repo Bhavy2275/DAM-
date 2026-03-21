@@ -681,7 +681,9 @@ export default function QuotationWizard() {
         if (!quotationId) return true;
         setSaving(true);
         try {
-            const itemsWithIds = items.filter(it => it.id);
+            // Only send items that actually have final quote data — never wipe records the user hasn't touched
+            const itemsWithIds = items.filter(it => it.id && (it.finalBrandName || it.finalRate || it.finalAmount));
+            if (itemsWithIds.length === 0) return true; // nothing to save yet
             await api.put(`/quotations/${quotationId}/final`, {
                 notes,
                 items: itemsWithIds.map(it => ({

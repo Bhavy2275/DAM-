@@ -419,20 +419,21 @@ router.put('/:id/final', async (req, res) => {
 
         if (items && items.length > 0) {
             for (const item of items) {
-                await prisma.quotationItem.update({
-                    where: { id: item.id },
-                    data: {
-                        finalBrandName: item.finalBrandName || null,
-                        finalProductCode: item.finalProductCode || null,
-                        finalListPrice: parseFloat(item.finalListPrice) || null,
-                        finalDiscount: parseFloat(item.finalDiscount) || null,
-                        finalRate: parseFloat(item.finalRate) || null,
-                        finalQuantity: parseFloat(item.finalQuantity) || null,
-                        finalAmount: parseFloat(item.finalAmount) || null,
-                        finalMacadamStep: item.finalMacadamStep || null,
-                        finalUnit: item.finalUnit || null,
-                    }
-                });
+                // Only update fields that are explicitly provided — never null-out existing data
+                const data = {};
+                if (item.finalBrandName   !== undefined) data.finalBrandName   = item.finalBrandName   || null;
+                if (item.finalProductCode !== undefined) data.finalProductCode = item.finalProductCode || null;
+                if (item.finalListPrice   !== undefined) data.finalListPrice   = parseFloat(item.finalListPrice)  || null;
+                if (item.finalDiscount    !== undefined) data.finalDiscount    = parseFloat(item.finalDiscount)   || null;
+                if (item.finalRate        !== undefined) data.finalRate        = parseFloat(item.finalRate)       || null;
+                if (item.finalQuantity    !== undefined) data.finalQuantity    = parseFloat(item.finalQuantity)   || null;
+                if (item.finalAmount      !== undefined) data.finalAmount      = parseFloat(item.finalAmount)     || null;
+                if (item.finalMacadamStep !== undefined) data.finalMacadamStep = item.finalMacadamStep || null;
+                if (item.finalUnit        !== undefined) data.finalUnit        = item.finalUnit        || null;
+
+                if (Object.keys(data).length > 0) {
+                    await prisma.quotationItem.update({ where: { id: item.id }, data });
+                }
             }
         }
 
