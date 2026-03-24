@@ -21,6 +21,7 @@ function serializeItem(item) {
         colourTemps: parseArr(item.colourTemps),
         beamAngles: parseArr(item.beamAngles),
         cri: parseArr(item.cri),
+        customFields: parseArr(item.customFields || '{}'),
         recommendations: item.recommendations || [],
         recommendationsByLabel: recs,
     };
@@ -157,7 +158,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/quotations  — create header (Step 3)
 router.post('/', async (req, res) => {
     try {
-        const { quoteTitle, clientId, projectName, city, state, validDays, gstRate, notes } = req.body;
+        const { quoteTitle, clientId, projectName, city, state, validDays, gstRate, notes, customLabels } = req.body;
         const quoteNumber = await generateQuoteNumber();
         const quotation = await prisma.quotation.create({
             data: {
@@ -166,6 +167,7 @@ router.post('/', async (req, res) => {
                 validDays: validDays || 30,
                 gstRate: gstRate || 18,
                 notes: notes || '',
+                customLabels: customLabels || null,
                 createdById: req.user.id,
             },
             include: { client: true, lineItems: true }
@@ -180,10 +182,12 @@ router.post('/', async (req, res) => {
 // PUT /api/quotations/:id  — update header
 router.put('/:id', async (req, res) => {
     try {
-        const { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes } = req.body;
+        const { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes, customLabels } = req.body;
+        const updateData = { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes };
+        if (customLabels !== undefined) updateData.customLabels = customLabels;
         const quotation = await prisma.quotation.update({
             where: { id: req.params.id },
-            data: { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes },
+            data: updateData,
             include: { client: true }
         });
         // If gstRate changed, recalculate stored totals
@@ -283,7 +287,7 @@ router.post('/:id/duplicate', async (req, res) => {
 router.post('/:id/items', async (req, res) => {
     try {
         const { productId, productCode, layoutCode, description, polarDiagramUrl, productImageUrl,
-            bodyColours, reflectorColours, colourTemps, beamAngles, cri, unit } = req.body;
+            bodyColours, reflectorColours, colourTemps, beamAngles, cri, unit, customFields } = req.body;
 
         // Get current max sno
         const count = await prisma.quotationItem.count({ where: { quotationId: req.params.id } });
@@ -304,6 +308,7 @@ router.post('/:id/items', async (req, res) => {
                 beamAngles: JSON.stringify(beamAngles || []),
                 cri: JSON.stringify(cri || []),
                 unit: unit || 'NUMBERS',
+                customFields: JSON.stringify(customFields || {}),
             },
             include: { recommendations: true }
         });
@@ -319,24 +324,28 @@ router.post('/:id/items', async (req, res) => {
 router.put('/:id/items/:itemId', async (req, res) => {
     try {
         const {
-            unit, sno, productCode, layoutCode, description,
+            unit, sno, productCode, layoutCode, description, currentCustomFields,
             finalBrandName, finalProductCode, finalListPrice, finalDiscount,
             finalRate, finalUnit, finalQuantity, finalAmount, finalMacadamStep
         } = req.body;
+        const dataToUpdate = {
+            unit, sno, productCode, layoutCode, description,
+            ...(finalBrandName !== undefined && { finalBrandName: finalBrandName || null }),
+            ...(finalProductCode !== undefined && { finalProductCode: finalProductCode || null }),
+            ...(finalListPrice !== undefined && { finalListPrice: parseFloat(finalListPrice) || null }),
+            ...(finalDiscount !== undefined && { finalDiscount: parseFloat(finalDiscount) || null }),
+            ...(finalRate !== undefined && { finalRate: parseFloat(finalRate) || null }),
+            ...(finalUnit !== undefined && { finalUnit: finalUnit || null }),
+            ...(finalQuantity !== undefined && { finalQuantity: parseFloat(finalQuantity) || null }),
+            ...(finalAmount !== undefined && { finalAmount: parseFloat(finalAmount) || null }),
+            ...(finalMacadamStep !== undefined && { finalMacadamStep: finalMacadamStep || null }),
+        };
+        if (currentCustomFields !== undefined) {
+            dataToUpdate.customFields = typeof currentCustomFields === 'string' ? currentCustomFields : JSON.stringify(currentCustomFields);
+        }
         const item = await prisma.quotationItem.update({
             where: { id: req.params.itemId },
-            data: {
-                unit, sno, productCode, layoutCode, description,
-                ...(finalBrandName !== undefined && { finalBrandName: finalBrandName || null }),
-                ...(finalProductCode !== undefined && { finalProductCode: finalProductCode || null }),
-                ...(finalListPrice !== undefined && { finalListPrice: parseFloat(finalListPrice) || null }),
-                ...(finalDiscount !== undefined && { finalDiscount: parseFloat(finalDiscount) || null }),
-                ...(finalRate !== undefined && { finalRate: parseFloat(finalRate) || null }),
-                ...(finalUnit !== undefined && { finalUnit: finalUnit || null }),
-                ...(finalQuantity !== undefined && { finalQuantity: parseFloat(finalQuantity) || null }),
-                ...(finalAmount !== undefined && { finalAmount: parseFloat(finalAmount) || null }),
-                ...(finalMacadamStep !== undefined && { finalMacadamStep: finalMacadamStep || null }),
-            },
+            data: dataToUpdate,
             include: { recommendations: true }
         });
         await recalculateQuotationTotal(req.params.id);
@@ -430,6 +439,9 @@ router.put('/:id/final', async (req, res) => {
                 if (item.finalAmount      !== undefined) data.finalAmount      = parseFloat(item.finalAmount)     || null;
                 if (item.finalMacadamStep !== undefined) data.finalMacadamStep = item.finalMacadamStep || null;
                 if (item.finalUnit        !== undefined) data.finalUnit        = item.finalUnit        || null;
+                if (item.customFields     !== undefined) {
+                    data.customFields = typeof item.customFields === 'string' ? item.customFields : JSON.stringify(item.customFields);
+                }
 
                 if (Object.keys(data).length > 0) {
                     await prisma.quotationItem.update({ where: { id: item.id }, data });

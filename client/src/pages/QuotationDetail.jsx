@@ -110,6 +110,14 @@ export default function QuotationDetail() {
         return { label, sum, gst, total: sum + gst };
     });
 
+    const customCols = (() => {
+        try {
+            const cl = typeof quotation.customLabels === 'string' ? JSON.parse(quotation.customLabels) : quotation.customLabels || {};
+            return cl.__customCols || [];
+        } catch { return []; }
+    })();
+
+
     // Final quote totals
     const finalSubtotal = quotation.lineItems.reduce((acc, i) => acc + (i.finalAmount || 0), 0);
     const finalGst      = finalSubtotal * (quotation.gstRate / 100);
@@ -128,7 +136,7 @@ export default function QuotationDetail() {
     const fixedCols  = COL.sno + COL.code + COL.desc + COL.unit;
     const recColW    = [COL.brand, COL.qty, COL.rate, COL.amt, COL.mac];
     const recGroupW  = recColW.reduce((s, w) => s + w, 0);
-    const recTableW  = fixedCols + recGroupW * usedLabels.length;
+    const recTableW  = fixedCols + (customCols.length * 85) + recGroupW * usedLabels.length;
 
     return (
         <motion.div variants={staggerContainer} initial="hidden" animate="visible"
@@ -241,6 +249,7 @@ export default function QuotationDetail() {
                                 <col style={{ width: COL.code }} />
                                 <col style={{ width: COL.desc }} />
                                 <col style={{ width: COL.unit }} />
+                                {customCols.map(c => <col key={c.id} style={{ width: 85 }} />)}
                                 {usedLabels.flatMap(() =>
                                     recColW.map((w, i) => <col key={i} style={{ width: w }} />)
                                 )}
@@ -253,6 +262,14 @@ export default function QuotationDetail() {
                                     <th rowSpan={2} style={thStyle({ borderRight: '1px solid var(--color-border)' })}>Code</th>
                                     <th rowSpan={2} style={thStyle({ borderRight: '1px solid var(--color-border)' })}>Description</th>
                                     <th rowSpan={2} style={thStyle({ textAlign: 'center', borderRight: '2px solid var(--color-border)' })}>Unit</th>
+                                    {customCols.map(c => (
+                                        <th key={c.id} rowSpan={2} style={thStyle({
+                                            textAlign: 'center', color: 'var(--color-accent)', background: 'rgba(59, 130, 246, 0.05)',
+                                            borderRight: '2px solid var(--color-border)',
+                                        })}>
+                                            {c.label}
+                                        </th>
+                                    ))}
                                     {usedLabels.map(label => (
                                         <th key={label} colSpan={SUB_COLS}
                                             style={{
@@ -304,6 +321,20 @@ export default function QuotationDetail() {
                                             {item.unit === 'METERS' ? 'Mtr.' : 'Nos.'}
                                         </td>
 
+                                        {customCols.map(c => {
+                                            const cf = (() => {
+                                                try { return typeof item.customFields === 'string' ? JSON.parse(item.customFields) : item.customFields || {}; }
+                                                catch { return {}; }
+                                            })();
+                                            const val = cf[c.id];
+                                            const display = (val === 'true' || val === true) ? '✓' : (val === 'false' || val === false) ? '✗' : (val != null && val !== '' ? String(val) : '—');
+                                            return (
+                                                <td key={c.id} style={tdStyle({ textAlign: 'center', borderRight: '2px solid var(--color-border)' })}>
+                                                    {display}
+                                                </td>
+                                            );
+                                        })}
+
                                         {usedLabels.flatMap(label => {
                                             const rec = (item.recommendations || []).find(r => r.label === label);
                                             return [
@@ -331,7 +362,7 @@ export default function QuotationDetail() {
                                         background: highlight ? 'var(--color-accent)' : 'var(--color-base)',
                                         borderTop: bold ? '2px solid var(--color-border)' : undefined,
                                     }}>
-                                        <td colSpan={4} style={{
+                                        <td colSpan={4 + customCols.length} style={{
                                             padding: '10px 14px', textAlign: 'right',
                                             fontWeight: bold ? 800 : 600, fontSize: 12,
                                             color: highlight ? 'var(--color-base)' : 'var(--color-text-primary)',
@@ -392,21 +423,42 @@ export default function QuotationDetail() {
                                 <col style={{ width: 65 }} />
                                 <col style={{ width: 95 }} />
                                 <col style={{ width: 65 }} />
-                                <col style={{ width: 55 }} />
-                                <col style={{ width: 105 }} />
+                                <col style={{ width: 65 }} />
                                 <col style={{ width: 100 }} />
+                                <col style={{ width: 105 }} />
+                                {customCols.map(c => <col key={c.id} style={{ width: 85 }} />)}
                             </colgroup>
                             <thead>
                                 <tr style={{ background: 'var(--color-base)' }}>
                                     {['S.No','Code','Description','Brand','LP','LP+18%','Disc%','Rate','Unit','Qty','Amount','Macadam'].map((h, i) => (
-                                        <th key={h} style={thStyle({
-                                            textAlign: [4,5,7,10].includes(i) ? 'right' : [0,6,8,9].includes(i) ? 'center' : 'left',
+                                        <th key={h} rowSpan={customCols.length ? 2 : 1} style={thStyle({
+                                            textAlign: [4,5,7,11].includes(i) ? 'right' : [0,6,8,9,10].includes(i) ? 'center' : 'left',
                                             borderRight: '1px solid var(--color-border)',
                                         })}>
                                             {h}
                                         </th>
                                     ))}
+                                    {customCols.length > 0 && (
+                                        <th colSpan={customCols.length} style={thStyle({
+                                            textAlign: 'center', color: 'var(--color-accent)', background: 'rgba(59, 130, 246, 0.05)', letterSpacing: 1.5,
+                                            borderRight: 'none'
+                                        })}>
+                                            ADD-ONS
+                                        </th>
+                                    )}
                                 </tr>
+                                {customCols.length > 0 && (
+                                    <tr style={{ background: 'var(--color-base)' }}>
+                                        {customCols.map((c, i) => (
+                                            <th key={c.id} style={thStyle({
+                                                textAlign: 'center', color: 'var(--color-accent)', background: 'rgba(59, 130, 246, 0.05)',
+                                                borderRight: i === customCols.length - 1 ? 'none' : '1px solid var(--color-border)',
+                                            })}>
+                                                {c.label}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                )}
                             </thead>
                             <tbody>
                                 {quotation.lineItems.map((item) => (
@@ -423,23 +475,36 @@ export default function QuotationDetail() {
                                         <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalRate != null ? formatINR(item.finalRate) : '—'}</td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalQuantity != null ? item.finalQuantity : '—'}</td>
-                                        <td style={tdStyle({ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)', fontVariantNumeric: 'tabular-nums' })}>{item.finalAmount != null ? formatINR(item.finalAmount) : '—'}</td>
-                                        <td style={tdStyle()}><MacadamBadge step={item.finalMacadamStep} showSpace /></td>
+                                        <td style={tdStyle({ textAlign: 'center', borderRight: '1px solid var(--color-border)' })}><MacadamBadge step={item.finalMacadamStep} showSpace /></td>
+                                        <td style={tdStyle({ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)', fontVariantNumeric: 'tabular-nums', borderRight: customCols.length ? '1px solid var(--color-border)' : 'none' })}>{item.finalAmount != null ? formatINR(item.finalAmount) : '—'}</td>
+                                        {customCols.map((c, i) => {
+                                            const cf = (() => {
+                                                try { return typeof item.customFields === 'string' ? JSON.parse(item.customFields) : item.customFields || {}; }
+                                                catch { return {}; }
+                                            })();
+                                            const val = cf[c.id];
+                                            const display = (val === 'true' || val === true) ? '✓' : (val === 'false' || val === false) ? '✗' : (val != null && val !== '' ? String(val) : '—');
+                                            return (
+                                                <td key={c.id} style={tdStyle({ textAlign: 'center', borderRight: i === customCols.length - 1 ? 'none' : '1px solid var(--color-border)' })}>
+                                                    {display}
+                                                </td>
+                                            );
+                                        })}
                                     </tr>
                                 ))}
                             </tbody>
                             <tfoot>
                                 <tr style={{ background: 'var(--color-base)', borderTop: '1px solid var(--color-border)' }}>
                                     <td colSpan={10} style={{ textAlign: 'right', fontWeight: 600, padding: '8px 14px', fontSize: 12 }}>Sub-Total</td>
-                                    <td colSpan={2} style={{ textAlign: 'right', fontWeight: 700, padding: '8px 14px', fontVariantNumeric: 'tabular-nums' }}>{formatINR(finalSubtotal)}</td>
+                                    <td colSpan={2 + customCols.length} style={{ textAlign: 'left', paddingLeft: 18, fontWeight: 700, padding: '8px 14px', fontVariantNumeric: 'tabular-nums' }}>{formatINR(finalSubtotal)}</td>
                                 </tr>
                                 <tr style={{ background: 'var(--color-base)' }}>
                                     <td colSpan={10} style={{ textAlign: 'right', padding: '4px 14px', fontSize: 12 }}>GST {quotation.gstRate}%</td>
-                                    <td colSpan={2} style={{ textAlign: 'right', padding: '4px 14px', fontVariantNumeric: 'tabular-nums' }}>{formatINR(finalGst)}</td>
+                                    <td colSpan={2 + customCols.length} style={{ textAlign: 'left', paddingLeft: 18, padding: '4px 14px', fontVariantNumeric: 'tabular-nums' }}>{formatINR(finalGst)}</td>
                                 </tr>
                                 <tr style={{ background: 'var(--color-accent)' }}>
                                     <td colSpan={10} style={{ textAlign: 'right', fontWeight: 800, padding: '10px 14px', color: 'var(--color-base)', fontSize: 13 }}>GRAND TOTAL</td>
-                                    <td colSpan={2} style={{ textAlign: 'right', fontWeight: 800, padding: '10px 14px', color: 'var(--color-base)', fontVariantNumeric: 'tabular-nums', fontSize: 13 }}>{formatINR(finalGrandTotal)}</td>
+                                    <td colSpan={2 + customCols.length} style={{ textAlign: 'left', paddingLeft: 18, fontWeight: 800, padding: '10px 14px', color: 'var(--color-base)', fontVariantNumeric: 'tabular-nums', fontSize: 13 }}>{formatINR(finalGrandTotal)}</td>
                                 </tr>
                             </tfoot>
                         </table>

@@ -72,17 +72,17 @@ function Pill({ value, bg, textColor = '#fff', small = false }) {
 export default function AttributeTagPills({ bodyColours = [], reflectorColours = [], colourTemps = [], beamAngles = [], cri = [], small = false }) {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-      {bodyColours.map(v => (
-        <Pill key={`b-${v}`} value={v} bg={COLOUR_MAP[v] || '#1E2D47'} textColor={v === 'WHITE' ? '#111' : '#fff'} small={small} />
+      {bodyColours.map((v, i) => (
+        <Pill key={`b-${v}-${i}`} value={v} bg={COLOUR_MAP[v] || '#1E2D47'} textColor={v === 'WHITE' ? '#111' : '#fff'} small={small} />
       ))}
-      {colourTemps.map(v => (
-        <Pill key={`c-${v}`} value={v} bg={CCT_MAP[v] || '#F5A623'} textColor={v === '4000K' || v === '3500K' || v === '6000K' ? '#222' : '#222'} small={small} />
+      {colourTemps.map((v, i) => (
+        <Pill key={`c-${v}-${i}`} value={v} bg={CCT_MAP[v] || '#F5A623'} textColor={v === '4000K' || v === '3500K' || v === '6000K' ? '#222' : '#222'} small={small} />
       ))}
-      {beamAngles.map(v => (
-        <Pill key={`a-${v}`} value={v} bg={BEAM_MAP[v] || '#6c63ff'} textColor="#fff" small={small} />
+      {beamAngles.map((v, i) => (
+        <Pill key={`a-${v}-${i}`} value={v} bg={BEAM_MAP[v] || '#6c63ff'} textColor="#fff" small={small} />
       ))}
-      {cri.map(v => (
-        <Pill key={`r-${v}`} value={v} bg={CRI_MAP[v] || '#10b981'} textColor="#fff" small={small} />
+      {cri.map((v, i) => (
+        <Pill key={`r-${v}-${i}`} value={v} bg={CRI_MAP[v] || '#10b981'} textColor="#fff" small={small} />
       ))}
     </div>
   );

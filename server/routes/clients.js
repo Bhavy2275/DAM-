@@ -82,9 +82,13 @@ router.get('/:id', async (req, res) => {
 // POST /api/clients
 router.post('/', async (req, res) => {
     try {
-        const { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress } = req.body;
+        const { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress, customAttributes, customLabels } = req.body;
         const client = await prisma.client.create({
-            data: { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress }
+            data: { 
+                fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress,
+                customAttributes: customAttributes ? JSON.stringify(customAttributes) : "[]",
+                customLabels: customLabels ? JSON.stringify(customLabels) : null
+            }
         });
         res.status(201).json(client);
     } catch (error) {
@@ -96,10 +100,14 @@ router.post('/', async (req, res) => {
 // PUT /api/clients/:id
 router.put('/:id', async (req, res) => {
     try {
-        const { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress } = req.body;
+        const { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress, customAttributes, customLabels } = req.body;
         const client = await prisma.client.update({
             where: { id: req.params.id },
-            data: { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress }
+            data: { 
+                fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress,
+                customAttributes: customAttributes ? JSON.stringify(customAttributes) : "[]",
+                customLabels: customLabels ? JSON.stringify(customLabels) : null
+            }
         });
         res.json(client);
     } catch (error) {

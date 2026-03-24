@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -58,6 +58,10 @@ model Client {
   createdAt        DateTime    @default(now())
   quotations       Quotation[]
   payments         Payment[]
+
+  // Dynamic customization
+  customAttributes String      @default("[]") // JSON string: [{ key: "Birthdate", value: "..." }]
+  customLabels     String?     // JSON string: { "fullName": "Contact Person" }
 }
 
 // ─── QUOTATIONS ────────────────────────────────────────────────────────────
@@ -74,7 +78,8 @@ model Quotation {
   clientId    String
   client      Client          @relation(fields: [clientId], references: [id])
   createdById String
-  notes       String?
+  notes         String?
+  customLabels  String? // JSON: { "quoteTitle": "Site Title", "col_brand": "Make", ... }
   grandTotal  Float           @default(0)
   subtotal    Float           @default(0)
   gstAmount   Float           @default(0)
@@ -122,6 +127,7 @@ model QuotationItem {
   finalAmount      Float?
   finalMacadamStep String?
   finalUnit        String?
+  customFields     String? // JSON storing dynamic custom columns values
 }
 
 // ─── RECOMMENDATION COLUMNS (A–F per line item) ────────────────────────────

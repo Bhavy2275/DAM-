@@ -237,6 +237,12 @@ body {
   box-shadow: 0 4px 20px var(--color-accent-glow);
 }
 
+/* ── Dropdown Options ── */
+option {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
 /* ── Button Base ── */
 .btn-primary {
   display: inline-flex;

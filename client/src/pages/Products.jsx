@@ -6,6 +6,8 @@ import api from '../lib/api';
 import { fadeUp, scaleIn, staggerContainer } from '../lib/animations';
 import AttributeTagPills from '../components/AttributeTagPills';
 import { SkeletonCard } from '../components/SkeletonCard';
+import { EditableField } from '../components/FieldArrow';
+import { inputStyle } from '../lib/styles';
 
 const BODY_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'TITANIUM'];
 const REFLECTOR_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'GOLD', 'MATT_SILVER', 'CHROME'];
@@ -395,18 +397,24 @@ export default function Products() {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
                                     <div>
                                         <label htmlFor="prod-productCode" className="label">Product Code *</label>
-                                        <input id="prod-productCode" name="productCode" type="text" value={form.productCode} onChange={e => updateField('productCode', e.target.value)}
-                                            className="input-dark" placeholder="e.g. C1, PF1, W1" />
+                                        <EditableField style={{ height: 36 }}>
+                                            <input id="prod-productCode" name="productCode" type="text" value={form.productCode} onChange={e => updateField('productCode', e.target.value)}
+                                                style={{ ...inputStyle }} placeholder="e.g. C1, PF1, W1" />
+                                        </EditableField>
                                     </div>
                                     <div>
                                         <label htmlFor="prod-layoutCode" className="label">Layout Code</label>
-                                        <input id="prod-layoutCode" name="layoutCode" type="text" value={form.layoutCode} onChange={e => updateField('layoutCode', e.target.value)}
-                                            className="input-dark" placeholder="e.g. LC-01" />
+                                        <EditableField style={{ height: 36 }}>
+                                            <input id="prod-layoutCode" name="layoutCode" type="text" value={form.layoutCode} onChange={e => updateField('layoutCode', e.target.value)}
+                                                style={{ ...inputStyle }} placeholder="e.g. LC-01" />
+                                        </EditableField>
                                     </div>
                                     <div>
                                         <label htmlFor="prod-basePrice" className="label">Base Price (₹)</label>
-                                        <input id="prod-basePrice" name="basePrice" type="number" min="0" step="0.01" value={form.basePrice} onChange={e => updateField('basePrice', e.target.value)}
-                                            className="input-dark tabular-nums" placeholder="0.00" />
+                                        <EditableField style={{ height: 36 }}>
+                                            <input id="prod-basePrice" name="basePrice" type="number" min="0" step="0.01" value={form.basePrice} onChange={e => updateField('basePrice', e.target.value)}
+                                                style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }} placeholder="0.00" />
+                                        </EditableField>
                                     </div>
                                 </div>
                                 <div style={{ marginBottom: 16 }}>
@@ -422,18 +430,24 @@ export default function Products() {
                                     border: '1px solid var(--color-accent)33' }}>
                                     <div>
                                         <label className="label" style={{ color: 'var(--color-accent)' }}>Default Brand</label>
-                                        <input type="text" value={form.brandName} onChange={e => updateField('brandName', e.target.value)}
-                                            className="input-dark" placeholder="e.g. Hybec Elite" />
+                                        <EditableField style={{ height: 36 }}>
+                                            <input type="text" value={form.brandName} onChange={e => updateField('brandName', e.target.value)}
+                                                style={{ ...inputStyle }} placeholder="e.g. Hybec Elite" />
+                                        </EditableField>
                                     </div>
                                     <div>
                                         <label className="label" style={{ color: 'var(--color-accent)' }}>List Price (₹)</label>
-                                        <input type="number" min="0" step="0.01" value={form.listPrice} onChange={e => updateField('listPrice', e.target.value)}
-                                            className="input-dark tabular-nums" placeholder="0" />
+                                        <EditableField style={{ height: 36 }}>
+                                            <input type="number" min="0" step="0.01" value={form.listPrice} onChange={e => updateField('listPrice', e.target.value)}
+                                                style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }} placeholder="0" />
+                                        </EditableField>
                                     </div>
                                     <div>
                                         <label className="label" style={{ color: 'var(--color-accent)' }}>Default Discount %</label>
-                                        <input type="number" min="0" max="100" step="0.1" value={form.discountPercent} onChange={e => updateField('discountPercent', e.target.value)}
-                                            className="input-dark tabular-nums" placeholder="0" />
+                                        <EditableField style={{ height: 36 }}>
+                                            <input type="number" min="0" max="100" step="0.1" value={form.discountPercent} onChange={e => updateField('discountPercent', e.target.value)}
+                                                style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }} placeholder="0" />
+                                        </EditableField>
                                     </div>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
