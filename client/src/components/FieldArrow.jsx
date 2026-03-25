@@ -131,9 +131,9 @@ export function MacadamTickGroup({ value, onChange }) {
 
 // Removed exported styles to lib/styles.js to fix Vite Fast Refresh
 
-// ── Label Rename Popover ───────────────────────────────────────────────────
-function RenamePopover({ currentLabel, onSave, onClose }) {
-    const [draft, setDraft] = useState(currentLabel || '');
+function RenamePopover({ currentLabel, currentPlaceholder, onSave, onClose }) {
+    const [draftLabel, setDraftLabel] = useState(currentLabel || '');
+    const [draftPlaceholder, setDraftPlaceholder] = useState(currentPlaceholder || '');
     const inputRef = useRef(null);
 
     useEffect(() => {
@@ -142,7 +142,12 @@ function RenamePopover({ currentLabel, onSave, onClose }) {
     }, []);
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter') { onSave(draft.trim() || currentLabel); }
+        if (e.key === 'Enter') {
+            onSave({
+                label: draftLabel.trim() || currentLabel,
+                placeholder: draftPlaceholder.trim() || currentPlaceholder
+            });
+        }
         if (e.key === 'Escape') { onClose(); }
         e.stopPropagation();
     };
@@ -167,63 +172,94 @@ function RenamePopover({ currentLabel, onSave, onClose }) {
             }}
             onMouseDown={e => e.stopPropagation()}
         >
-            <span style={{ fontSize: 10, color: '#7B91B0', flexShrink: 0 }}>Rename:</span>
-            <input
-                id="rename-label-input"
-                name="renameLabelInput"
-                autoComplete="off"
-                aria-label="Rename label"
-                ref={inputRef}
-                value={draft}
-                onChange={e => setDraft(e.target.value)}
-                onKeyDown={handleKeyDown}
-                style={{
-                    flex: 1,
-                    background: '#0E1629',
-                    border: '1px solid #1E3A8A',
-                    borderRadius: 4,
-                    color: '#EDF2FF',
-                    fontSize: 12,
-                    padding: '3px 7px',
-                    outline: 'none',
-                    fontFamily: 'Outfit, sans-serif',
-                    minWidth: 0,
-                }}
-            />
-            <button
-                type="button"
-                onClick={() => onSave(draft.trim() || currentLabel)}
-                style={{
-                    background: '#1E40AF',
-                    border: 'none',
-                    borderRadius: 4,
-                    color: '#fff',
-                    fontSize: 11,
-                    padding: '3px 8px',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                }}
-            >✓</button>
-            <button
-                type="button"
-                onClick={onClose}
-                style={{
-                    background: 'transparent',
-                    border: '1px solid #1E3A8A',
-                    borderRadius: 4,
-                    color: '#7B91B0',
-                    fontSize: 11,
-                    padding: '3px 6px',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                }}
-            >✕</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: '#7B91B0', flexShrink: 0, width: 62 }}>Label:</span>
+                    <input
+                        id="rename-label-input"
+                        autoComplete="off"
+                        aria-label="Rename label"
+                        ref={inputRef}
+                        value={draftLabel}
+                        onChange={e => setDraftLabel(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        style={{
+                            flex: 1,
+                            background: '#0E1629',
+                            border: '1px solid #1E3A8A',
+                            borderRadius: 4,
+                            color: '#EDF2FF',
+                            fontSize: 12,
+                            padding: '3px 7px',
+                            outline: 'none',
+                            fontFamily: 'Outfit, sans-serif',
+                            minWidth: 0,
+                        }}
+                    />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: '#7B91B0', flexShrink: 0, width: 62 }}>Placeholder:</span>
+                    <input
+                        id="rename-placeholder-input"
+                        autoComplete="off"
+                        aria-label="Rename placeholder"
+                        value={draftPlaceholder}
+                        onChange={e => setDraftPlaceholder(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        style={{
+                            flex: 1,
+                            background: '#0E1629',
+                            border: '1px solid #1E3A8A',
+                            borderRadius: 4,
+                            color: '#EDF2FF',
+                            fontSize: 12,
+                            padding: '3px 7px',
+                            outline: 'none',
+                            fontFamily: 'Outfit, sans-serif',
+                            minWidth: 0,
+                        }}
+                    />
+                </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <button
+                    type="button"
+                    onClick={() => onSave({
+                        label: draftLabel.trim() || currentLabel,
+                        placeholder: draftPlaceholder.trim() || currentPlaceholder
+                    })}
+                    style={{
+                        background: '#1E40AF',
+                        border: 'none',
+                        borderRadius: 4,
+                        color: '#fff',
+                        fontSize: 11,
+                        padding: '3px 8px',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                    }}
+                >✓</button>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                        background: 'transparent',
+                        border: '1px solid #1E3A8A',
+                        borderRadius: 4,
+                        color: '#7B91B0',
+                        fontSize: 11,
+                        padding: '3px 6px',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                    }}
+                >✕</button>
+            </div>
         </div>
     );
 }
 
 // ── EditableField — wraps any input with blue ▶ arrow + optional label rename
-export function EditableField({ children, inputRef, style = {}, label, onRenameLabel }) {
+export function EditableField({ children, inputRef, style = {}, label, placeholder, onRenameOptions, onRenameLabel }) {
     const [renaming, setRenaming] = useState(false);
     const wrapperRef = useRef(null);
 
@@ -238,7 +274,7 @@ export function EditableField({ children, inputRef, style = {}, label, onRenameL
     }, [renaming]);
 
     const handleArrowClick = () => {
-        if (onRenameLabel) {
+        if (onRenameOptions || onRenameLabel) {
             setRenaming(true);
         } else if (inputRef?.current) {
             inputRef.current.focus();
@@ -248,8 +284,9 @@ export function EditableField({ children, inputRef, style = {}, label, onRenameL
         }
     };
 
-    const handleSave = (newLabel) => {
-        onRenameLabel?.(newLabel);
+    const handleSave = (opts) => {
+        if (onRenameOptions) onRenameOptions(opts);
+        else if (onRenameLabel) onRenameLabel(opts.label);
         setRenaming(false);
     };
 
@@ -278,6 +315,7 @@ export function EditableField({ children, inputRef, style = {}, label, onRenameL
             {renaming && (
                 <RenamePopover
                     currentLabel={label || ''}
+                    currentPlaceholder={placeholder || ''}
                     onSave={handleSave}
                     onClose={() => setRenaming(false)}
                 />

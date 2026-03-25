@@ -4,8 +4,9 @@ const path = require("path");
 const https = require("https");
 const http = require("http");
 
-const MACADAM_MAP = { "5A": "100%", "4A": "90%", "3A": "75%", "2A": "50%", "1A": "40%" };
+const MACADAM_MAP = { "5A": "75%", "4A": "90%", "3A": "100%", "2A": "50%", "1A": "40%" };
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(amount) {
   if (amount == null || amount === "") return "—";
   const n = Number(amount);
@@ -25,16 +26,15 @@ function tagLines(val) {
   const items = parseArr(val);
   if (!items.length) return "—";
   return items.map(v =>
-    '<div style="font-size:6.5px;line-height:1.6;color:#333;text-align:center">'
-    + v.replace(/DEG/g, "°").replace(/_/g, " ") + "</div>"
+    `<div style="font-size:6.5px;line-height:1.6;color:#333;text-align:center">${v.replace(/DEG/g, "°").replace(/_/g, " ")}</div>`
   ).join("");
 }
 
 function macadamCell(step) {
   if (!step) return "—";
   const pct = MACADAM_MAP[step] || "";
-  return '<div style="font-size:7.5px;font-weight:700;color:#0D1E40;text-align:center">' + step + '</div>'
-    + '<div style="font-size:6.5px;color:#555;text-align:center;margin-top:1px">(' + pct + ')</div>';
+  return `<div style="font-size:7.5px;font-weight:700;color:#0D1E40;text-align:center">${step}</div>`
+    + `<div style="font-size:6.5px;color:#555;text-align:center;margin-top:1px">(${pct})</div>`;
 }
 
 function toBase64(imageUrl) {
@@ -71,8 +71,30 @@ function toBase64(imageUrl) {
   return Promise.resolve(null);
 }
 
-// ── Shared style constants (matching Ramada Encore PDF exactly) ──────────────
-// No fixed table-layout — let columns auto-size to content
+function getCustomCols(quotation) {
+  if (!quotation.customLabels) return [];
+  try {
+    const cl = typeof quotation.customLabels === "string"
+      ? JSON.parse(quotation.customLabels) : quotation.customLabels;
+    if (cl && Array.isArray(cl.__customCols)) return cl.__customCols;
+  } catch (e) { }
+  return [];
+}
+
+function getCustomField(item, colId) {
+  if (!item.customFields) return "—";
+  try {
+    const cf = typeof item.customFields === "string"
+      ? JSON.parse(item.customFields) : item.customFields;
+    const val = cf[colId];
+    if (val === "true" || val === true) return "✓";
+    if (val === "false" || val === false) return "✗";
+    if (val != null && val !== "") return String(val);
+  } catch (e) { }
+  return "—";
+}
+
+// ── Shared style constants ───────────────────────────────────────────────────
 const TABLE_STYLE = "width:100%;border-collapse:collapse;font-size:7.5px;";
 
 const TH = [
@@ -109,35 +131,21 @@ const TH_BRAND = [
   "letter-spacing:0.5px",
 ].join(";") + ";";
 
-// ── Parse custom columns from quotation ────────────────────────────────────
-function getCustomCols(quotation) {
-  if (!quotation.customLabels) return [];
-  try {
-    const cl = typeof quotation.customLabels === "string"
-      ? JSON.parse(quotation.customLabels)
-      : quotation.customLabels;
-    if (cl && Array.isArray(cl.__customCols)) return cl.__customCols;
-  } catch (e) { }
-  return [];
-}
-
-// ── Get custom field value for a line item ─────────────────────────────────
-function getCustomField(item, colId) {
-  if (!item.customFields) return "—";
-  try {
-    const cf = typeof item.customFields === "string"
-      ? JSON.parse(item.customFields)
-      : item.customFields;
-    const val = cf[colId];
-    if (val === "true" || val === true) return "✓";
-    if (val === "false" || val === false) return "✗";
-    if (val != null && val !== "") return String(val);
-  } catch (e) { }
-  return "—";
-}
+const TH_GREY = [
+  "border:0.5px solid #999",
+  "padding:5px 4px",
+  "text-align:center",
+  "font-weight:700",
+  "font-size:7px",
+  "color:#111",
+  "background:#d9d9d9",
+  "vertical-align:middle",
+  "line-height:1.3",
+  "white-space:nowrap",
+].join(";") + ";";
 
 // ════════════════════════════════════════════════════════════════════════════
-// COVER PAGE — matches Ramada Encore reference exactly
+// COVER PAGE — A3 landscape, all pages landscape
 // ════════════════════════════════════════════════════════════════════════════
 function coverHTML(quotation, settings) {
   const client = quotation.client || {};
@@ -159,67 +167,66 @@ function coverHTML(quotation, settings) {
   const clientCityLine = cityParts.join(", ");
   const clientPinLine = client.pinCode ? "Pincode - " + client.pinCode : "";
 
-  // Format company address — split by comma, join with line breaks
   const addrLines = companyAddress
     ? companyAddress.split(",").map(s => s.trim()).filter(Boolean).join(",<br>")
     : "";
 
   return `
-<div style="position:relative;width:100%;height:100%;background:#fff;font-family:'Times New Roman',Georgia,serif">
+<div style="position:relative;width:100%;height:100%;background:#fff;font-family:Arial,'Helvetica Neue',sans-serif">
 
-  <!-- TOP WHITE SECTION -->
-  <div style="position:absolute;top:0;left:0;right:0;height:42%;padding:28px 28px 0 28px;box-sizing:border-box">
+  <!-- TOP WHITE SECTION (45%) -->
+  <div style="position:absolute;top:0;left:0;right:0;height:45%;padding:24px 24px 0 24px;box-sizing:border-box">
     <div style="border:1px solid #ccc;height:100%;box-sizing:border-box;display:flex">
 
       <!-- Left: Developed By -->
-      <div style="flex:1;padding:28px 32px;border-right:1px solid #ddd">
-        <p style="font-size:10px;font-weight:700;color:#0D1E40;letter-spacing:2px;text-transform:uppercase;margin:0 0 14px 0;font-family:Arial,sans-serif">
+      <div style="flex:1;padding:24px 32px;border-right:1px solid #ddd">
+        <p style="font-size:9px;font-weight:700;color:#0D1E40;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px 0">
           Developed &amp; Illuminated By
         </p>
-        <p style="font-size:16px;font-weight:700;color:#111;margin:0 0 12px 0;font-family:Arial,sans-serif">
+        <p style="font-size:15px;font-weight:700;color:#111;margin:0 0 10px 0">
           ${companyName}
         </p>
-        <p style="font-size:12px;color:#444;line-height:1.9;margin:0 0 12px 0;font-family:Arial,sans-serif">
+        <p style="font-size:11px;color:#444;line-height:1.9;margin:0 0 10px 0">
           ${companyPhone}<br>
           ${companyEmail}<br>
           ${companyWebsite}
         </p>
-        <p style="font-size:12px;color:#444;line-height:1.7;margin:0;font-family:Arial,sans-serif">
+        <p style="font-size:11px;color:#444;line-height:1.7;margin:0">
           ${addrLines}
         </p>
       </div>
 
       <!-- Right: Developed For -->
-      <div style="flex:1;padding:28px 32px">
-        <p style="font-size:10px;font-weight:700;color:#0D1E40;letter-spacing:2px;text-transform:uppercase;margin:0 0 14px 0;font-family:Arial,sans-serif">
+      <div style="flex:1;padding:24px 32px">
+        <p style="font-size:9px;font-weight:700;color:#0D1E40;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px 0">
           Developed &amp; Illuminated For
         </p>
-        <p style="font-size:16px;font-weight:700;color:#111;margin:0 0 12px 0;font-family:Arial,sans-serif">
+        <p style="font-size:15px;font-weight:700;color:#111;margin:0 0 10px 0">
           ${clientName}
         </p>
-        ${clientPerson ? `<p style="font-size:12px;color:#444;margin:0 0 6px 0;font-family:Arial,sans-serif">${clientPerson}</p>` : ""}
-        ${client.address ? `<p style="font-size:12px;color:#444;line-height:1.7;margin:0 0 6px 0;font-family:Arial,sans-serif">${client.address}</p>` : ""}
-        ${clientCityLine ? `<p style="font-size:12px;color:#444;margin:0 0 4px 0;font-family:Arial,sans-serif">${clientCityLine}.</p>` : ""}
-        ${clientPinLine ? `<p style="font-size:12px;color:#444;margin:0;font-family:Arial,sans-serif">${clientPinLine}</p>` : ""}
+        ${clientPerson ? `<p style="font-size:11px;color:#444;margin:0 0 6px 0">${clientPerson}</p>` : ""}
+        ${client.address ? `<p style="font-size:11px;color:#444;line-height:1.7;margin:0 0 6px 0">${client.address}</p>` : ""}
+        ${clientCityLine ? `<p style="font-size:11px;color:#444;margin:0 0 4px 0">${clientCityLine}.</p>` : ""}
+        ${clientPinLine ? `<p style="font-size:11px;color:#444;margin:0">${clientPinLine}</p>` : ""}
       </div>
 
     </div>
   </div>
 
-  <!-- BOTTOM NAVY SECTION -->
-  <div style="position:absolute;bottom:0;left:0;right:0;height:58%;background:#0D1E40;
+  <!-- BOTTOM NAVY SECTION (55%) -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:55%;background:#0D1E40;
               display:flex;align-items:flex-end;justify-content:space-between;
               padding:44px 60px;box-sizing:border-box">
 
     <!-- Light Quotation serif text -->
-    <div style="font-family:Georgia,'Times New Roman',serif;font-size:64px;font-weight:700;
+    <div style="font-family:Georgia,'Times New Roman',serif;font-size:72px;font-weight:700;
                 color:#ffffff;line-height:1.0;letter-spacing:-1px">
       Light<br>Quotation
     </div>
 
     <!-- DAM logo -->
     <div style="text-align:right">
-      <div style="font-family:'Arial Black',Arial,sans-serif;font-size:60px;font-weight:900;
+      <div style="font-family:'Arial Black',Arial,sans-serif;font-size:68px;font-weight:900;
                   color:#ffffff;letter-spacing:-3px;line-height:1">DAM</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:2px;
                   margin-top:8px;font-family:Arial,sans-serif">
@@ -232,7 +239,7 @@ function coverHTML(quotation, settings) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// TERMS + BANK — matches Ramada Encore page 5/6
+// TERMS + BANK
 // ════════════════════════════════════════════════════════════════════════════
 function termsAndBankHTML(quotation, settings) {
   const s = settings || {};
@@ -280,7 +287,7 @@ function termsAndBankHTML(quotation, settings) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// FINAL TABLE — dynamic columns, Macadam BEFORE Amount, Add-Ons only if custom cols exist
+// FINAL TABLE — selected recommendation per item
 // ════════════════════════════════════════════════════════════════════════════
 async function finalTableHTML(quotation) {
   let items = quotation.lineItems || [];
@@ -308,17 +315,16 @@ async function finalTableHTML(quotation) {
     subtotal = items.reduce((s, i) => s + (Number(i.finalAmount) || 0), 0);
   }
 
-  const gstAmt = subtotal * ((quotation.gstRate || 18) / 100);
-  const grand = subtotal + gstAmt;
   const gstRate = quotation.gstRate || 18;
+  const gstAmt = subtotal * (gstRate / 100);
+  const grand = subtotal + gstAmt;
 
-  // Pre-load images in parallel
   const [polarB64s, productB64s] = await Promise.all([
     Promise.all(items.map(i => toBase64(i.polarDiagramUrl))),
     Promise.all(items.map(i => toBase64(i.productImageUrl))),
   ]);
 
-  // Group consecutive items by brand for the brand header rows
+  // Group by brand
   const groups = [];
   let cur = null;
   for (const item of items) {
@@ -327,17 +333,10 @@ async function finalTableHTML(quotation) {
     cur.items.push(item);
   }
 
-  // Banner
   const banner = (quotation.projectName || "") + " \u2014 " + (quotation.city || "") + " \u2014 LIGHTING QUOTATION";
-
-  // ── Build header row ────────────────────────────────────────────────────
-  // Columns: S.NO | LAYOUT | CODE | DESCRIPTION | POLAR | IMG | BODY | REFL | CCT | BEAM | CRI | [BRAND_HEADER spanning brand cols]
-  // Brand section: PROD CODE | LP | LP+18% | DISC% | RATE | UNIT | QTY | MACADAM | AMOUNT
-  // Note: MACADAM is before AMOUNT
   const brandColCount = 9; // prod code, lp, lp+18%, disc%, rate, unit, qty, macadam, amount
   const specColCount = 11; // s.no, layout, code, desc, polar, img, body, refl, cct, beam, cri
 
-  // ── thead ────────────────────────────────────────────────────────────────
   const theadHTML = `
 <thead>
   <tr>
@@ -367,17 +366,14 @@ async function finalTableHTML(quotation) {
   </tr>
 </thead>`;
 
-  // ── tbody ────────────────────────────────────────────────────────────────
   let rowsHTML = "";
   let globalIdx = 0;
 
   for (const group of groups) {
-    // Brand separator row spanning all columns
-    const totalCols = specColCount + brandColCount;
     rowsHTML += `
 <tr>
-  <td colspan="${specColCount}" style="${TD}background:#f7f8fa"></td>
-  <td colspan="${brandColCount}" style="${TD}background:#dbeafe;color:#0D1E40;text-align:center;font-weight:700;font-size:8px;letter-spacing:0.8px">
+  <td colspan="${specColCount}" style="${TD}background:#d9d9d9"></td>
+  <td colspan="${brandColCount}" style="${TD}background:#d9d9d9;color:#111;text-align:center;font-weight:700;font-size:8px;letter-spacing:0.8px">
     ${group.brand || "BRAND"}
   </td>
 </tr>`;
@@ -405,9 +401,9 @@ async function finalTableHTML(quotation) {
 
       rowsHTML += `
 <tr style="background:${bg}">
-  <td style="${TD}text-align:center">${item.sno || globalIdx}</td>
-  <td style="${TD}text-align:center;font-size:7px">${item.layoutCode || "—"}</td>
-  <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px">${item.productCode || ""}</td>
+  <td style="${TD}text-align:center;background:#d9d9d9">${item.sno || globalIdx}</td>
+  <td style="${TD}text-align:center;font-size:7px;background:#d9d9d9">${item.layoutCode || "—"}</td>
+  <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;background:#d9d9d9">${item.productCode || ""}</td>
   <td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:130px">${(item.description || "").slice(0, 220)}</td>
   <td style="${TD}text-align:center;padding:3px">${polar}</td>
   <td style="${TD}text-align:center;padding:3px">${prodImg}</td>
@@ -429,8 +425,7 @@ async function finalTableHTML(quotation) {
     }
   }
 
-  // ── tfoot ────────────────────────────────────────────────────────────────
-  const footerSpan = specColCount + brandColCount - 1; // all columns minus amount col
+  const footerSpan = specColCount + brandColCount - 1;
   const tfootHTML = `
 <tfoot>
   <tr>
@@ -447,10 +442,9 @@ async function finalTableHTML(quotation) {
   </tr>
 </tfoot>`;
 
-  // ── Main product table ────────────────────────────────────────────────────
   const mainTable = `
 <div style="padding:8px 10px 0;font-family:Arial,sans-serif">
-  <div style="background:#0D1E40;color:#fff;text-align:center;font-weight:700;font-size:11px;
+  <div style="background:#a6a6a6;color:#111;text-align:center;font-weight:700;font-size:11px;
               padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">
     ${banner}
   </div>
@@ -463,15 +457,12 @@ async function finalTableHTML(quotation) {
   </div>
 </div>`;
 
-  // ── Add-Ons table — ONLY if custom columns exist ──────────────────────────
+  // Add-ons table (only if custom columns exist)
   let addOnsTable = "";
   if (hasCustomCols) {
-    // Build add-ons header
     const addOnsThHTML = customCols.map(col =>
       `<th style="${TH_BRAND}white-space:nowrap">${(col.label || "").toUpperCase()}</th>`
     ).join("");
-
-    // Build add-ons rows
     let addOnsRows = "";
     let addOnsIdx = 0;
     for (const item of items) {
@@ -480,7 +471,6 @@ async function finalTableHTML(quotation) {
       const customTds = customCols.map(col =>
         `<td style="${TD}text-align:center">${getCustomField(item, col.id)}</td>`
       ).join("");
-
       addOnsRows += `
 <tr style="background:${bg}">
   <td style="${TD}text-align:center;font-weight:700;color:#0D1E40">${item.sno || addOnsIdx}</td>
@@ -489,13 +479,10 @@ async function finalTableHTML(quotation) {
   ${customTds}
 </tr>`;
     }
-
     addOnsTable = `
 <div style="padding:12px 10px 0;font-family:Arial,sans-serif">
-  <div style="background:#0D1E40;color:#fff;text-align:center;font-weight:700;font-size:11px;
-              padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">
-    ADD-ONS
-  </div>
+  <div style="background:#a6a6a6;color:#111;text-align:center;font-weight:700;font-size:11px;
+              padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">ADD-ONS</div>
   <table style="${TABLE_STYLE}">
     <thead>
       <tr>
@@ -514,7 +501,7 @@ async function finalTableHTML(quotation) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// ALL RECS TABLE — matches Ramada Encore page 2 format exactly
+// ALL RECS TABLE — all recommendations side by side + summary table
 // ════════════════════════════════════════════════════════════════════════════
 async function allRecsTableHTML(quotation) {
   const items = quotation.lineItems || [];
@@ -538,13 +525,20 @@ async function allRecsTableHTML(quotation) {
   });
 
   const polarB64s = await Promise.all(items.map(i => toBase64(i.polarDiagramUrl)));
-
   const banner = (quotation.projectName || "") + " \u2014 " + (quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
-  // ── thead ─────────────────────────────────────────────────────────────────
-  // Each rec has 4 sub-columns: Macadam Step | Rate | Amount | Space Match %
-  const recTh1 = activeLabels.map(l =>
-    `<th colspan="4" style="${TH_BRAND}">${l}</th>`
+  // Brand names for header row
+  const brandNames = activeLabels.map(label => {
+    for (const item of items) {
+      const r = (item.recommendations || []).find(r => r.label === label && r.brandName);
+      if (r) return r.brandName;
+    }
+    return label;
+  });
+
+  // thead — each rec: Macadam Step | Rate | Amount | Space Match %
+  const recTh1 = brandNames.map(b =>
+    `<th colspan="4" style="${TH_GREY}letter-spacing:0.5px;">${b.toUpperCase()}</th>`
   ).join("");
   const recTh2 = activeLabels.map(() =>
     `<th style="${TH}">Macadam<br>Step</th>
@@ -567,7 +561,10 @@ async function allRecsTableHTML(quotation) {
   <tr>${recTh2}</tr>
 </thead>`;
 
-  // ── tbody ──────────────────────────────────────────────────────────────────
+  const baseColCount = 6;
+  const brandHeaderRow = ""; // brand names are now in thead
+
+  // Data rows
   let rowsHTML = "";
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
@@ -596,18 +593,17 @@ async function allRecsTableHTML(quotation) {
 
     rowsHTML += `
 <tr style="background:${bg}">
-  <td style="${TD}text-align:center">${item.sno || idx + 1}</td>
-  <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px">${item.productCode || ""}</td>
+  <td style="${TD}text-align:center;background:#d9d9d9">${item.sno || idx + 1}</td>
+  <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;background:#d9d9d9">${item.productCode || ""}</td>
   <td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:120px">${(item.description || "").slice(0, 180)}</td>
   <td style="${TD}text-align:center;padding:3px">${polar}</td>
-  <td style="${TD}text-align:center">${unit}</td>
-  <td style="${TD}text-align:center;font-weight:700">${qty}</td>
+  <td style="${TD}text-align:center;background:#d9d9d9">${unit}</td>
+  <td style="${TD}text-align:center;font-weight:700;background:#d9d9d9">${qty}</td>
   ${recCells}
 </tr>`;
   }
 
-  // ── tfoot ──────────────────────────────────────────────────────────────────
-  const baseColCount = 6;
+  // tfoot
   const totalDefs = [
     { label: "SUM", key: "sum", bg: "#f0f4f8", color: "#333" },
     { label: "GST 18%", key: "gst", bg: "#f0f4f8", color: "#333" },
@@ -629,28 +625,9 @@ async function allRecsTableHTML(quotation) {
 </tr>`;
   }
 
-  // ── Brand row labels above the recs table ──────────────────────────────────
-  // Get brand names for each label from first item that has data
-  const brandNames = activeLabels.map(label => {
-    for (const item of items) {
-      const r = (item.recommendations || []).find(r => r.label === label && r.brandName);
-      if (r) return r.brandName;
-    }
-    return label;
-  });
-
-  const brandHeaderRow = `
-<tr>
-  <td colspan="${baseColCount}" style="${TD}background:#f0f4f8"></td>
-  ${brandNames.map(b =>
-    `<td colspan="4" style="${TD}background:#dbeafe;color:#0D1E40;text-align:center;font-weight:700;font-size:8px;letter-spacing:0.5px">${b.toUpperCase()}</td>`
-  ).join("")}
-</tr>`;
-
-  // ── Main recs table ────────────────────────────────────────────────────────
   const mainTable = `
 <div style="padding:8px 10px 0;font-family:Arial,sans-serif">
-  <div style="background:#0D1E40;color:#fff;text-align:center;font-weight:700;font-size:11px;
+  <div style="background:#a6a6a6;color:#111;text-align:center;font-weight:700;font-size:11px;
               padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">
     ${banner}
   </div>
@@ -658,7 +635,6 @@ async function allRecsTableHTML(quotation) {
     <table style="${TABLE_STYLE}">
       ${theadHTML}
       <tbody>
-        ${brandHeaderRow}
         ${rowsHTML}
       </tbody>
       <tfoot>${tfootHTML}</tfoot>
@@ -666,8 +642,7 @@ async function allRecsTableHTML(quotation) {
   </div>
 </div>`;
 
-  // ── Recommendation Summary Table (matches Ramada page 5) ──────────────────
-  // S.No | Qty | Unit | Product Code | Rec A (Brand + Amount) | Rec B | ...
+  // ── Recommendation Summary Table ──────────────────────────────────────────
   let summaryRows = "";
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
@@ -700,7 +675,6 @@ async function allRecsTableHTML(quotation) {
     `<th style="${TH}">BRAND</th><th style="${TH}">AMOUNT</th>`
   ).join("");
 
-  // Summary totals
   const summaryTotalRows = [
     { label: "SUM", key: "sum", bg: "#f0f4f8", color: "#333" },
     { label: "GST 18%", key: "gst", bg: "#f0f4f8", color: "#333" },
@@ -738,7 +712,7 @@ async function allRecsTableHTML(quotation) {
   </table>
 </div>`;
 
-  // ── Add-Ons table (only if custom columns exist) ───────────────────────────
+  // Add-ons (only if custom columns exist)
   let addOnsTable = "";
   if (hasCustomCols) {
     const addOnsThHTML = customCols.map(col =>
@@ -760,10 +734,8 @@ async function allRecsTableHTML(quotation) {
     });
     addOnsTable = `
 <div style="padding:16px 10px 0;font-family:Arial,sans-serif">
-  <div style="background:#0D1E40;color:#fff;text-align:center;font-weight:700;font-size:11px;
-              padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">
-    ADD-ONS
-  </div>
+  <div style="background:#a6a6a6;color:#111;text-align:center;font-weight:700;font-size:11px;
+              padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">ADD-ONS</div>
   <table style="${TABLE_STYLE}">
     <thead>
       <tr>
@@ -793,6 +765,7 @@ async function generatePDF(quotation, settings, mode) {
     ? await allRecsTableHTML(quotation)
     : await finalTableHTML(quotation);
 
+  // All pages: Letter landscape (279 × 216 mm)
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -808,17 +781,15 @@ async function generatePDF(quotation, settings, mode) {
     print-color-adjust: exact;
     background: #fff;
   }
-  @page { margin: 0; }
-  @page :first { size: A4 portrait; }
-  @page :not(:first) { size: A3 landscape; }
+  @page { size: Letter landscape; margin: 0; }
   img { display: block; }
   table { border-spacing: 0; }
 </style>
 </head>
 <body>
 
-<!-- ── COVER PAGE (A4 portrait) ── -->
-<div style="width:100vw;height:100vh;overflow:hidden;position:relative;page-break-after:always;break-after:page">
+<!-- ── COVER PAGE (Letter landscape) ── -->
+<div style="width:11in;height:8.5in;overflow:hidden;position:relative;page-break-after:always;break-after:page">
   ${cover}
 </div>
 
@@ -844,59 +815,16 @@ async function generatePDF(quotation, settings, mode) {
 
   try {
     const page = await browser.newPage();
-
-    // Set A4 viewport for cover page rendering
-    await page.setViewport({ width: 794, height: 1123 });
+    await page.setViewport({ width: 1056, height: 816 });
     await page.setContent(html, { waitUntil: "networkidle0", timeout: 60000 });
     await page.evaluateHandle("document.fonts.ready");
 
-    // Try merged PDF (cover A4 portrait + table A3 landscape)
-    try {
-      const { PDFDocument } = require("pdf-lib");
-
-      // Cover — A4 portrait
-      const coverPdf = await page.pdf({
-        format: "A4",
-        landscape: false,
-        printBackground: true,
-        margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
-        pageRanges: "1",
-      });
-
-      // Table pages — A3 landscape
-      await page.setViewport({ width: 1587, height: 1123 });
-      const tablePdf = await page.pdf({
-        format: "A3",
-        landscape: true,
-        printBackground: true,
-        margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
-        pageRanges: "2-",
-      });
-
-      // Merge
-      const coverDoc = await PDFDocument.load(coverPdf);
-      const tableDoc = await PDFDocument.load(tablePdf);
-      const mergedDoc = await PDFDocument.create();
-
-      const cp = await mergedDoc.copyPages(coverDoc, coverDoc.getPageIndices());
-      cp.forEach(p => mergedDoc.addPage(p));
-
-      const tp = await mergedDoc.copyPages(tableDoc, tableDoc.getPageIndices());
-      tp.forEach(p => mergedDoc.addPage(p));
-
-      return Buffer.from(await mergedDoc.save());
-
-    } catch (pdfLibErr) {
-      // pdf-lib not installed — single A3 landscape output
-      console.warn("pdf-lib unavailable, falling back to single A3:", pdfLibErr.message);
-      await page.setViewport({ width: 1587, height: 1123 });
-      return await page.pdf({
-        format: "A3",
-        landscape: true,
-        printBackground: true,
-        margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
-      });
-    }
+    return await page.pdf({
+      format: "Letter",
+      landscape: true,
+      printBackground: true,
+      margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+    });
 
   } finally {
     await browser.close();

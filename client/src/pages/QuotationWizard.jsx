@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Plus, Trash2, X, Save, ChevronDown } from 'lucide-react';
@@ -50,6 +51,27 @@ function getTagStyle(val) {
 function formatTagLabel(val) {
     if (!val) return '';
     return val.replace('DEG', '°').replace('_', ' ');
+}
+
+export function getCustomLabel(customLabels, key, defaultLabel) {
+    const entry = customLabels?.[key];
+    if (typeof entry === 'object' && entry !== null) return entry.label || defaultLabel;
+    return entry || defaultLabel;
+}
+
+export function getPlaceholder(customLabels, key, defaultPlaceholder) {
+    const entry = customLabels?.[key];
+    if (typeof entry === 'object' && entry !== null && entry.placeholder !== undefined) {
+        return entry.placeholder;
+    }
+    return defaultPlaceholder;
+}
+
+export function getImageUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
 // ─── EditableAttributeTags (FULLY FIXED) ────────────────────────────────────
@@ -281,7 +303,7 @@ function InlineInput({ value, onChange, type = 'text', placeholder = '', style =
 // ─── Step 1: Quote Info ─────────────────────────────────────────────────────
 function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, extraFields, setExtraFields }) {
     const updateField = (k, v) => setForm(f => ({ ...f, [k]: v }));
-    const lbl = (key, def) => customLabels[key] || def;
+    const lbl = (key, def) => getCustomLabel(customLabels, key, def);
     return (
         <motion.div variants={fadeUp} className="card-surface" style={{ padding: 32, cursor: 'default' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -299,7 +321,12 @@ function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, e
                 ].map(field => (
                     <div key={field.key}>
                         <label htmlFor={`qi-${field.key}`} className="label">{lbl(field.key, field.label)}</label>
-                        <EditableField style={{ height: 36 }} label={lbl(field.key, field.label)} onRenameLabel={newLabel => onRenameLabel(field.key, newLabel)}>
+                        <EditableField
+                            style={{ height: 36 }}
+                            label={lbl(field.key, field.label)}
+                            placeholder={getPlaceholder(customLabels, field.key, field.placeholder || '')}
+                            onRenameOptions={opts => onRenameLabel(field.key, opts)}
+                        >
                             <input
                                 id={`qi-${field.key}`}
                                 name={field.key}
@@ -308,7 +335,7 @@ function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, e
                                 value={form[field.key] || ''}
                                 onChange={e => updateField(field.key, field.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
                                 style={{ ...inputStyle }}
-                                placeholder={field.placeholder || ''}
+                                placeholder={getPlaceholder(customLabels, field.key, field.placeholder || '')}
                             />
                         </EditableField>
                     </div>
@@ -332,7 +359,12 @@ function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, e
                                 onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}
                                 title="Remove field"><Trash2 size={13} /></button>
                         </div>
-                        <EditableField style={{ height: 36 }} label={lbl(ef.id, ef.label)} onRenameLabel={newLabel => onRenameLabel(ef.id, newLabel)}>
+                        <EditableField
+                            style={{ height: 36 }}
+                            label={lbl(ef.id, ef.label)}
+                            placeholder={getPlaceholder(customLabels, ef.id, 'Enter value')}
+                            onRenameOptions={opts => onRenameLabel(ef.id, opts)}
+                        >
                             <input
                                 id={`qi-${ef.id}`}
                                 name={ef.id}
@@ -341,7 +373,7 @@ function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, e
                                 value={ef.value}
                                 onChange={e => setExtraFields(prev => prev.map(x => x.id === ef.id ? { ...x, value: e.target.value } : x))}
                                 style={{ ...inputStyle }}
-                                placeholder="Enter value"
+                                placeholder={getPlaceholder(customLabels, ef.id, 'Enter value')}
                             />
                         </EditableField>
                     </div>
@@ -358,7 +390,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel }) {
         const updated = { ...rec, [key]: val };
         onChange(recalcRec(updated));
     };
-    const lbl = (key, def) => customLabels[`rec_${key}`] || def;
+    const lbl = (key, def) => getCustomLabel(customLabels, `rec_${key}`, def);
     const editableFields = [
         { key: 'brandName', label: 'Brand', type: 'text' },
         { key: 'productCode', label: 'Prod Code', type: 'text' },
@@ -382,7 +414,12 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel }) {
                                     ? formatINR(parseFloat(rec[f.key]) || 0) : rec[f.key] || '—'}
                             </div>
                         ) : (
-                            <EditableField style={{ height: 28 }} label={lbl(f.key, f.label)} onRenameLabel={onRenameLabel ? (newLabel) => onRenameLabel(`rec_${f.key}`, newLabel) : undefined}>
+                            <EditableField
+                                style={{ height: 28 }}
+                                label={lbl(f.key, f.label)}
+                                placeholder={getPlaceholder(customLabels, `rec_${f.key}`, '')}
+                                onRenameOptions={onRenameLabel ? (opts) => onRenameLabel(`rec_${f.key}`, opts) : undefined}
+                            >
                                 <input
                                     type={f.type}
                                     name={`rec_${label}_${f.key}`}
@@ -390,6 +427,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel }) {
                                     aria-label={lbl(f.key, f.label)}
                                     value={rec[f.key] || ''}
                                     onChange={e => handleChange(f.key, e.target.value)}
+                                    placeholder={getPlaceholder(customLabels, `rec_${f.key}`, '')}
                                     style={{ ...inputStyle, fontSize: 11, padding: '0 6px' }}
                                 />
                             </EditableField>
@@ -577,7 +615,7 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
     const [editingAttrIdx, setEditingAttrIdx] = useState(null);   // index of existing row being re-edited
     const [attrModalInitial, setAttrModalInitial] = useState(null); // initial attrs for modal
 
-    const lbl = (key, def) => customLabels?.[key] || def;
+    const lbl = (key, def) => getCustomLabel(customLabels, key, def);
 
     const filteredProducts = products.filter(p => {
         const s = productSearch.toLowerCase();
@@ -915,7 +953,7 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
 // ─── Step 2: Final Working Quotation ────────────────────────────────────────
 function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, setNotes, settings, products = [], searches, setSearches, customLabels, onRenameLabel, customCols, setCustomCols }) {
     const [openSearch, setOpenSearch] = useState(null);
-    const lbl = (key, def) => customLabels?.[key] || def;
+    const lbl = (key, def) => getCustomLabel(customLabels, key, def);
 
     const importFromRec = (label) => {
         setItems(prev => prev.map(item => {
@@ -942,28 +980,49 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
         const disc = parseFloat(product.discountPercent) || 0;
         const rate = parseFloat((lp * (1 - disc / 100)).toFixed(2));
         const qty = parseFloat(items[idx]?.finalQuantity) || 1;
-        setItems(prev => prev.map((it, i) => i !== idx ? it : {
-            ...it,
-            productId: product.id,
-            productCode: product.productCode || '',
-            layoutCode: product.layoutCode || '',
-            description: product.description || '',
-            polarDiagramUrl: product.polarDiagramUrl || '',
-            productImageUrl: product.productImageUrl || '',
-            bodyColours: product.bodyColours || [],
-            reflectorColours: product.reflectorColours || [],
-            colourTemps: product.colourTemps || [],
-            beamAngles: product.beamAngles || [],
-            cri: product.cri || [],
-            unit: product.unit || 'NUMBERS',
-            finalBrandName: product.brandName || '',
-            finalListPrice: lp,
-            finalDiscount: disc,
-            finalRate: rate,
-            finalUnit: product.unit || 'NUMBERS',
-            finalQuantity: qty,
-            finalAmount: parseFloat((rate * qty).toFixed(2)),
-            finalMacadamStep: '',
+        setItems(prev => prev.map((it, i) => {
+            if (i !== idx) return it;
+            const finalBrandName = product.brandName || '';
+            const finalUnit = product.unit || 'NUMBERS';
+            const finalAmount = parseFloat((rate * qty).toFixed(2));
+            const recA = recalcRec({
+                ...it.recommendations['A'],
+                brandName: finalBrandName,
+                productCode: product.productCode || '',
+                listPrice: lp,
+                discountPercent: disc,
+                rate: rate,
+                quantity: qty,
+                amount: finalAmount,
+                unit: finalUnit,
+            });
+            return {
+                ...it,
+                productId: product.id,
+                productCode: product.productCode || '',
+                layoutCode: product.layoutCode || '',
+                description: product.description || '',
+                polarDiagramUrl: product.polarDiagramUrl || '',
+                productImageUrl: product.productImageUrl || '',
+                bodyColours: product.bodyColours || [],
+                reflectorColours: product.reflectorColours || [],
+                colourTemps: product.colourTemps || [],
+                beamAngles: product.beamAngles || [],
+                cri: product.cri || [],
+                unit: finalUnit,
+                finalBrandName,
+                finalListPrice: lp,
+                finalDiscount: disc,
+                finalRate: rate,
+                finalUnit,
+                finalQuantity: qty,
+                finalAmount,
+                finalMacadamStep: '',
+                recommendations: {
+                    ...it.recommendations,
+                    A: recA
+                }
+            };
         }));
         setSearches(s => ({ ...s, [idx]: product.productCode }));
         setOpenSearch(null);
@@ -997,6 +1056,30 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                 const qty = parseFloat(key === 'finalQuantity' ? val : item.finalQuantity) || 0;
                 updated.finalRate = calcRate(lp, disc);
                 updated.finalAmount = calcAmount(updated.finalRate, qty);
+            }
+            
+            // Auto-sync to Rec A
+            const recKeyMap = {
+                finalBrandName: 'brandName', finalProductCode: 'productCode',
+                finalListPrice: 'listPrice', finalDiscount: 'discountPercent',
+                finalUnit: 'unit', finalQuantity: 'quantity', finalMacadamStep: 'macadamStep',
+            };
+            const rKey = recKeyMap[key];
+            if (rKey) {
+                updated.recommendations = {
+                    ...updated.recommendations,
+                    A: recalcRec({
+                        ...updated.recommendations['A'],
+                        [rKey]: val,
+                        ...(key === 'finalListPrice' || key === 'finalDiscount' || key === 'finalQuantity' ? {
+                            rate: updated.finalRate,
+                            amount: updated.finalAmount,
+                            listPrice: updated.finalListPrice || 0,
+                            discountPercent: updated.finalDiscount || 0,
+                            quantity: updated.finalQuantity || 0
+                        } : {})
+                    })
+                };
             }
             return updated;
         }));
@@ -1079,13 +1162,32 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                 value={searchVal}
                                                 placeholder="Search product..."
                                                 onChange={e => { setSearches(s => ({ ...s, [idx]: e.target.value })); setOpenSearch(idx); }}
-                                                onFocus={() => setOpenSearch(idx)}
+                                                onFocus={(e) => {
+                                                    const rect = e.target.getBoundingClientRect();
+                                                    e.target.dataset.rectBottom = rect.bottom;
+                                                    e.target.dataset.rectLeft = rect.left;
+                                                    e.target.dataset.rectWidth = rect.width;
+                                                    setOpenSearch(idx);
+                                                }}
                                                 onBlur={() => setTimeout(() => setOpenSearch(null), 200)}
                                                 className="input-dark"
                                                 style={{ padding: '3px 8px', fontSize: 11, width: '100%' }}
                                             />
-                                            {openSearch === idx && filteredProd.length > 0 && (
-                                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                                            {openSearch === idx && filteredProd.length > 0 && createPortal((
+                                                <div 
+                                                    ref={el => {
+                                                        if (!el) return;
+                                                        const input = document.getElementById(`fq-code-${idx}`);
+                                                        if (input) {
+                                                            const rect = input.getBoundingClientRect();
+                                                            el.style.top = (rect.bottom + 4) + 'px';
+                                                            el.style.left = rect.left + 'px';
+                                                            el.style.width = Math.max(rect.width, 240) + 'px';
+                                                        }
+                                                    }}
+                                                    onMouseDown={e => e.stopPropagation()}
+                                                    style={{ position: 'fixed', zIndex: 999999, background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                                                >
                                                     {filteredProd.map(p => (
                                                         <div key={p.id}
                                                             onMouseDown={e => { e.preventDefault(); applyProduct(idx, p); }}
@@ -1101,24 +1203,48 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                         </div>
                                                     ))}
                                                 </div>
-                                            )}
+                                            ), document.body)}
                                         </td>
 
-                                        {/*
-                      ── FIX: overflow:visible + position:relative so the fixed-position
-                         dropdown from EditableAttributeTags can position itself correctly.
-                         The dropdown uses position:fixed + a ref callback to place itself
-                         relative to the trigger's getBoundingClientRect(), so it always
-                         escapes the table regardless of scroll position.
-                    */}
                                         <td style={{ padding: '8px 8px', maxWidth: 240, overflow: 'visible', position: 'relative' }}>
-                                            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 6, lineHeight: 1.4 }}>
-                                                {(item.description || '').substring(0, 70)}
+                                            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                                {/* Images Section */}
+                                                {(item.polarDiagramUrl || item.productImageUrl) && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, marginTop: 4 }}>
+                                                        {item.productImageUrl && (
+                                                            <div style={{ width: 44, height: 44, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <img
+                                                                    src={getImageUrl(item.productImageUrl)}
+                                                                    alt="Product"
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                                                    onError={(e) => e.target.style.display = 'none'}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        {item.polarDiagramUrl && (
+                                                            <div style={{ width: 44, height: 44, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <img
+                                                                    src={getImageUrl(item.polarDiagramUrl)}
+                                                                    alt="Polar Curve"
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                                                    onError={(e) => e.target.style.display = 'none'}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Text / Attributes Section */}
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 6, lineHeight: 1.4 }}>
+                                                        {(item.description || '').substring(0, 70)}
+                                                    </div>
+                                                    <EditableAttributeGroup
+                                                        item={item}
+                                                        onUpdate={(updatedItem) => updateItemAttrs(idx, updatedItem)}
+                                                    />
+                                                </div>
                                             </div>
-                                            <EditableAttributeGroup
-                                                item={item}
-                                                onUpdate={(updatedItem) => updateItemAttrs(idx, updatedItem)}
-                                            />
                                         </td>
 
                                         <td style={{ padding: '8px 6px', fontSize: 10, color: 'var(--color-text-muted)' }}>{item.layoutCode || '—'}</td>
@@ -1146,7 +1272,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                     aria-label="List Price"
                                                     value={item.finalListPrice != null ? item.finalListPrice : ''}
                                                     onChange={e => updateFinal(idx, 'finalListPrice', e.target.value)}
-                                                    placeholder="0"
+                                                    placeholder={getPlaceholder(customLabels, 'colLP', '0')}
                                                     style={{ ...inputStyle, fontSize: 11, padding: '0 6px', fontVariantNumeric: 'tabular-nums' }}
                                                 />
                                             </EditableField>
@@ -1164,7 +1290,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                     aria-label="Discount %"
                                                     value={item.finalDiscount != null ? item.finalDiscount : ''}
                                                     onChange={e => updateFinal(idx, 'finalDiscount', e.target.value)}
-                                                    placeholder="0"
+                                                    placeholder={getPlaceholder(customLabels, 'colDisc', '0')}
                                                     style={{ ...inputStyle, fontSize: 11, padding: '0 6px', fontVariantNumeric: 'tabular-nums' }}
                                                 />
                                             </EditableField>
@@ -1197,7 +1323,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                     aria-label="Quantity"
                                                     value={item.finalQuantity != null ? item.finalQuantity : ''}
                                                     onChange={e => updateFinal(idx, 'finalQuantity', e.target.value)}
-                                                    placeholder="0"
+                                                    placeholder={getPlaceholder(customLabels, 'colQty', '0')}
                                                     style={{ ...inputStyle, fontSize: 11, padding: '0 6px' }}
                                                 />
                                             </EditableField>
@@ -1445,9 +1571,12 @@ export default function QuotationWizard() {
 
     const saveFinalDraft = async () => {
         if (!quotationId) return true;
+        const updatedItems = await saveRecommendations();
+        if (!updatedItems) return false;
+
         setSaving(true);
         try {
-            const itemsWithIds = items.filter(it => it.id && (it.finalBrandName || it.finalRate || it.finalAmount));
+            const itemsWithIds = updatedItems.filter(it => it.id && (it.finalBrandName || it.finalRate || it.finalAmount));
             if (itemsWithIds.length === 0) return true;
             const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols });
             await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
@@ -1502,10 +1631,12 @@ export default function QuotationWizard() {
     };
 
     const saveRecommendations = async () => {
-        if (!quotationId) return true;
+        if (!quotationId) return items;
         setSaving(true);
+        let currentItems = [...items];
         try {
-            for (const item of items) {
+            for (let i = 0; i < currentItems.length; i++) {
+                let item = currentItems[i];
                 let itemId = item.id;
                 if (!itemId) {
                     const { data: createdItem } = await api.post(`/quotations/${quotationId}/items`, {
@@ -1521,8 +1652,11 @@ export default function QuotationWizard() {
                         beamAngles: item.beamAngles,
                         cri: item.cri,
                         unit: item.unit,
+                        customFields: item.customFields,
                     });
                     itemId = createdItem.id;
+                    item = { ...item, id: itemId };
+                    currentItems[i] = item;
                     setItems(prev => prev.map(it => it._tempId === item._tempId ? { ...it, id: itemId } : it));
                 }
                 const recs = activeLabels.map(label => {
@@ -1531,7 +1665,7 @@ export default function QuotationWizard() {
                 }).filter(Boolean);
                 await api.put(`/quotations/${quotationId}/items/${itemId}/recommendations`, { recommendations: recs });
             }
-            return true;
+            return currentItems;
         } catch (err) {
             console.error(err);
             toast.error('Failed to save recommendations');
@@ -1540,13 +1674,13 @@ export default function QuotationWizard() {
     };
 
     const saveFinal = async () => {
-        const ok = await saveRecommendations();
-        if (!ok) return;
+        const updatedItems = await saveRecommendations();
+        if (!updatedItems) return;
         setSaving(true);
         try {
             const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols });
             await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
-            const itemsWithIds = items.filter(it => it.id);
+            const itemsWithIds = updatedItems.filter(it => it.id);
             await api.put(`/quotations/${quotationId}/final`, {
                 notes,
                 items: itemsWithIds.map(it => ({
