@@ -347,7 +347,9 @@ async function finalTableHTML(quotation) {
   const sLayout = !hCols['Layout'];
   const sCode = !hCols['Code'];
   const sDesc = !hCols['Description / Attributes'];
-  
+  const sPolar = !hCols['Polar Diagram'];
+  const sProdImg = !hCols['Product Image'];
+
   const sLp = !hCols['LP (₹)'];
   const sLp18 = !hCols['LP+18%'];
   const sDisc = !hCols['Disc %'];
@@ -365,8 +367,10 @@ async function finalTableHTML(quotation) {
   if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
   if (sDesc) {
     specHeaders.push(`<th rowspan="2" style="${TH}width:140px">PRODUCT DESCRIPTION</th>`);
-    specHeaders.push(`<th rowspan="2" style="${TH}">POLAR<br>DIAGRAM</th>`);
-    specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
+  }
+  if (sPolar) specHeaders.push(`<th rowspan="2" style="${TH}">POLAR<br>DIAGRAM</th>`);
+  if (sProdImg) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
+  if (sDesc) {
     specHeaders.push(`<th rowspan="2" style="${TH}">BODY<br>COLOUR</th>`);
     specHeaders.push(`<th rowspan="2" style="${TH}">REFLECTOR<br>COLOUR</th>`);
     specHeaders.push(`<th rowspan="2" style="${TH}">COLOUR<br>TEMPERATURE</th>`);
@@ -435,8 +439,10 @@ async function finalTableHTML(quotation) {
       if (sCode) rowHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;">${item.productCode || ""}</td>`;
       if (sDesc) {
           rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:130px">${(item.description || "").slice(0, 220)}</td>`;
-          rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
-          rowHtml += `<td style="${TD}text-align:center;padding:3px">${prodImg}</td>`;
+      }
+      if (sPolar) rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
+      if (sProdImg) rowHtml += `<td style="${TD}text-align:center;padding:3px">${prodImg}</td>`;
+      if (sDesc) {
           rowHtml += `<td style="${TD}text-align:center">${tagLines(item.bodyColours)}</td>`;
           rowHtml += `<td style="${TD}text-align:center">${tagLines(item.reflectorColours)}</td>`;
           rowHtml += `<td style="${TD}text-align:center">${tagLines(item.colourTemps)}</td>`;
@@ -577,6 +583,7 @@ async function allRecsTableHTML(quotation) {
   const sSno = !hCols['S.No'];
   const sCode = !hCols['Code'];
   const sDesc = !hCols['Description / Attributes'];
+  const sPolar = !hCols['Polar Diagram'];
   const sUnit = !hCols['Unit'];
   const sQty = !hCols['Qty'];
   const sMac = !hCols['Macadam'];
@@ -601,8 +608,8 @@ async function allRecsTableHTML(quotation) {
   if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
   if (sDesc) {
       specHeaders.push(`<th rowspan="2" style="${TH}">DESCRIPTION</th>`);
-      specHeaders.push(`<th rowspan="2" style="${TH}">POLAR</th>`);
   }
+  if (sPolar) specHeaders.push(`<th rowspan="2" style="${TH}">POLAR</th>`);
   if (sUnit) specHeaders.push(`<th rowspan="2" style="${TH}">UNIT</th>`);
   if (sQty) specHeaders.push(`<th rowspan="2" style="${TH}">QTY<br>(Approx)</th>`);
 
@@ -654,8 +661,8 @@ async function allRecsTableHTML(quotation) {
     if (sCode) rowHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;">${item.productCode || ""}</td>`;
     if (sDesc) {
         rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:120px">${(item.description || "").slice(0, 180)}</td>`;
-        rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
     }
+    if (sPolar) rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
     if (sUnit) rowHtml += `<td style="${TD}text-align:center;">${unit}</td>`;
     if (sQty) rowHtml += `<td style="${TD}text-align:center;font-weight:700;">${qty}</td>`;
     rowHtml += recCells;
