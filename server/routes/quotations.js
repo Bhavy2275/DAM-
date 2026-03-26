@@ -89,16 +89,36 @@ router.put('/:id/batch', async (req, res) => {
                     const { id: itemId, recommendations, customFields, ...itemData } = item;
                     if (!itemId) continue; // Safety check
 
-                    const dataToUpdate = { ...itemData };
-                    if (customFields !== undefined) {
-                        dataToUpdate.customFields = typeof customFields === 'string' ? customFields : JSON.stringify(customFields);
-                    }
-                    // Stringify attribute arrays if present
-                    ['bodyColours', 'reflectorColours', 'colourTemps', 'beamAngles', 'cri'].forEach(key => {
-                        if (item[key] !== undefined) {
-                            dataToUpdate[key] = JSON.stringify(item[key] || []);
+                    // 2.2. Sanitize itemData to only include valid QuotationItem fields
+                    const VALID_ITEM_FIELDS = [
+                        'productId', 'productCode', 'layoutCode', 'description', 'basePrice',
+                        'polarDiagramUrl', 'productImageUrl', 'bodyColours', 'reflectorColours',
+                        'colourTemps', 'beamAngles', 'cri', 'unit',
+                        'finalBrandName', 'finalProductCode', 'finalListPrice', 'finalDiscount',
+                        'finalRate', 'finalQuantity', 'finalAmount', 'finalMacadamStep', 'finalUnit',
+                        'finalPriceType', 'customFields'
+                    ];
+
+                    const dataToUpdate = {};
+                    VALID_ITEM_FIELDS.forEach(field => {
+                        if (item[field] !== undefined) {
+                            dataToUpdate[field] = item[field];
                         }
                     });
+
+                    // Stringify attribute arrays if present in dataToUpdate
+                    ['bodyColours', 'reflectorColours', 'colourTemps', 'beamAngles', 'cri'].forEach(key => {
+                        if (dataToUpdate[key] !== undefined) {
+                            dataToUpdate[key] = JSON.stringify(dataToUpdate[key] || []);
+                        }
+                    });
+
+                    // Special handling for customFields
+                    if (dataToUpdate.customFields !== undefined) {
+                        dataToUpdate.customFields = typeof dataToUpdate.customFields === 'string' 
+                            ? dataToUpdate.customFields 
+                            : JSON.stringify(dataToUpdate.customFields || {});
+                    }
 
                     // Update item itself
                     await tx.quotationItem.update({
