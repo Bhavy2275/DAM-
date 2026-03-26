@@ -66,16 +66,18 @@ app.use((err, req, res, next) => {
 });
 
 async function start() {
-  try {
-    await runInit();
-  } catch (e) {
-    // If seeding fails, log the error but still start the server
-    console.error('Admin/bootstrap initialisation failed:', e);
-  }
-
+  // Start listening immediately to avoid 502 Bad Gateway timeouts
   app.listen(PORT, () => {
     console.log(`DAM Lighting API running on port ${PORT}`);
   });
+
+  try {
+    // Run DB initialization in the background
+    await runInit();
+    console.log('✅ Admin/bootstrap initialisation complete');
+  } catch (e) {
+    console.error('❌ Admin/bootstrap initialisation failed:', e);
+  }
 }
 
 start();
