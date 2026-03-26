@@ -62,6 +62,7 @@ function buildData(body, files) {
         data.productImageUrl = files.productImage[0].path;
     }
 
+    console.log('📦 Incoming buildData:', JSON.stringify(body, null, 2));
     return data;
 }
 
@@ -137,6 +138,7 @@ router.put('/:id', runUpload, async (req, res) => {
         res.json(serializeProduct(product));
     } catch (error) {
         console.error('Update product error:', error);
+        console.error('🔴 Update product failed for ID:', req.params.id, 'with body:', JSON.stringify(req.body, null, 2));
         res.status(500).json({ error: 'Failed to update product' });
     }
 });

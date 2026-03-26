@@ -13,8 +13,8 @@ import MacadamBadge from '../components/MacadamBadge';
 import { EditableField, FilterField, MacadamTickGroup, ColumnHeaderField } from '../components/FieldArrow';
 import { inputStyle, selectStyle } from '../lib/styles';
 
-const BODY_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'TITANIUM'];
-const REFLECTOR_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'GOLD', 'MATT_SILVER', 'CHROME'];
+const BODY_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'TITANIUM', 'TITANIUM_SILVER'];
+const REFLECTOR_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'GOLD', 'MATT_SILVER', 'CHROME', 'TITANIUM_SILVER'];
 const COLOUR_TEMPS = ['2700K', '3000K', '3500K', '4000K', '6000K', 'TUNABLE'];
 const BEAM_ANGLES = ['05DEG', '10DEG', '15DEG', '24DEG', '36DEG', '38DEG', '40DEG', '55DEG', '60DEG', '90DEG', '110DEG', '120DEG'];
 const CRI_OPT = ['>70', '>80', '>90'];
@@ -32,6 +32,7 @@ const TAG_COLORS = {
     GOLD: { bg: '#FFD700', text: '#333' },
     MATT_SILVER: { bg: '#aaa', text: '#fff' },
     CHROME: { bg: '#d4d4d4', text: '#333' },
+    TITANIUM_SILVER: { bg: '#a1a1a1', text: '#fff' },
     '2700K': { bg: '#f5a623', text: '#fff' },
     '3000K': { bg: '#f59e0b', text: '#fff' },
     '3500K': { bg: '#fbbf24', text: '#333' },
@@ -384,13 +385,13 @@ function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, e
 }
 
 // ─── Recommendation Column Cell ─────────────────────────────────────────────
-function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel }) {
+function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemId }) {
     const color = REC_COLORS[label] || 'var(--color-accent)';
     const handleChange = (key, val) => {
         const updated = { ...rec, [key]: val };
         onChange(recalcRec(updated));
     };
-    const lbl = (key, def) => getCustomLabel(customLabels, `rec_${key}`, def);
+
     const editableFields = [
         { key: 'brandName', label: 'Brand', type: 'text' },
         { key: 'productCode', label: 'Prod Code', type: 'text' },
@@ -401,13 +402,23 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel }) {
         { key: 'quantity', label: 'Qty', type: 'number' },
         { key: 'amount', label: 'Amount', readOnly: true },
     ];
+
+    const defaultHeader = (rec.brandName || `REC ${label}`).toUpperCase();
+    const headerLabel = getCustomLabel(customLabels, `rec_${itemId}_${label}_header`, defaultHeader);
+
     return (
         <td style={{ verticalAlign: 'top', padding: '0 4px', minWidth: 140 }}>
             <div style={{ background: 'var(--color-base)', border: `1px solid ${color}33`, borderTop: `3px solid ${color}`, borderRadius: 8, padding: '8px 6px' }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color, letterSpacing: 1, textAlign: 'center', marginBottom: 8 }}>REC {label}</div>
+                <div style={{ marginBottom: 8, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color, letterSpacing: 1, textAlign: 'center', width: '100%' }}>
+                        {headerLabel}
+                    </div>
+                </div>
                 {editableFields.map(f => (
                     <div key={f.key} style={{ marginBottom: 5 }}>
-                        <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginBottom: 2, letterSpacing: 0.3 }}>{lbl(f.key, f.label)}</div>
+                        <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginBottom: 2, letterSpacing: 0.3 }}>
+                            {getCustomLabel(customLabels, `rec_${itemId}_${label}_${f.key}`, f.label)}
+                        </div>
                         {f.readOnly ? (
                             <div style={{ padding: '3px 6px', fontSize: 11, fontWeight: 600, color: f.key === 'amount' ? color : 'var(--color-text-secondary)', background: 'var(--color-elevated)', borderRadius: 4 }}>
                                 {f.key === 'listPriceWithGst' || f.key === 'rate' || f.key === 'amount'
@@ -416,18 +427,18 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel }) {
                         ) : (
                             <EditableField
                                 style={{ height: 28 }}
-                                label={lbl(f.key, f.label)}
-                                placeholder={getPlaceholder(customLabels, `rec_${f.key}`, '')}
-                                onRenameOptions={onRenameLabel ? (opts) => onRenameLabel(`rec_${f.key}`, opts) : undefined}
+                                label={getCustomLabel(customLabels, `rec_${itemId}_${label}_${f.key}`, f.label)}
+                                placeholder={getPlaceholder(customLabels, `rec_${itemId}_${label}_${f.key}`, '')}
+                                onRenameOptions={onRenameLabel ? (opts) => onRenameLabel(`rec_${itemId}_${label}_${f.key}`, opts) : undefined}
                             >
                                 <input
                                     type={f.type}
                                     name={`rec_${label}_${f.key}`}
                                     autoComplete="off"
-                                    aria-label={lbl(f.key, f.label)}
+                                    aria-label={getCustomLabel(customLabels, `rec_${itemId}_${label}_${f.key}`, f.label)}
                                     value={rec[f.key] || ''}
                                     onChange={e => handleChange(f.key, e.target.value)}
-                                    placeholder={getPlaceholder(customLabels, `rec_${f.key}`, '')}
+                                    placeholder={getPlaceholder(customLabels, `rec_${itemId}_${label}_${f.key}`, '')}
                                     style={{ ...inputStyle, fontSize: 11, padding: '0 6px' }}
                                 />
                             </EditableField>
@@ -461,6 +472,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel }) {
         </td>
     );
 }
+
 
 // ─── Colour / attribute maps (mirrors AttributeTagPills) ──────────────────
 const COLOUR_MAP_MODAL = {
@@ -773,7 +785,9 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                             </th>
                             {activeLabels.map(label => (
                                 <th key={label} style={{ padding: '10px 4px', fontSize: 10, color: REC_COLORS[label], textAlign: 'center', minWidth: 130, fontWeight: 800 }}>
-                                    REC {label}
+                                    <div style={{ width: '100%', textAlign: 'center' }}>
+                                        {getCustomLabel(customLabels, `rec_${label}_header`, `REC ${label}`)}
+                                    </div>
                                 </th>
                             ))}
                             <th style={{ width: 40 }}></th>
@@ -839,6 +853,7 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
                                         <td></td>
                                         {activeLabels.map(label => (
                                             <RecCell key={label} label={label}
+                                                itemId={item._tempId || item.id}
                                                 rec={item.recommendations[label] || emptyRecommendation(label)}
                                                 onChange={rec => updateRec(idx, label, rec)}
                                                 customLabels={customLabels} onRenameLabel={onRenameLabel} />
@@ -953,6 +968,7 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
 // ─── Step 2: Final Working Quotation ────────────────────────────────────────
 function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, setNotes, settings, products = [], searches, setSearches, customLabels, onRenameLabel, customCols, setCustomCols, hiddenCols, setHiddenCols }) {
     const [openSearch, setOpenSearch] = useState(null);
+    const [rowInputs, setRowInputs] = useState({});
     const lbl = (key, def) => getCustomLabel(customLabels, key, def);
 
     const importFromRec = (label) => {
@@ -972,7 +988,8 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                 finalUnit: rec.unit || item.unit,
             };
         }));
-        toast.success(`Imported Rec ${label} into Final Quotation`);
+        const customHeader = getCustomLabel(customLabels, `rec_${label}_header`, `Rec ${label}`);
+        toast.success(`Imported ${customHeader} into Final Quotation`);
     };
 
     const applyProduct = (idx, product) => {
@@ -980,11 +997,15 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
         const disc = parseFloat(product.discountPercent) || 0;
         const rate = parseFloat((lp * (1 - disc / 100)).toFixed(2));
         const qty = parseFloat(items[idx]?.finalQuantity) || 1;
+        const finalAmount = parseFloat((rate * qty).toFixed(2));
+        const finalBrandName = product.brandName || '';
+        const finalUnit = product.unit || 'NUMBERS';
+
+        // Sync price input field immediately
+        setRowInputs(prev => ({ ...prev, [idx]: lp.toString() }));
+
         setItems(prev => prev.map((it, i) => {
             if (i !== idx) return it;
-            const finalBrandName = product.brandName || '';
-            const finalUnit = product.unit || 'NUMBERS';
-            const finalAmount = parseFloat((rate * qty).toFixed(2));
             const recA = recalcRec({
                 ...it.recommendations['A'],
                 brandName: finalBrandName,
@@ -1012,6 +1033,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                 unit: finalUnit,
                 finalBrandName,
                 finalListPrice: lp,
+                finalPriceType: 'LP', // Default to LP for new selection
                 finalDiscount: disc,
                 finalRate: rate,
                 finalUnit,
@@ -1042,6 +1064,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
             recommendations: REC_LABELS.reduce((acc, l) => { acc[l] = emptyRecommendation(l); return acc; }, {}),
             finalBrandName: '', finalListPrice: 0, finalDiscount: 0,
             finalRate: 0, finalUnit: 'NUMBERS', finalQuantity: 1, finalAmount: 0, finalMacadamStep: '',
+            finalPriceType: 'LP',
         }]);
         setSearches(s => ({ ...s, [newIdx]: '' }));
     };
@@ -1050,7 +1073,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
         setItems(prev => prev.map((item, i) => {
             if (i !== idx) return item;
             const updated = { ...item, [key]: val };
-            if (key === 'finalListPrice' || key === 'finalDiscount' || key === 'finalQuantity') {
+            if (key === 'finalListPrice' || key === 'finalDiscount' || key === 'finalQuantity' || key === 'finalPriceType') {
                 const lp = parseFloat(key === 'finalListPrice' ? val : item.finalListPrice) || 0;
                 const disc = parseFloat(key === 'finalDiscount' ? val : item.finalDiscount) || 0;
                 const qty = parseFloat(key === 'finalQuantity' ? val : item.finalQuantity) || 0;
@@ -1100,14 +1123,17 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                 <button onClick={addRow} className="btn-primary" style={{ fontSize: 12, padding: '6px 16px' }}>
                     <Plus size={14} /> Add Row
                 </button>
-                {activeLabels.map(label => (
-                    <button key={label} onClick={() => importFromRec(label)}
-                        style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${REC_COLORS[label]}`, background: 'transparent', color: REC_COLORS[label], transition: 'all 0.15s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = REC_COLORS[label]; e.currentTarget.style.color = '#fff'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = REC_COLORS[label]; }}>
-                        Import Rec {label}
-                    </button>
-                ))}
+                {activeLabels.map(label => {
+                    const customHeader = getCustomLabel(customLabels, `rec_${label}_header`, `Rec ${label}`);
+                    return (
+                        <button key={label} onClick={() => importFromRec(label)}
+                            style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${REC_COLORS[label]}`, background: 'transparent', color: REC_COLORS[label], transition: 'all 0.15s' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = REC_COLORS[label]; e.currentTarget.style.color = '#fff'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = REC_COLORS[label]; }}>
+                            Import {customHeader}
+                        </button>
+                    );
+                })}
                 {/* PDF Image Toggles */}
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
                     <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.5 }}>PDF IMAGES:</span>
@@ -1146,7 +1172,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                     <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1100 }}>
                         <thead>
                             <tr style={{ background: 'var(--color-base)' }}>
-                                {['S.No', 'Code', 'Description / Attributes', 'Layout', 'Brand', 'LP (₹)', 'LP+18%', 'Disc %', 'Rate (₹)', 'Unit', 'Qty', 'Amount'].map(h => {
+                                {['S.No', 'Code', 'Description / Attributes', 'Layout', 'Brand', 'LP (₹)', 'Disc %', 'Rate (₹)', 'Unit', 'Qty', 'Amount'].map(h => {
                                     const isHidden = hiddenCols[h];
                                     return (
                                         <th key={h} style={{ padding: '10px 8px', fontSize: 10, color: isHidden ? 'var(--color-border)' : 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.4, textAlign: 'left', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
@@ -1185,8 +1211,8 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
 
                                 return (
                                     <tr key={item._tempId || item.id || idx} style={{ borderBottom: '1px solid var(--color-border)', background: idx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-base)' }}>
-                                        <td style={{ padding: '8px 8px', fontSize: 12, textAlign: 'center' }}>{idx + 1}</td>
-                                        <td style={{ padding: '8px 8px', position: 'relative', minWidth: 160 }}>
+                                        <td style={{ padding: '8px 8px', fontSize: 12, textAlign: 'center', verticalAlign: 'middle' }}>{idx + 1}</td>
+                                        <td style={{ padding: '8px 8px', position: 'relative', minWidth: 160, verticalAlign: 'middle' }}>
                                             <input
                                                 type="text"
                                                 id={`fq-code-${idx}`}
@@ -1240,8 +1266,8 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                             ), document.body)}
                                         </td>
 
-                                        <td style={{ padding: '8px 8px', maxWidth: 240, overflow: 'visible', position: 'relative' }}>
-                                            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                        <td style={{ padding: '8px 8px', maxWidth: 240, overflow: 'visible', position: 'relative', verticalAlign: 'middle' }}>
+                                            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                                                 {/* Images Section */}
                                                 {(item.polarDiagramUrl || item.productImageUrl) && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, marginTop: 4 }}>
@@ -1269,9 +1295,9 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                 )}
 
                                                 {/* Text / Attributes Section */}
-                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ flex: 1 }}>
                                                     <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 6, lineHeight: 1.4 }}>
-                                                        {(item.description || '').substring(0, 70)}
+                                                        {(item.description || '').substring(0, 100)}
                                                     </div>
                                                     <EditableAttributeGroup
                                                         item={item}
@@ -1280,9 +1306,17 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                 </div>
                                             </div>
                                         </td>
-
-                                        <td style={{ padding: '8px 6px', fontSize: 10, color: 'var(--color-text-muted)' }}>{item.layoutCode || '—'}</td>
-                                        <td style={{ padding: '8px 6px' }}>
+                                        <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
+                                            <EditableField style={{ height: 28 }}>
+                                                <input
+                                                    value={item.layoutCode || ''}
+                                                    onChange={e => updateFinal(idx, 'layoutCode', e.target.value)}
+                                                    placeholder="Layout"
+                                                    style={{ ...inputStyle, fontSize: 11, padding: '0 6px' }}
+                                                />
+                                            </EditableField>
+                                        </td>
+                                        <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
                                             <EditableField style={{ height: 28 }}>
                                                 <input
                                                     id={`fq-brand-${idx}`}
@@ -1296,25 +1330,60 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                 />
                                             </EditableField>
                                         </td>
-                                        <td style={{ padding: '8px 6px' }}>
-                                            <EditableField style={{ height: 28 }}>
-                                                <input
-                                                    id={`fq-lp-${idx}`}
-                                                    name={`fq_lp_${idx}`}
-                                                    type="number"
-                                                    autoComplete="off"
-                                                    aria-label="List Price"
-                                                    value={item.finalListPrice != null ? item.finalListPrice : ''}
-                                                    onChange={e => updateFinal(idx, 'finalListPrice', e.target.value)}
-                                                    placeholder={getPlaceholder(customLabels, 'colLP', '0')}
-                                                    style={{ ...inputStyle, fontSize: 11, padding: '0 6px', fontVariantNumeric: 'tabular-nums' }}
-                                                />
-                                            </EditableField>
+                                        <td style={{ padding: '8px 4px', minWidth: 160, verticalAlign: 'middle' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                <div style={{ display: 'flex' }}>
+                                                    <FilterField style={{ height: 28, width: 90, borderRadius: '6px 0 0 6px', borderRight: 'none' }}>
+                                                        <select
+                                                            value={item.finalPriceType || 'LP'}
+                                                            onChange={e => {
+                                                                const newType = e.target.value;
+                                                                const currentVal = rowInputs[idx] || (item.finalPriceType === 'LP' ? (item.finalListPrice || 0) : (parseFloat(item.finalListPrice || 0) * 1.18).toFixed(2));
+                                                                updateFinal(idx, 'finalPriceType', newType);
+                                                                // Convert current input value to new mode if needed
+                                                                let newVal;
+                                                                if (newType === 'LP') {
+                                                                    newVal = (parseFloat(currentVal) / 1.18).toFixed(2);
+                                                                } else {
+                                                                    newVal = (parseFloat(currentVal) * 1.18).toFixed(2);
+                                                                }
+                                                                setRowInputs(prev => ({ ...prev, [idx]: newVal }));
+                                                            }}
+                                                            style={{ ...selectStyle, fontSize: 9, padding: '0 4px', border: 'none' }}
+                                                        >
+                                                            <option value="LP">LP</option>
+                                                            <option value="LP_INC">LP + 18% (INC)</option>
+                                                        </select>
+                                                    </FilterField>
+                                                    <EditableField style={{ height: 28, flex: 1, borderRadius: '0 6px 6px 0' }}>
+                                                        <input
+                                                            id={`fq-lp-${idx}`}
+                                                            name={`fq_lp_${idx}`}
+                                                            type="number"
+                                                            autoComplete="off"
+                                                            aria-label="Price"
+                                                            value={rowInputs[idx] ?? (item.finalPriceType === 'LP' ? (item.finalListPrice || '') : (parseFloat(item.finalListPrice || 0) * 1.18).toFixed(2))}
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                setRowInputs(prev => ({ ...prev, [idx]: val }));
+                                                                const netPrice = item.finalPriceType === 'LP' ? val : (parseFloat(val || 0) / 1.18).toFixed(2);
+                                                                updateFinal(idx, 'finalListPrice', netPrice);
+                                                            }}
+                                                            placeholder="0.00"
+                                                            style={{ ...inputStyle, fontSize: 11, padding: '0 6px', borderLeft: 'none' }}
+                                                        />
+                                                    </EditableField>
+                                                </div>
+                                                <div style={{ fontSize: 10, color: 'var(--color-text-muted)', textAlign: 'right', paddingRight: 4, fontWeight: 600 }}>
+                                                    {item.finalPriceType === 'LP' 
+                                                        ? `INC: ₹${(parseFloat(item.finalListPrice || 0) * 1.18).toFixed(2)}`
+                                                        : `NET: ₹${(parseFloat(item.finalListPrice || 0)).toFixed(2)}`
+                                                    }
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td style={{ padding: '8px 6px', fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                                            {lpGst ? formatINR(lpGst) : '—'}
-                                        </td>
-                                        <td style={{ padding: '8px 6px' }}>
+
+                                        <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
                                             <EditableField style={{ height: 28 }}>
                                                 <input
                                                     id={`fq-disc-${idx}`}
@@ -1329,10 +1398,10 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                 />
                                             </EditableField>
                                         </td>
-                                        <td style={{ padding: '8px 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
+                                        <td style={{ padding: '8px 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                             {item.finalRate ? formatINR(parseFloat(item.finalRate)) : '—'}
                                         </td>
-                                        <td style={{ padding: '8px 6px' }}>
+                                        <td style={{ padding: '8px 6px', verticalAlign: 'middle' }}>
                                             <FilterField style={{ height: 28 }}>
                                                 <select
                                                     id={`fq-unit-${idx}`}
@@ -1347,7 +1416,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                 </select>
                                             </FilterField>
                                         </td>
-                                        <td style={{ padding: '8px 6px' }}>
+                                        <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
                                             <EditableField style={{ height: 28 }}>
                                                 <input
                                                     id={`fq-qty-${idx}`}
@@ -1362,14 +1431,14 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                                 />
                                             </EditableField>
                                         </td>
-                                        <td style={{ padding: '8px 6px', fontWeight: 700, color: 'var(--color-accent)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                                        <td style={{ padding: '8px 6px', fontWeight: 700, color: 'var(--color-accent)', fontSize: 12, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                             {item.finalAmount ? formatINR(parseFloat(item.finalAmount)) : '—'}
                                         </td>
                                         {customCols?.map(col => {
                                             const cfVal = (item.customFields || {})[col.id];
                                             const setCF = (v) => updateFinal(idx, 'customFields', { ...(item.customFields || {}), [col.id]: v });
                                             return (
-                                                <td key={col.id} style={{ padding: '8px 6px', textAlign: 'center' }}>
+                                                <td key={col.id} style={{ padding: '8px 6px', textAlign: 'center', verticalAlign: 'middle' }}>
                                                     {col.type === 'checkbox' ? (
                                                         <input
                                                             type="checkbox"
@@ -1575,6 +1644,7 @@ export default function QuotationWizard() {
                     finalQuantity: item.finalQuantity ?? 0,
                     finalAmount: item.finalAmount ?? 0,
                     finalMacadamStep: item.finalMacadamStep ?? '',
+                    finalPriceType: item.finalPriceType || 'LP',
                     customFields: (() => {
                         try { return typeof item.customFields === 'string' ? JSON.parse(item.customFields) : (item.customFields || {}); }
                         catch { return {}; }
@@ -1696,6 +1766,7 @@ export default function QuotationWizard() {
                         cri: item.cri,
                         unit: item.unit,
                         customFields: item.customFields,
+                        finalPriceType: item.finalPriceType || 'LP',
                     });
                     itemId = createdItem.id;
                     item = { ...item, id: itemId };
@@ -1743,6 +1814,7 @@ export default function QuotationWizard() {
                     finalAmount: it.finalAmount,
                     finalMacadamStep: it.finalMacadamStep,
                     finalUnit: it.finalUnit,
+                    finalPriceType: it.finalPriceType || 'LP',
                     customFields: it.customFields || {},
                     // ── CRITICAL: save edited attribute arrays so PDF reflects changes ──
                     bodyColours: it.bodyColours || [],

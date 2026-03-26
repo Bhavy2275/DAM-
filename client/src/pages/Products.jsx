@@ -9,8 +9,8 @@ import { SkeletonCard } from '../components/SkeletonCard';
 import { EditableField } from '../components/FieldArrow';
 import { inputStyle } from '../lib/styles';
 
-const BODY_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'TITANIUM'];
-const REFLECTOR_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'GOLD', 'MATT_SILVER', 'CHROME'];
+const BODY_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'TITANIUM', 'TITANIUM_SILVER'];
+const REFLECTOR_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'GOLD', 'MATT_SILVER', 'CHROME', 'TITANIUM_SILVER'];
 const COLOUR_TEMPS = ['2700K', '3000K', '3500K', '4000K', '6000K', 'TUNABLE'];
 const BEAM_ANGLES = ['05DEG', '10DEG', '15DEG', '24DEG', '36DEG', '38DEG', '40DEG', '55DEG', '60DEG', '90DEG', '110DEG', '120DEG'];
 const CRI_OPTIONS = ['>70', '>80', '>90'];
@@ -108,11 +108,13 @@ export default function Products() {
     const [showFilters, setShowFilters] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [editProduct, setEditProduct] = useState(null);
-    const [form, setForm] = useState(emptyForm);
+    const [form, setForm] = useState({ ...emptyForm, listPrice: '', discountPercent: '' });
     const [polarFile, setPolarFile] = useState(null);
     const [imageFile, setImageFile] = useState(null);
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [priceType, setPriceType] = useState('LP'); // 'LP' or 'LP_GST'
+    const [priceValue, setPriceValue] = useState('');
     const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     useEffect(() => { loadProducts(); }, []);
@@ -129,6 +131,8 @@ export default function Products() {
     const openAdd = () => {
         setEditProduct(null);
         setForm(emptyForm);
+        setPriceType('LP');
+        setPriceValue('');
         setPolarFile(null);
         setImageFile(null);
         setShowModal(true);
@@ -136,9 +140,10 @@ export default function Products() {
 
     const openEdit = (p) => {
         setEditProduct(p);
+        const effectivePrice = p.listPrice || p.basePrice || '';
         setForm({
             productCode: p.productCode, layoutCode: p.layoutCode || '', description: p.description,
-            basePrice: p.basePrice || '',
+            basePrice: effectivePrice,
             brandName: p.brandName || '',
             bodyColours: Array.isArray(p.bodyColours) ? p.bodyColours : [], 
             reflectorColours: Array.isArray(p.reflectorColours) ? p.reflectorColours : [],
@@ -147,6 +152,8 @@ export default function Products() {
             cri: Array.isArray(p.cri) ? p.cri : [],
             customAttributes: Array.isArray(p.customAttributes) ? p.customAttributes : [],
         });
+        setPriceType('LP');
+        setPriceValue(effectivePrice);
         setPolarFile(null);
         setImageFile(null);
         setShowModal(true);
@@ -157,6 +164,12 @@ export default function Products() {
             toast.error('Product code and description are required');
             return;
         }
+
+        // 🚨 CRITICAL FIX: Calculate the final net price directly before saving 
+        // to ensure the LP+18% calculation is perfectly synced even if typed quickly.
+        const num = parseFloat(priceValue || 0);
+        const finalBasePrice = priceType === 'LP' ? priceValue : (num / 1.18).toFixed(2);
+
         setSaving(true);
         try {
             // Always use FormData so files + JSON arrays can travel together
@@ -164,7 +177,9 @@ export default function Products() {
             fd.append('productCode',      form.productCode.trim());
             fd.append('layoutCode',       form.layoutCode.trim());
             fd.append('description',      form.description.trim());
-            fd.append('basePrice',        form.basePrice || '0');
+            fd.append('basePrice',        finalBasePrice || '0');
+            fd.append('listPrice',        finalBasePrice || '0');
+            fd.append('discountPercent',  '0'); 
             fd.append('brandName',        form.brandName || '');
             fd.append('bodyColours',      JSON.stringify(form.bodyColours));
             fd.append('reflectorColours', JSON.stringify(form.reflectorColours));
@@ -186,6 +201,7 @@ export default function Products() {
             setShowModal(false);
             loadProducts();
         } catch (err) {
+            console.error('❌ handleSave Error:', err);
             toast.error(err.response?.data?.error || 'Failed to save product');
         } finally { setSaving(false); }
     };
@@ -349,13 +365,18 @@ export default function Products() {
                                     {product.description}
                                 </p>
 
-                                <AttributeTagPills
-                                    bodyColours={product.bodyColours}
-                                    colourTemps={product.colourTemps}
-                                    beamAngles={product.beamAngles}
-                                    cri={product.cri}
-                                    small
-                                />
+                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <AttributeTagPills
+                                        bodyColours={product.bodyColours}
+                                        colourTemps={product.colourTemps}
+                                        beamAngles={product.beamAngles}
+                                        cri={product.cri}
+                                        small
+                                    />
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                                        ₹{(product.listPrice || product.basePrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 1 })}
+                                    </div>
+                                </div>
                             </motion.div>
                         ))}
                     </AnimatePresence>
@@ -385,7 +406,7 @@ export default function Products() {
                                         <label htmlFor="prod-productCode" className="label">Product Code *</label>
                                         <EditableField style={{ height: 36 }}>
                                             <input id="prod-productCode" name="productCode" type="text" value={form.productCode} onChange={e => updateField('productCode', e.target.value)}
-                                                style={{ ...inputStyle }} placeholder="e.g. C1, PF1, W1" />
+                                                style={{ ...inputStyle }} placeholder="e.g. C1, PF1" />
                                         </EditableField>
                                     </div>
                                     <div>
@@ -396,11 +417,57 @@ export default function Products() {
                                         </EditableField>
                                     </div>
                                     <div>
-                                        <label htmlFor="prod-basePrice" className="label">Base Price (₹)</label>
-                                        <EditableField style={{ height: 36 }}>
-                                            <input id="prod-basePrice" name="basePrice" type="number" min="0" step="0.01" value={form.basePrice} onChange={e => updateField('basePrice', e.target.value)}
-                                                style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }} placeholder="0.00" />
-                                        </EditableField>
+                                        <label className="label">List Price Selection</label>
+                                        <div style={{ display: 'flex', gap: 4 }}>
+                                            <select 
+                                                value={priceType} 
+                                                onChange={e => {
+                                                    const newType = e.target.value;
+                                                    setPriceType(newType);
+                                                    if (newType === 'LP') {
+                                                        setPriceValue(form.basePrice);
+                                                    } else {
+                                                        setPriceValue((parseFloat(form.basePrice || 0) * 1.18).toFixed(2));
+                                                    }
+                                                }} 
+                                                className="input-dark" 
+                                                style={{ width: '42%', fontSize: 10, padding: '0 4px', height: 36, fontWeight: 600 }}
+                                            >
+                                                <option value="LP">LP (NET)</option>
+                                                <option value="LP_GST">LP + 18% (INC)</option>
+                                            </select>
+                                            <EditableField style={{ height: 36, flex: 1 }}>
+                                                <input 
+                                                    id="prod-price-val"
+                                                    type="number" min="0" step="0.01" 
+                                                    value={priceValue} 
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        setPriceValue(val);
+                                                        const num = parseFloat(val || 0);
+                                                        // Sync the net price in the form state immediately
+                                                        if (priceType === 'LP') {
+                                                            updateField('basePrice', val);
+                                                        } else {
+                                                            updateField('basePrice', (num / 1.18).toFixed(2));
+                                                        }
+                                                    }}
+                                                    style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }} 
+                                                    placeholder="0.00" 
+                                                />
+                                            </EditableField>
+                                        </div>
+                                        <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginTop: 4, display: 'flex', justifyContent: 'space-between', padding: '0 2px' }}>
+                                            <span>
+                                                {priceType === 'LP' ? 
+                                                    `Incl. GST: ₹${(parseFloat(priceValue || 0) * 1.18).toFixed(2)}` : 
+                                                    `Net Price: ₹${(parseFloat(priceValue || 0) / 1.18).toFixed(2)}`
+                                                }
+                                            </span>
+                                            <span style={{ fontWeight: 700, color: 'var(--color-accent)', letterSpacing: 0.5 }}>
+                                                NET SAVED: ₹{priceType === 'LP' ? (priceValue || '0.00') : (parseFloat(priceValue || 0) / 1.18).toFixed(2)}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div style={{ marginBottom: 16 }}>

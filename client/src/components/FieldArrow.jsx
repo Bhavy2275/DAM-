@@ -361,7 +361,7 @@ export function FilterField({ children, inputRef, style = {} }) {
                 height: 36,
                 ...style,
             }}
-            onFocusCapture={e => e.currentTarget.style.borderColor = '#B91C1C'}
+            onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--color-accent)'}
             onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
         >
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
