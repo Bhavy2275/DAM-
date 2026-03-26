@@ -19,12 +19,12 @@ async function migrate() {
     try {
         // 1. Clear existing data (if any) to avoid collisions
         console.log('🧹 Cleaning up Supabase...');
-        await prisma.itemRecommendation.deleteMany();
-        await prisma.quotationItem.deleteMany();
-        await prisma.quotation.deleteMany();
-        await prisma.client.deleteMany();
-        await prisma.product.deleteMany();
-        await prisma.companySettings.deleteMany();
+        try { await prisma.itemRecommendation.deleteMany(); } catch (e) {}
+        try { await prisma.quotationItem.deleteMany(); } catch (e) {}
+        try { await prisma.quotation.deleteMany(); } catch (e) {}
+        try { await prisma.client.deleteMany(); } catch (e) {}
+        try { await prisma.product.deleteMany(); } catch (e) {}
+        try { await prisma.companySettings.deleteMany(); } catch (e) {}
         // We usually don't delete users to avoid locking ourselves out, 
         // but since we're inserting them from backup, we'll upsert them.
 
@@ -70,17 +70,20 @@ async function migrate() {
         // 6. Insert Quotations (Complex nested insert)
         console.log('📄 Migrating Quotations...');
         for (const quote of quotations) {
-            const { lineItems, ...quoteData } = quote;
+            const { id, lineItems, ...quoteData } = quote;
             await prisma.quotation.create({
                 data: {
                     ...quoteData,
                     lineItems: {
                         create: lineItems.map(item => {
-                            const { recommendations, ...itemData } = item;
+                            const { id, quotationId, recommendations, ...itemData } = item;
                             return {
                                 ...itemData,
                                 recommendations: {
-                                    create: recommendations
+                                    create: recommendations.map(rec => {
+                                        const { id, quotationItemId, ...recData } = rec;
+                                        return recData;
+                                    })
                                 }
                             };
                         })
