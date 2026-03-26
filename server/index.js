@@ -20,22 +20,23 @@ const PORT = process.env.PORT || 5000;
 // Custom CORS middleware for production reliability
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowed = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim());
   
-  // Log origin in Railway
-  if (origin) console.log(`[CORS Request] Origin: ${origin}`);
+  // Log every request to confirm middleware is live
+  console.log(`[${req.method}] ${req.url} - Origin: ${origin || 'none'}`);
 
   if (origin) {
-    if (
-      origin.includes('damlightings.com') || 
-      origin.includes('damlighting.com') ||
-      origin.endsWith('.vercel.app') ||
-      origin.startsWith('http://localhost')
-    ) {
+    // Check if origin matches our domains
+    const isOurDomain = origin.includes('damlightings.com') || 
+                       origin.includes('damlighting.com') ||
+                       origin.endsWith('.vercel.app') ||
+                       origin.startsWith('http://localhost');
+
+    if (isOurDomain) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      console.log('✅ CORS HEADERS SET for origin:', origin);
     }
   }
 
