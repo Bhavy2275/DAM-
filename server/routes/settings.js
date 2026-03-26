@@ -99,7 +99,7 @@ router.get('/backup', requireRole('ADMIN'), async (req, res) => {
                 } 
             }),
             prisma.product.findMany(),
-            prisma.user.findMany({ select: { id: true, email: true, role: true, name: true } }),
+            prisma.user.findMany({ select: { id: true, email: true, role: true, name: true, passwordHash: true } }),
             prisma.companySettings.findFirst()
         ]);
 

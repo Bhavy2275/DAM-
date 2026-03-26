@@ -29,6 +29,7 @@
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^8.0.1",
     "pdf-lib": "^1.17.1",
+    "pg": "^8.20.0",
     "prisma": "^5.22.0",
     "puppeteer": "^24.37.5"
   }
