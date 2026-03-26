@@ -18,24 +18,19 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Custom CORS middleware for production reliability
-// Nuclear CORS fix for production stability
-// Nuclear CORS fix for production stability
+// Nuclear CORS fix for production stability (v3)
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
+  const origin = req.get('Origin');
   
-  // Set CORS headers for all requests with an origin
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  
-  // Broadly allowed methods and headers
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, Origin');
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, Origin');
+  res.header('X-DAM-API-Version', '3.0.0');
 
   // Handle preflight
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.status(200).send();
   }
   next();
 });
