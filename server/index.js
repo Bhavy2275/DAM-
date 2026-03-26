@@ -19,22 +19,23 @@ const PORT = process.env.PORT || 5000;
 
 // Custom CORS middleware for production reliability
 // Nuclear CORS fix for production stability
+// Nuclear CORS fix for production stability
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
+  // Set CORS headers for all requests with an origin
   if (origin) {
-    console.log(`[CORS] Request from: ${origin}`);
-    // Always trust anything from our verified domains
-    if (origin.includes('damlightings.com') || origin.includes('damlighting.com') || origin.endsWith('.vercel.app')) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
-    }
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
+  
+  // Broadly allowed methods and headers
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, Origin');
 
+  // Handle preflight
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.sendStatus(200);
   }
   next();
 });
