@@ -336,16 +336,6 @@ export default function Products() {
                                                 {product.brandName}
                                             </div>
                                         )}
-                                        {product.listPrice > 0 && (
-                                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-accent)', marginTop: 4 }}>
-                                                LP: ₹{product.listPrice.toLocaleString('en-IN')}
-                                                {product.discountPercent > 0 && (
-                                                    <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: 11 }}>
-                                                        {' '}— {product.discountPercent}% off
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                     <div style={{ display: 'flex', gap: 4 }}>
                                         <button onClick={() => openEdit(product)} style={{ padding: 6, borderRadius: 6, border: 'none', background: 'var(--color-elevated)', color: 'var(--color-text-secondary)', cursor: 'pointer', transition: 'all 0.15s' }}
@@ -425,7 +415,7 @@ export default function Products() {
                                 </div>
 
                                 {/* ── Pricing fields ── */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16,
+                                <div style={{ marginBottom: 16,
                                     padding: 16, background: 'var(--color-elevated)', borderRadius: 'var(--radius-md)',
                                     border: '1px solid var(--color-accent)33' }}>
                                     <div>
@@ -433,20 +423,6 @@ export default function Products() {
                                         <EditableField style={{ height: 36 }}>
                                             <input type="text" value={form.brandName} onChange={e => updateField('brandName', e.target.value)}
                                                 style={{ ...inputStyle }} placeholder="e.g. Hybec Elite" />
-                                        </EditableField>
-                                    </div>
-                                    <div>
-                                        <label className="label" style={{ color: 'var(--color-accent)' }}>List Price (₹)</label>
-                                        <EditableField style={{ height: 36 }}>
-                                            <input type="number" min="0" step="0.01" value={form.listPrice} onChange={e => updateField('listPrice', e.target.value)}
-                                                style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }} placeholder="0" />
-                                        </EditableField>
-                                    </div>
-                                    <div>
-                                        <label className="label" style={{ color: 'var(--color-accent)' }}>Default Discount %</label>
-                                        <EditableField style={{ height: 36 }}>
-                                            <input type="number" min="0" max="100" step="0.1" value={form.discountPercent} onChange={e => updateField('discountPercent', e.target.value)}
-                                                style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }} placeholder="0" />
                                         </EditableField>
                                     </div>
                                 </div>
