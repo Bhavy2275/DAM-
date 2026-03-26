@@ -1146,7 +1146,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                     <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1100 }}>
                         <thead>
                             <tr style={{ background: 'var(--color-base)' }}>
-                                {['S.No', 'Code', 'Description / Attributes', 'Layout', 'Brand', 'LP (₹)', 'LP+18%', 'Disc %', 'Rate (₹)', 'Unit', 'Qty', 'Amount', 'Macadam'].map(h => {
+                                {['S.No', 'Code', 'Description / Attributes', 'Layout', 'Brand', 'LP (₹)', 'LP+18%', 'Disc %', 'Rate (₹)', 'Unit', 'Qty', 'Amount'].map(h => {
                                     const isHidden = hiddenCols[h];
                                     return (
                                         <th key={h} style={{ padding: '10px 8px', fontSize: 10, color: isHidden ? 'var(--color-border)' : 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.4, textAlign: 'left', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
@@ -1365,9 +1365,6 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                                         <td style={{ padding: '8px 6px', fontWeight: 700, color: 'var(--color-accent)', fontSize: 12, whiteSpace: 'nowrap' }}>
                                             {item.finalAmount ? formatINR(parseFloat(item.finalAmount)) : '—'}
                                         </td>
-                                        <td style={{ padding: '4px 6px', verticalAlign: 'middle' }}>
-                                            <MacadamTickGroup value={item.finalMacadamStep || ''} onChange={val => updateFinal(idx, 'finalMacadamStep', val)} />
-                                        </td>
                                         {customCols?.map(col => {
                                             const cfVal = (item.customFields || {})[col.id];
                                             const setCF = (v) => updateFinal(idx, 'customFields', { ...(item.customFields || {}), [col.id]: v });
@@ -1427,7 +1424,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                         {subtotal > 0 && (() => {
                                 // 13 fixed cols + customCols + 1 delete = 14 + n total
                                 // label spans cols 1-11 (S.No → Qty), value spans the rest
-                                const valSpan = 2 + (customCols?.length || 0) + 1; // Amount + Macadam + custom + delete
+                                const valSpan = 1 + (customCols?.length || 0) + 1; // Amount + custom + delete
                                 return (
                                     <tfoot>
                                         <tr style={{ background: 'var(--color-base)', borderTop: '1px solid var(--color-border)' }}>
