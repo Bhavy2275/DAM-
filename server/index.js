@@ -23,16 +23,22 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman)
+    // Log incoming origin for debugging in Railway
+    console.log('Incoming Origin:', origin);
+    console.log('Allowed Origins:', JSON.stringify(allowedOrigins));
+
     if (!origin) return callback(null, true);
-    // Allow localhost and any *.vercel.app preview/production URL
-    if (
-      allowedOrigins.includes(origin) ||
-      origin.endsWith('.vercel.app') ||
-      origin.startsWith('http://localhost')
-    ) {
+    
+    // Check if it's one of our production domains
+    const isProductionDomain = allowedOrigins.some(ao => origin === ao);
+    const isVercelPreview = origin.endsWith('.vercel.app');
+    const isLocal = origin.startsWith('http://localhost');
+
+    if (isProductionDomain || isVercelPreview || isLocal) {
       return callback(null, true);
     }
+    
+    console.error('❌ CORS BLOCKED for origin:', origin);
     callback(new Error('CORS not allowed'));
   },
   credentials: true,
