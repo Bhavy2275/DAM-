@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building, Landmark, FileText, Users, Plus, Trash2, Save, X } from 'lucide-react';
+import { Building, Landmark, FileText, Users, Plus, Trash2, Save, X, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { fadeUp, staggerContainer, modalOverlay, modalContent } from '../lib/animations';
@@ -53,6 +53,22 @@ export default function Settings() {
         catch (err) { toast.error('Failed to update'); }
     };
 
+    const handleDownloadBackup = async () => {
+        try {
+            const response = await api.get('/settings/backup', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `DAM-backup-${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            toast.success('Backup downloaded');
+        } catch (err) {
+            toast.error('Failed to download backup');
+        }
+    };
+
     if (loading) return <div style={{ padding: 32 }}><div className="skeleton" style={{ height: 400 }} /></div>;
 
     return (
@@ -79,6 +95,20 @@ export default function Settings() {
                             <tab.icon size={16} /> {tab.label}
                         </button>
                     ))}
+
+                    {user?.role === 'ADMIN' && (
+                        <button onClick={handleDownloadBackup}
+                            className="flex items-center gap-2 w-full"
+                            style={{
+                                marginTop: 24, padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--color-border)',
+                                cursor: 'pointer', background: 'transparent', color: 'var(--color-text-secondary)',
+                                fontSize: 13, fontWeight: 500, textAlign: 'left', transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-accent)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}>
+                            <Download size={16} /> Download Backup
+                        </button>
+                    )}
                 </motion.div>
 
                 {/* Content */}

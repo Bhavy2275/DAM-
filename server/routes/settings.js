@@ -80,4 +80,43 @@ router.post('/logo', requireRole('ADMIN'), uploadLogo.single('logo'), async (req
     }
 });
 
+// GET /api/settings/backup - Export all data as JSON
+router.get('/backup', requireRole('ADMIN'), async (req, res) => {
+    try {
+        const [
+            clients,
+            quotations,
+            products,
+            users,
+            settings
+        ] = await Promise.all([
+            prisma.client.findMany(),
+            prisma.quotation.findMany({ include: { items: true } }),
+            prisma.product.findMany(),
+            prisma.user.findMany({ select: { id: true, email: true, role: true, name: true } }),
+            prisma.companySettings.findFirst()
+        ]);
+
+        const backupData = {
+            version: '1.0.0',
+            timestamp: new Date().toISOString(),
+            data: {
+                clients,
+                quotations,
+                products,
+                users,
+                settings
+            }
+        };
+
+        const fileName = `DAM-backup-${new Date().toISOString().split('T')[0]}.json`;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+        res.send(JSON.stringify(backupData, null, 2));
+    } catch (error) {
+        console.error('Backup error:', error);
+        res.status(500).json({ error: 'Failed to generate backup' });
+    }
+});
+
 module.exports = router;
