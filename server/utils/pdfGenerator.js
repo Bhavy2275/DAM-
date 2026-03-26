@@ -357,7 +357,7 @@ async function finalTableHTML(quotation) {
   const sUnit = !hCols['Unit'];
   const sQty = !hCols['Qty'];
   const sAmt = !hCols['Amount'];
-  const sMac = !hCols['Macadam'];
+  const sMac = false; // Always false for final quote table per user request
 
   const banner = (quotation.projectName || "") + " \u2014 " + (quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
@@ -680,10 +680,12 @@ async function allRecsTableHTML(quotation) {
   for (const def of totalDefs) {
     const recAmtCells = activeLabels.map(label => {
       const t = recTotals.find(r => r.label === label);
-      return `<td style="${TD}background:${def.bg};color:${def.color}"></td>
-              <td style="${TD}background:${def.bg};color:${def.color}"></td>
-              <td style="${TD}text-align:right;font-weight:700;background:${def.bg};color:${def.color};font-variant-numeric:tabular-nums">${fmt(t[def.key])}</td>
-              <td style="${TD}background:${def.bg};color:${def.color}"></td>`;
+      let cells = "";
+      if (sMac) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
+      if (sRate) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
+      if (sAmt) cells += `<td style="${TD}text-align:right;font-weight:700;background:${def.bg};color:${def.color};font-variant-numeric:tabular-nums">${fmt(t[def.key])}</td>`;
+      cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
+      return cells;
     }).join("");
     tfootHTML += `
 <tr>

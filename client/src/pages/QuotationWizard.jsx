@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -302,7 +302,7 @@ function InlineInput({ value, onChange, type = 'text', placeholder = '', style =
 }
 
 // ─── Step 1: Quote Info ─────────────────────────────────────────────────────
-function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, extraFields, setExtraFields }) {
+const Step3QuoteInfo = memo(function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, extraFields, setExtraFields }) {
     const updateField = (k, v) => setForm(f => ({ ...f, [k]: v }));
     const lbl = (key, def) => getCustomLabel(customLabels, key, def);
     return (
@@ -382,7 +382,7 @@ function Step3QuoteInfo({ form, setForm, clients, customLabels, onRenameLabel, e
             </div>
         </motion.div>
     );
-}
+});
 
 // ─── Recommendation Column Cell ─────────────────────────────────────────────
 function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemId }) {
@@ -617,7 +617,7 @@ function ProductAttributeModal({ product, initialAttrs, editingItem, onConfirm, 
 }
 
 // ─── Step 3: Recommendations ────────────────────────────────────────────────
-function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstRate, products, quotationId, customLabels, onRenameLabel, customCols, setCustomCols }) {
+const Step4Recommendations = memo(function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstRate, products, quotationId, customLabels, onRenameLabel, customCols, setCustomCols }) {
     const [productSearch, setProductSearch] = useState('');
     const [showProductPicker, setShowProductPicker] = useState(false);
     const [filterAttr, setFilterAttr] = useState({ bodyColour: '', cct: '', beamAngle: '', cri: '' });
@@ -963,10 +963,10 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
             </AnimatePresence>
         </div>
     );
-}
+});
 
 // ─── Step 2: Final Working Quotation ────────────────────────────────────────
-function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, setNotes, settings, products = [], searches, setSearches, customLabels, onRenameLabel, customCols, setCustomCols, hiddenCols, setHiddenCols }) {
+const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, setNotes, settings, products = [], searches, setSearches, customLabels, onRenameLabel, customCols, setCustomCols, hiddenCols, setHiddenCols }) {
     const [openSearch, setOpenSearch] = useState(null);
     const [rowInputs, setRowInputs] = useState({});
     const lbl = (key, def) => getCustomLabel(customLabels, key, def);
@@ -1551,7 +1551,7 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
             </div>
         </div>
     );
-}
+});
 
 // ─── Main Wizard ─────────────────────────────────────────────────────────────
 export default function QuotationWizard() {
@@ -1683,38 +1683,43 @@ export default function QuotationWizard() {
         try {
             // Always save customLabels (includes hiddenCols, customCols, etc.) regardless of items
             const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
-            await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
-
             const itemsWithIds = updatedItems.filter(it => it.id && (it.finalBrandName || it.finalRate || it.finalAmount));
-            if (itemsWithIds.length === 0) return true;
-            await api.put(`/quotations/${quotationId}/final`, {
-                notes,
-                items: itemsWithIds.map(it => ({
-                    id: it.id,
-                    productId: it.productId,
-                    productCode: it.productCode,
-                    description: it.description,
-                    layoutCode: it.layoutCode,
-                    productImageUrl: it.productImageUrl,
-                    polarDiagramUrl: it.polarDiagramUrl,
-                    finalBrandName: it.finalBrandName,
-                    finalProductCode: it.finalProductCode || it.productCode,
-                    finalListPrice: it.finalListPrice,
-                    finalDiscount: it.finalDiscount,
-                    finalRate: it.finalRate,
-                    finalQuantity: it.finalQuantity,
-                    finalAmount: it.finalAmount,
-                    finalMacadamStep: it.finalMacadamStep,
-                    finalUnit: it.finalUnit,
-                    customFields: it.customFields || {},
-                    // ── CRITICAL: save edited attribute arrays so PDF reflects changes ──
-                    bodyColours: it.bodyColours || [],
-                    reflectorColours: it.reflectorColours || [],
-                    colourTemps: it.colourTemps || [],
-                    beamAngles: it.beamAngles || [],
-                    cri: it.cri || [],
-                }))
-            });
+            if (itemsWithIds.length === 0) {
+                await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
+                return true;
+            }
+
+            await Promise.all([
+                api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson }),
+                api.put(`/quotations/${quotationId}/final`, {
+                    notes,
+                    items: itemsWithIds.map(it => ({
+                        id: it.id,
+                        productId: it.productId,
+                        productCode: it.productCode,
+                        description: it.description,
+                        layoutCode: it.layoutCode,
+                        productImageUrl: it.productImageUrl,
+                        polarDiagramUrl: it.polarDiagramUrl,
+                        finalBrandName: it.finalBrandName,
+                        finalProductCode: it.finalProductCode || it.productCode,
+                        finalListPrice: it.finalListPrice,
+                        finalDiscount: it.finalDiscount,
+                        finalRate: it.finalRate,
+                        finalQuantity: it.finalQuantity,
+                        finalAmount: it.finalAmount,
+                        finalMacadamStep: it.finalMacadamStep,
+                        finalUnit: it.finalUnit,
+                        customFields: it.customFields || {},
+                        bodyColours: it.bodyColours || [],
+                        reflectorColours: it.reflectorColours || [],
+                        colourTemps: it.colourTemps || [],
+                        beamAngles: it.beamAngles || [],
+                        cri: it.cri || [],
+                    }))
+                })
+            ]);
+
             return true;
         } catch (err) {
             toast.error('Failed to save Final Quote');
@@ -1748,37 +1753,40 @@ export default function QuotationWizard() {
         setSaving(true);
         let currentItems = [...items];
         try {
+            // 1. First ensure all items have server-side IDs (sequential creation to preserve S.No order)
             for (let i = 0; i < currentItems.length; i++) {
-                let item = currentItems[i];
-                let itemId = item.id;
-                if (!itemId) {
+                if (!currentItems[i].id) {
                     const { data: createdItem } = await api.post(`/quotations/${quotationId}/items`, {
-                        productId: item.productId,
-                        productCode: item.productCode,
-                        layoutCode: item.layoutCode,
-                        description: item.description,
-                        polarDiagramUrl: item.polarDiagramUrl || null,
-                        productImageUrl: item.productImageUrl || null,
-                        bodyColours: item.bodyColours,
-                        reflectorColours: item.reflectorColours,
-                        colourTemps: item.colourTemps,
-                        beamAngles: item.beamAngles,
-                        cri: item.cri,
-                        unit: item.unit,
-                        customFields: item.customFields,
-                        finalPriceType: item.finalPriceType || 'LP',
+                        productId: currentItems[i].productId,
+                        productCode: currentItems[i].productCode,
+                        layoutCode: currentItems[i].layoutCode,
+                        description: currentItems[i].description,
+                        polarDiagramUrl: currentItems[i].polarDiagramUrl || null,
+                        productImageUrl: currentItems[i].productImageUrl || null,
+                        bodyColours: currentItems[i].bodyColours,
+                        reflectorColours: currentItems[i].reflectorColours,
+                        colourTemps: currentItems[i].colourTemps,
+                        beamAngles: currentItems[i].beamAngles,
+                        cri: currentItems[i].cri,
+                        unit: currentItems[i].unit,
+                        customFields: currentItems[i].customFields,
+                        finalPriceType: currentItems[i].finalPriceType || 'LP',
                     });
-                    itemId = createdItem.id;
-                    item = { ...item, id: itemId };
-                    currentItems[i] = item;
-                    setItems(prev => prev.map(it => it._tempId === item._tempId ? { ...it, id: itemId } : it));
+                    currentItems[i] = { ...currentItems[i], id: createdItem.id };
+                    // Sync the state locally immediately so UI shows IDs
+                    setItems(prev => prev.map(it => it._tempId === currentItems[i]._tempId ? { ...it, id: createdItem.id } : it));
                 }
+            }
+
+            // 2. Parallelize all recommendation updates
+            await Promise.all(currentItems.map(item => {
                 const recs = activeLabels.map(label => {
                     const rec = item.recommendations[label];
                     return rec && rec.brandName ? { ...rec, label } : null;
                 }).filter(Boolean);
-                await api.put(`/quotations/${quotationId}/items/${itemId}/recommendations`, { recommendations: recs });
-            }
+                return api.put(`/quotations/${quotationId}/items/${item.id}/recommendations`, { recommendations: recs });
+            }));
+
             return currentItems;
         } catch (err) {
             console.error(err);
@@ -1793,37 +1801,40 @@ export default function QuotationWizard() {
         setSaving(true);
         try {
             const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
-            await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
             const itemsWithIds = updatedItems.filter(it => it.id);
-            await api.put(`/quotations/${quotationId}/final`, {
-                notes,
-                items: itemsWithIds.map(it => ({
-                    id: it.id,
-                    productId: it.productId,
-                    productCode: it.productCode,
-                    description: it.description,
-                    layoutCode: it.layoutCode,
-                    productImageUrl: it.productImageUrl,
-                    polarDiagramUrl: it.polarDiagramUrl,
-                    finalBrandName: it.finalBrandName,
-                    finalProductCode: it.finalProductCode,
-                    finalListPrice: it.finalListPrice,
-                    finalDiscount: it.finalDiscount,
-                    finalRate: it.finalRate,
-                    finalQuantity: it.finalQuantity,
-                    finalAmount: it.finalAmount,
-                    finalMacadamStep: it.finalMacadamStep,
-                    finalUnit: it.finalUnit,
-                    finalPriceType: it.finalPriceType || 'LP',
-                    customFields: it.customFields || {},
-                    // ── CRITICAL: save edited attribute arrays so PDF reflects changes ──
-                    bodyColours: it.bodyColours || [],
-                    reflectorColours: it.reflectorColours || [],
-                    colourTemps: it.colourTemps || [],
-                    beamAngles: it.beamAngles || [],
-                    cri: it.cri || [],
-                }))
-            });
+
+            await Promise.all([
+                api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson }),
+                api.put(`/quotations/${quotationId}/final`, {
+                    notes,
+                    items: itemsWithIds.map(it => ({
+                        id: it.id,
+                        productId: it.productId,
+                        productCode: it.productCode,
+                        description: it.description,
+                        layoutCode: it.layoutCode,
+                        productImageUrl: it.productImageUrl,
+                        polarDiagramUrl: it.polarDiagramUrl,
+                        finalBrandName: it.finalBrandName,
+                        finalProductCode: it.finalProductCode,
+                        finalListPrice: it.finalListPrice,
+                        finalDiscount: it.finalDiscount,
+                        finalRate: it.finalRate,
+                        finalQuantity: it.finalQuantity,
+                        finalAmount: it.finalAmount,
+                        finalMacadamStep: it.finalMacadamStep,
+                        finalUnit: it.finalUnit,
+                        finalPriceType: it.finalPriceType || 'LP',
+                        customFields: it.customFields || {},
+                        bodyColours: it.bodyColours || [],
+                        reflectorColours: it.reflectorColours || [],
+                        colourTemps: it.colourTemps || [],
+                        beamAngles: it.beamAngles || [],
+                        cri: it.cri || [],
+                    }))
+                })
+            ]);
+
             toast.success('Quotation saved successfully!');
             navigate(`/quotations/${quotationId}`);
         } catch (err) {
