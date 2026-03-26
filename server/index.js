@@ -29,12 +29,12 @@ const corsOptions = {
 
     if (!origin) return callback(null, true);
     
-    // Check if it's one of our production domains
-    const isProductionDomain = allowedOrigins.some(ao => origin === ao);
+    // Stronger matching: Allow any of our domains or localhost
+    const isOurDomain = origin.includes('damlightings.com') || origin.includes('damlighting.com');
     const isVercelPreview = origin.endsWith('.vercel.app');
     const isLocal = origin.startsWith('http://localhost');
 
-    if (isProductionDomain || isVercelPreview || isLocal) {
+    if (isOurDomain || isVercelPreview || isLocal) {
       return callback(null, true);
     }
     
