@@ -166,8 +166,16 @@ router.put('/:id/batch', async (req, res) => {
         });
         res.json({ ...quotation, lineItems: quotation.lineItems.map(serializeItem) });
     } catch (error) {
-        console.error('Batch save error:', error);
-        res.status(500).json({ error: 'Failed to perform batch save', detail: error.message });
+        console.error('BATCH SAVE FATAL ERROR:', {
+            message: error.message,
+            stack: error.stack,
+            body: JSON.stringify(req.body).substring(0, 1000) // Log part of the body for context
+        });
+        res.status(500).json({ 
+            error: 'Failed to perform batch save', 
+            detail: error.message,
+            code: error.code // Prisma error code (e.g., P2002)
+        });
     }
 });
 
