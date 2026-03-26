@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const fs = require('fs');
 const path = require('path');
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient(); // It uses DATABASE_URL by default from .env or shell
 
 async function migrate() {
     console.log('🚀 Starting Data Migration to Supabase...');

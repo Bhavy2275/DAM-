@@ -3,3 +3,7 @@ node_modules
 .env
 
 /generated/prisma
+test_*.js
+migrate_*.js
+*.json.bak
+backup_*.json

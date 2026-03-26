@@ -1,9 +1,7 @@
 const { Client } = require('pg');
 
 const urls = [
-  'postgresql://postgres.pwuyokvfslndfrwgxijp:bk3GFg9PdGHNh4B1@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require',
-  'postgresql://postgres.pwuyokvfslndfrwgxijp:bk3GFg9PdGHNh4B1@aws-1-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require',
-  'postgresql://postgres:bk3GFg9PdGHNh4B1@db.pwuyokvfslndfrwgxijp.supabase.co:5432/postgres?sslmode=require'
+  process.env.DATABASE_URL
 ];
 
 async function test() {
