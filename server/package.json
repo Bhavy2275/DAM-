@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "npx prisma generate",
     "dev": "node index.js",
     "start": "node index.js",
     "seed": "node prisma/seed.js",
