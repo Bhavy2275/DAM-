@@ -17,7 +17,7 @@ const CRI_OPTIONS = ['>70', '>80', '>90'];
 
 const emptyForm = {
     productCode: '', layoutCode: '', description: '', basePrice: '',
-    brandName: '', listPrice: '', discountPercent: '',
+    brandName: '',
     bodyColours: [], reflectorColours: [], colourTemps: [], beamAngles: [], cri: [],
     customAttributes: [],
 };
@@ -140,8 +140,6 @@ export default function Products() {
             productCode: p.productCode, layoutCode: p.layoutCode || '', description: p.description,
             basePrice: p.basePrice || '',
             brandName: p.brandName || '',
-            listPrice: p.listPrice != null ? p.listPrice : '',
-            discountPercent: p.discountPercent != null ? p.discountPercent : '',
             bodyColours: Array.isArray(p.bodyColours) ? p.bodyColours : [], 
             reflectorColours: Array.isArray(p.reflectorColours) ? p.reflectorColours : [],
             colourTemps: Array.isArray(p.colourTemps) ? p.colourTemps : [], 
@@ -168,8 +166,6 @@ export default function Products() {
             fd.append('description',      form.description.trim());
             fd.append('basePrice',        form.basePrice || '0');
             fd.append('brandName',        form.brandName || '');
-            if (form.listPrice !== '')       fd.append('listPrice',       form.listPrice);
-            if (form.discountPercent !== '') fd.append('discountPercent', form.discountPercent);
             fd.append('bodyColours',      JSON.stringify(form.bodyColours));
             fd.append('reflectorColours', JSON.stringify(form.reflectorColours));
             fd.append('colourTemps',      JSON.stringify(form.colourTemps));
