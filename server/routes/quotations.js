@@ -412,8 +412,8 @@ router.put('/:id/items/:itemId/recommendations', async (req, res) => {
         
         res.json(serializeItem(item));
     } catch (error) {
-        console.error('Save recommendations error:', error);
-        res.status(500).json({ error: 'Failed to save recommendations' });
+        console.error('Save recommendations error:', error?.message, error?.code, error?.meta);
+        res.status(500).json({ error: 'Failed to save recommendations', detail: error?.message });
     }
 });
 
@@ -430,6 +430,18 @@ router.put('/:id/final', async (req, res) => {
             for (const item of items) {
                 // Only update fields that are explicitly provided — never null-out existing data
                 const data = {};
+                if (item.productId        !== undefined) data.productId        = item.productId        || null;
+                if (item.productCode      !== undefined) data.productCode      = item.productCode      || '';
+                if (item.layoutCode       !== undefined) data.layoutCode       = item.layoutCode       || '';
+                if (item.description      !== undefined) data.description      = item.description      || '';
+                if (item.productImageUrl  !== undefined) data.productImageUrl  = item.productImageUrl  || null;
+                if (item.polarDiagramUrl  !== undefined) data.polarDiagramUrl  = item.polarDiagramUrl  || null;
+                if (item.bodyColours      !== undefined) data.bodyColours      = JSON.stringify(item.bodyColours || []);
+                if (item.reflectorColours !== undefined) data.reflectorColours = JSON.stringify(item.reflectorColours || []);
+                if (item.colourTemps      !== undefined) data.colourTemps      = JSON.stringify(item.colourTemps || []);
+                if (item.beamAngles       !== undefined) data.beamAngles       = JSON.stringify(item.beamAngles || []);
+                if (item.cri              !== undefined) data.cri              = JSON.stringify(item.cri || []);
+
                 if (item.finalBrandName   !== undefined) data.finalBrandName   = item.finalBrandName   || null;
                 if (item.finalProductCode !== undefined) data.finalProductCode = item.finalProductCode || null;
                 if (item.finalListPrice   !== undefined) data.finalListPrice   = parseFloat(item.finalListPrice)  || null;

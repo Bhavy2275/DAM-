@@ -1108,6 +1108,30 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                         Import Rec {label}
                     </button>
                 ))}
+                {/* PDF Image Toggles */}
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.5 }}>PDF IMAGES:</span>
+                    {[
+                        { key: 'Polar Diagram', label: '📐 Polar' },
+                        { key: 'Product Image', label: '🖼 Photo' },
+                    ].map(({ key, label }) => {
+                        const hidden = hiddenCols[key];
+                        return (
+                            <button key={key} type="button"
+                                onClick={() => setHiddenCols(prev => ({ ...prev, [key]: !prev[key] }))}
+                                style={{
+                                    padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                    border: `1px solid ${hidden ? 'var(--color-error)' : 'var(--color-border)'}`,
+                                    background: hidden ? 'rgba(239,68,68,0.1)' : 'var(--color-surface)',
+                                    color: hidden ? 'var(--color-error)' : 'var(--color-text-secondary)',
+                                    display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s',
+                                }}
+                                title={`${hidden ? 'Show' : 'Hide'} ${key} in PDF`}>
+                                {hidden ? <EyeOff size={11} /> : <Eye size={11} />} {label}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/*
@@ -1600,6 +1624,12 @@ export default function QuotationWizard() {
                 notes,
                 items: itemsWithIds.map(it => ({
                     id: it.id,
+                    productId: it.productId,
+                    productCode: it.productCode,
+                    description: it.description,
+                    layoutCode: it.layoutCode,
+                    productImageUrl: it.productImageUrl,
+                    polarDiagramUrl: it.polarDiagramUrl,
                     finalBrandName: it.finalBrandName,
                     finalProductCode: it.finalProductCode || it.productCode,
                     finalListPrice: it.finalListPrice,
@@ -1701,6 +1731,12 @@ export default function QuotationWizard() {
                 notes,
                 items: itemsWithIds.map(it => ({
                     id: it.id,
+                    productId: it.productId,
+                    productCode: it.productCode,
+                    description: it.description,
+                    layoutCode: it.layoutCode,
+                    productImageUrl: it.productImageUrl,
+                    polarDiagramUrl: it.polarDiagramUrl,
                     finalBrandName: it.finalBrandName,
                     finalProductCode: it.finalProductCode,
                     finalListPrice: it.finalListPrice,
