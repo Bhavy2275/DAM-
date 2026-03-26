@@ -2,9 +2,8 @@
  * Idempotent admin bootstrap script.
  * Safe to run on every deploy — uses upsert so it won't duplicate data.
  */
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
-const prisma = new PrismaClient();
 
 async function main() {
     const passwordHash = await bcrypt.hash('admin123', 10);

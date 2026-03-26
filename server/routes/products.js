@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
-const path = require('path');
-const prisma = new PrismaClient();
 
 // ─── Cloudinary multer upload ──────────────────────────────────────────────
 const { uploadProductFiles } = require('../utils/cloudinary');
