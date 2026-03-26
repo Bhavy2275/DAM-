@@ -3,49 +3,16 @@ import api from '../lib/api';
 
 const AuthContext = createContext(null);
 
+// ── TEMPORARY: Auth disabled for client access ──
+const GUEST_USER = { id: 'guest', name: 'Admin', email: 'admin@dam.app', role: 'ADMIN' };
+
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(GUEST_USER);
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    const checkAuth = async () => {
-        // If there is no token, skip the /auth/me call entirely
-        const token = localStorage.getItem('dam_token');
-        if (!token) {
-            setUser(null);
-            setLoading(false);
-            return;
-        }
-
-        try {
-            const { data } = await api.get('/auth/me');
-            setUser(data.user);
-        } catch {
-            // If token is invalid/expired, clear it so we don't keep getting 401s
-            localStorage.removeItem('dam_token');
-            setUser(null);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const login = async (email, password) => {
-        const { data } = await api.post('/auth/login', { email, password });
-        if (data.token) {
-            localStorage.setItem('dam_token', data.token);
-        }
-        setUser(data.user);
-        return data;
-    };
-
-    const logout = async () => {
-        await api.post('/auth/logout');
-        localStorage.removeItem('dam_token');
-        setUser(null);
-    };
+    const login = async () => { setUser(GUEST_USER); };
+    const logout = async () => { setUser(GUEST_USER); };
+    const checkAuth = () => {};
 
     return (
         <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
