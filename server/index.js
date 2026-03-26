@@ -17,38 +17,35 @@ const productRoutes = require('./routes/products');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
-  .split(',')
-  .map(o => o.trim());
+// Custom CORS middleware for production reliability
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowed = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim());
+  
+  // Log origin in Railway
+  if (origin) console.log(`[CORS Request] Origin: ${origin}`);
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Log incoming origin for debugging in Railway
-    console.log('Incoming Origin:', origin);
-    console.log('Allowed Origins:', JSON.stringify(allowedOrigins));
-
-    if (!origin) return callback(null, true);
-    
-    // Stronger matching: Allow any of our domains or localhost
-    const isOurDomain = origin.includes('damlightings.com') || origin.includes('damlighting.com');
-    const isVercelPreview = origin.endsWith('.vercel.app');
-    const isLocal = origin.startsWith('http://localhost');
-
-    if (isOurDomain || isVercelPreview || isLocal) {
-      return callback(null, true);
+  if (origin) {
+    if (
+      origin.includes('damlightings.com') || 
+      origin.includes('damlighting.com') ||
+      origin.endsWith('.vercel.app') ||
+      origin.startsWith('http://localhost')
+    ) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
-    
-    console.error('❌ CORS BLOCKED for origin:', origin);
-    callback(new Error('CORS not allowed'));
-  },
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
+  }
 
-app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions));
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 // Serve uploaded files with proper CORS + CORP headers so images load in browser & PDF
