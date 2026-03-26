@@ -96,7 +96,7 @@ router.put('/:id/batch', async (req, res) => {
                         'colourTemps', 'beamAngles', 'cri', 'unit',
                         'finalBrandName', 'finalProductCode', 'finalListPrice', 'finalDiscount',
                         'finalRate', 'finalQuantity', 'finalAmount', 'finalMacadamStep', 'finalUnit',
-                        'finalPriceType', 'customFields'
+                        'customFields'
                     ];
 
                     const dataToUpdate = {};
