@@ -8,6 +8,7 @@ const routeNames = {
     '/quotations/new': 'New Quotation',
     '/clients': 'Clients',
     '/payments': 'Payments',
+
     '/settings': 'Settings',
 };
 

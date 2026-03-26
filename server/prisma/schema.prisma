@@ -59,6 +59,7 @@ model Client {
   quotations       Quotation[]
   payments         Payment[]
 
+
   // Dynamic customization
   customAttributes String      @default("[]") // JSON string: [{ key: "Birthdate", value: "..." }]
   customLabels     String?     // JSON string: { "fullName": "Contact Person" }
@@ -163,6 +164,9 @@ model Payment {
   status          String   @default("COMPLETED") // COMPLETED | PENDING | PARTIAL
   createdAt       DateTime @default(now())
 }
+
+
+
 
 // ─── COMPANY SETTINGS (single row) ────────────────────────────────────────
 model CompanySettings {

@@ -27,9 +27,10 @@ function serializeItem(item) {
 }
 
 // Recalculate and persist quotation totals after any item change
-async function recalculateQuotationTotal(quotationId) {
+// Recalculate and persist quotation totals after any item change
+async function recalculateQuotationTotal(quotationId, tx = prisma) {
     try {
-        const items = await prisma.quotationItem.findMany({ 
+        const items = await tx.quotationItem.findMany({ 
             where: { quotationId },
             include: { recommendations: true }
         });
@@ -44,13 +45,13 @@ async function recalculateQuotationTotal(quotationId) {
             }, 0);
         }
 
-        const quotation = await prisma.quotation.findUnique({ where: { id: quotationId } });
+        const quotation = await tx.quotation.findUnique({ where: { id: quotationId } });
         if (!quotation) return;
         
         const gstAmount = subtotal * ((Number(quotation.gstRate) || 18) / 100);
         const grandTotal = subtotal + gstAmount;
         
-        await prisma.quotation.update({
+        await tx.quotation.update({
             where: { id: quotationId },
             data: { grandTotal, subtotal, gstAmount }
         });
@@ -58,6 +59,98 @@ async function recalculateQuotationTotal(quotationId) {
         console.error('recalculateQuotationTotal error:', err);
     }
 }
+
+// ... existing routes ...
+
+// PUT /api/quotations/:id/batch  — fully atomic save for header + all items + all recs
+router.put('/:id/batch', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { header, items, notes } = req.body;
+
+        await prisma.$transaction(async (tx) => {
+            // 1. Update Header if provided
+            if (header) {
+                const { customLabels, ...hData } = header;
+                const updateData = { ...hData };
+                if (customLabels !== undefined) {
+                    updateData.customLabels = typeof customLabels === 'string' ? customLabels : JSON.stringify(customLabels);
+                }
+                if (notes !== undefined) updateData.notes = notes;
+                
+                await tx.quotation.update({ where: { id }, data: updateData });
+            } else if (notes !== undefined) {
+                await tx.quotation.update({ where: { id }, data: { notes } });
+            }
+
+            // 2. Update Items & Recommendations
+            if (items && items.length > 0) {
+                for (const item of items) {
+                    const { id: itemId, recommendations, customFields, ...itemData } = item;
+                    if (!itemId) continue; // Safety check
+
+                    const dataToUpdate = { ...itemData };
+                    if (customFields !== undefined) {
+                        dataToUpdate.customFields = typeof customFields === 'string' ? customFields : JSON.stringify(customFields);
+                    }
+                    // Stringify attribute arrays if present
+                    ['bodyColours', 'reflectorColours', 'colourTemps', 'beamAngles', 'cri'].forEach(key => {
+                        if (item[key] !== undefined) {
+                            dataToUpdate[key] = JSON.stringify(item[key] || []);
+                        }
+                    });
+
+                    // Update item itself
+                    await tx.quotationItem.update({
+                        where: { id: itemId },
+                        data: dataToUpdate
+                    });
+
+                    // Update recommendations if provided
+                    if (recommendations !== undefined) {
+                        await tx.itemRecommendation.deleteMany({ where: { quotationItemId: itemId } });
+                        if (Array.isArray(recommendations) && recommendations.length > 0) {
+                            await tx.itemRecommendation.createMany({
+                                data: recommendations.map(r => ({
+                                    quotationItemId: itemId,
+                                    label: r.label,
+                                    brandName: r.brandName || '',
+                                    productCode: r.productCode || '',
+                                    listPrice: parseFloat(r.listPrice) || 0,
+                                    listPriceWithGst: parseFloat(r.listPriceWithGst) || parseFloat(r.listPrice || 0) * 1.18,
+                                    discountPercent: parseFloat(r.discountPercent) || 0,
+                                    rate: parseFloat(r.rate) || 0,
+                                    unit: r.unit || 'NUMBERS',
+                                    quantity: parseFloat(r.quantity) || 0,
+                                    amount: parseFloat(r.amount) || 0,
+                                    macadamStep: r.macadamStep || '',
+                                }))
+                            });
+                        }
+                    }
+                }
+            }
+
+            // 3. Recalculate Totals inside the transaction
+            await recalculateQuotationTotal(id, tx);
+        });
+
+        // Fetch fresh state to return
+        const quotation = await prisma.quotation.findUnique({
+            where: { id },
+            include: {
+                client: true,
+                lineItems: { include: { recommendations: { orderBy: { label: 'asc' } } }, orderBy: { sno: 'asc' } },
+                payments: true
+            }
+        });
+        res.json({ ...quotation, lineItems: quotation.lineItems.map(serializeItem) });
+    } catch (error) {
+        console.error('Batch save error:', error);
+        res.status(500).json({ error: 'Failed to perform batch save', detail: error.message });
+    }
+});
+
 
 // GET /api/quotations
 router.get('/', async (req, res) => {

@@ -61,16 +61,14 @@ router.get('/stats', async (req, res) => {
             INVOICED: quotations.filter(q => q.status === 'INVOICED').length,
         };
 
-        // Schema confirmed: Quotation has quoteNumber, projectName, grandTotal
-        // Client has companyName, fullName
         const recentQuotations = quotations.slice(0, 10).map(q => ({
             id:          q.id,
-            quoteNumber: q.quoteNumber,          // always exists — @unique @required
+            quoteNumber: q.quoteNumber,
             projectName: q.projectName || '—',
             clientName:  q.client?.companyName || q.client?.fullName || '—',
             status:      q.status,
             createdAt:   q.createdAt,
-            total:       q.grandTotal || 0,      // Float @default(0)
+            total:       q.grandTotal || 0,
         }));
 
         res.json({
@@ -84,6 +82,7 @@ router.get('/stats', async (req, res) => {
             statusCounts,
             recentQuotations,
         });
+
 
     } catch (error) {
         console.error('Dashboard stats error:', error);

@@ -94,6 +94,8 @@ export default function Dashboard() {
                 </div>
             </motion.div>
 
+
+
             {/* Charts */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 32 }}>
                 <motion.div variants={fadeUp} className="card-surface" style={{ padding: 24, borderTop: '2px solid var(--color-accent)', cursor: 'default' }}>

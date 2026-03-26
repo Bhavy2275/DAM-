@@ -1674,59 +1674,6 @@ export default function QuotationWizard() {
         setActiveLabels(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label].sort());
     };
 
-    const saveFinalDraft = async () => {
-        if (!quotationId) return true;
-        const updatedItems = await saveRecommendations();
-        if (!updatedItems) return false;
-
-        setSaving(true);
-        try {
-            // Always save customLabels (includes hiddenCols, customCols, etc.) regardless of items
-            const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
-            const itemsWithIds = updatedItems.filter(it => it.id && (it.finalBrandName || it.finalRate || it.finalAmount));
-            if (itemsWithIds.length === 0) {
-                await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
-                return true;
-            }
-
-            await Promise.all([
-                api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson }),
-                api.put(`/quotations/${quotationId}/final`, {
-                    notes,
-                    items: itemsWithIds.map(it => ({
-                        id: it.id,
-                        productId: it.productId,
-                        productCode: it.productCode,
-                        description: it.description,
-                        layoutCode: it.layoutCode,
-                        productImageUrl: it.productImageUrl,
-                        polarDiagramUrl: it.polarDiagramUrl,
-                        finalBrandName: it.finalBrandName,
-                        finalProductCode: it.finalProductCode || it.productCode,
-                        finalListPrice: it.finalListPrice,
-                        finalDiscount: it.finalDiscount,
-                        finalRate: it.finalRate,
-                        finalQuantity: it.finalQuantity,
-                        finalAmount: it.finalAmount,
-                        finalMacadamStep: it.finalMacadamStep,
-                        finalUnit: it.finalUnit,
-                        customFields: it.customFields || {},
-                        bodyColours: it.bodyColours || [],
-                        reflectorColours: it.reflectorColours || [],
-                        colourTemps: it.colourTemps || [],
-                        beamAngles: it.beamAngles || [],
-                        cri: it.cri || [],
-                    }))
-                })
-            ]);
-
-            return true;
-        } catch (err) {
-            toast.error('Failed to save Final Quote');
-            return false;
-        } finally { setSaving(false); }
-    };
-
     const saveHeader = async () => {
         if (!form.quoteTitle || !form.clientId || !form.projectName) {
             toast.error('Please fill in Quote Title, Client, and Project Name');
@@ -1777,20 +1724,61 @@ export default function QuotationWizard() {
                     setItems(prev => prev.map(it => it._tempId === currentItems[i]._tempId ? { ...it, id: createdItem.id } : it));
                 }
             }
-
-            // 2. Parallelize all recommendation updates
-            await Promise.all(currentItems.map(item => {
-                const recs = activeLabels.map(label => {
-                    const rec = item.recommendations[label];
-                    return rec && rec.brandName ? { ...rec, label } : null;
-                }).filter(Boolean);
-                return api.put(`/quotations/${quotationId}/items/${item.id}/recommendations`, { recommendations: recs });
-            }));
-
+            // NOTE: Batch recommendation updates are now handled in saveFinalDraft/saveFinal via /batch endpoint
             return currentItems;
         } catch (err) {
             console.error(err);
-            toast.error('Failed to save recommendations');
+            toast.error('Failed to prepare items');
+            return false;
+        } finally { setSaving(false); }
+    };
+
+    const saveFinalDraft = async () => {
+        if (!quotationId) return true;
+        const updatedItems = await saveRecommendations();
+        if (!updatedItems) return false;
+
+        setSaving(true);
+        try {
+            const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
+            const itemsToBatch = updatedItems.filter(it => it.id).map(it => ({
+                id: it.id,
+                productId: it.productId,
+                productCode: it.productCode,
+                description: it.description,
+                layoutCode: it.layoutCode,
+                productImageUrl: it.productImageUrl,
+                polarDiagramUrl: it.polarDiagramUrl,
+                finalBrandName: it.finalBrandName,
+                finalProductCode: it.finalProductCode || it.productCode,
+                finalListPrice: it.finalListPrice,
+                finalDiscount: it.finalDiscount,
+                finalRate: it.finalRate,
+                finalQuantity: it.finalQuantity,
+                finalAmount: it.finalAmount,
+                finalMacadamStep: it.finalMacadamStep,
+                finalUnit: it.finalUnit,
+                customFields: it.customFields || {},
+                bodyColours: it.bodyColours || [],
+                reflectorColours: it.reflectorColours || [],
+                colourTemps: it.colourTemps || [],
+                beamAngles: it.beamAngles || [],
+                cri: it.cri || [],
+                recommendations: activeLabels.map(label => {
+                    const rec = it.recommendations[label];
+                    return rec && rec.brandName ? { ...rec, label } : null;
+                }).filter(Boolean)
+            }));
+
+            await api.put(`/quotations/${quotationId}/batch`, {
+                header: { ...form, customLabels: labelsJson },
+                notes,
+                items: itemsToBatch
+            });
+            return true;
+        } catch (err) {
+            console.error('Batch save draft error:', err);
+            toast.error('Failed to save draft');
             return false;
         } finally { setSaving(false); }
     };
@@ -1801,46 +1789,50 @@ export default function QuotationWizard() {
         setSaving(true);
         try {
             const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
-            const itemsWithIds = updatedItems.filter(it => it.id);
+            const itemsToBatch = updatedItems.filter(it => it.id).map(it => ({
+                id: it.id,
+                productId: it.productId,
+                productCode: it.productCode,
+                description: it.description,
+                layoutCode: it.layoutCode,
+                productImageUrl: it.productImageUrl,
+                polarDiagramUrl: it.polarDiagramUrl,
+                finalBrandName: it.finalBrandName,
+                finalProductCode: it.finalProductCode,
+                finalListPrice: it.finalListPrice,
+                finalDiscount: it.finalDiscount,
+                finalRate: it.finalRate,
+                finalQuantity: it.finalQuantity,
+                finalAmount: it.finalAmount,
+                finalMacadamStep: it.finalMacadamStep,
+                finalUnit: it.finalUnit,
+                finalPriceType: it.finalPriceType || 'LP',
+                customFields: it.customFields || {},
+                bodyColours: it.bodyColours || [],
+                reflectorColours: it.reflectorColours || [],
+                colourTemps: it.colourTemps || [],
+                beamAngles: it.beamAngles || [],
+                cri: it.cri || [],
+                recommendations: activeLabels.map(label => {
+                    const rec = it.recommendations[label];
+                    return rec && rec.brandName ? { ...rec, label } : null;
+                }).filter(Boolean)
+            }));
 
-            await Promise.all([
-                api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson }),
-                api.put(`/quotations/${quotationId}/final`, {
-                    notes,
-                    items: itemsWithIds.map(it => ({
-                        id: it.id,
-                        productId: it.productId,
-                        productCode: it.productCode,
-                        description: it.description,
-                        layoutCode: it.layoutCode,
-                        productImageUrl: it.productImageUrl,
-                        polarDiagramUrl: it.polarDiagramUrl,
-                        finalBrandName: it.finalBrandName,
-                        finalProductCode: it.finalProductCode,
-                        finalListPrice: it.finalListPrice,
-                        finalDiscount: it.finalDiscount,
-                        finalRate: it.finalRate,
-                        finalQuantity: it.finalQuantity,
-                        finalAmount: it.finalAmount,
-                        finalMacadamStep: it.finalMacadamStep,
-                        finalUnit: it.finalUnit,
-                        finalPriceType: it.finalPriceType || 'LP',
-                        customFields: it.customFields || {},
-                        bodyColours: it.bodyColours || [],
-                        reflectorColours: it.reflectorColours || [],
-                        colourTemps: it.colourTemps || [],
-                        beamAngles: it.beamAngles || [],
-                        cri: it.cri || [],
-                    }))
-                })
-            ]);
+            await api.put(`/quotations/${quotationId}/batch`, {
+                header: { ...form, customLabels: labelsJson },
+                notes,
+                items: itemsToBatch
+            });
 
             toast.success('Quotation saved successfully!');
             navigate(`/quotations/${quotationId}`);
         } catch (err) {
+            console.error('Batch save final error:', err);
             toast.error('Failed to save final quotation');
         } finally { setSaving(false); }
     };
+
 
     const handleNext = async () => {
         if (step === 0) {

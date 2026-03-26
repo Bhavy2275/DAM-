@@ -83,6 +83,8 @@ export default function QuotationDetail() {
         } catch { toast.error('Failed to add payment'); }
     };
 
+
+
     if (loading) return (
         <div style={{ padding: 32 }}>
             <div className="skeleton" style={{ height: 40, width: 240, marginBottom: 24 }} />
@@ -218,6 +220,7 @@ export default function QuotationDetail() {
                         Balance: <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>{formatINR(balance)}</span>
                     </div>
                 </motion.div>
+
             </div>
 
             {/* ══════════════════════════════════════════════════════════════
@@ -609,6 +612,9 @@ export default function QuotationDetail() {
                     </table>
                 </motion.div>
             )}
+
+
+
 
             {/* ── PDF Export Modal ───────────────────────────────────────── */}
             <AnimatePresence>

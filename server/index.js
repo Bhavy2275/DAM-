@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const clientRoutes = require('./routes/clients');
 const quotationRoutes = require('./routes/quotations');
 const paymentRoutes = require('./routes/payments');
+
 const dashboardRoutes = require('./routes/dashboard');
 const settingsRoutes = require('./routes/settings');
 const userRoutes = require('./routes/users');
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/quotations', quotationRoutes);
 app.use('/api/payments', paymentRoutes);
+
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/users', userRoutes);
