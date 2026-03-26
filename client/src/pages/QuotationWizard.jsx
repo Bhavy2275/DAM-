@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Plus, Trash2, X, Save, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Trash2, X, Save, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { formatINR } from '../lib/formatCurrency';
@@ -951,7 +951,7 @@ function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstR
 }
 
 // ─── Step 2: Final Working Quotation ────────────────────────────────────────
-function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, setNotes, settings, products = [], searches, setSearches, customLabels, onRenameLabel, customCols, setCustomCols }) {
+function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, setNotes, settings, products = [], searches, setSearches, customLabels, onRenameLabel, customCols, setCustomCols, hiddenCols, setHiddenCols }) {
     const [openSearch, setOpenSearch] = useState(null);
     const lbl = (key, def) => getCustomLabel(customLabels, key, def);
 
@@ -1122,9 +1122,19 @@ function Step5FinalQuotation({ items, setItems, gstRate, activeLabels, notes, se
                     <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1100 }}>
                         <thead>
                             <tr style={{ background: 'var(--color-base)' }}>
-                                {['S.No', 'Code', 'Description / Attributes', 'Layout', 'Brand', 'LP (₹)', 'LP+18%', 'Disc %', 'Rate (₹)', 'Unit', 'Qty', 'Amount', 'Macadam'].map(h => (
-                                    <th key={h} style={{ padding: '10px 8px', fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.4, textAlign: 'left', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>{h}</th>
-                                ))}
+                                {['S.No', 'Code', 'Description / Attributes', 'Layout', 'Brand', 'LP (₹)', 'LP+18%', 'Disc %', 'Rate (₹)', 'Unit', 'Qty', 'Amount', 'Macadam'].map(h => {
+                                    const isHidden = hiddenCols[h];
+                                    return (
+                                        <th key={h} style={{ padding: '10px 8px', fontSize: 10, color: isHidden ? 'var(--color-border)' : 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.4, textAlign: 'left', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <span style={{ textDecoration: isHidden ? 'line-through' : 'none' }}>{h}</span>
+                                                <button type="button" onClick={() => setHiddenCols(prev => ({ ...prev, [h]: !prev[h] }))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: isHidden ? 'var(--color-error)' : 'var(--color-text-muted)', opacity: isHidden ? 1 : 0.5 }} title="Toggle visibility in PDF">
+                                                    {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                                                </button>
+                                            </div>
+                                        </th>
+                                    );
+                                })}
                                 {customCols?.map(col => (
                                     <th key={col.id} style={{ padding: '10px 8px', fontSize: 10, color: 'var(--color-accent)', fontWeight: 600, letterSpacing: 0.4, textAlign: 'left', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap', minWidth: 110, position: 'relative', overflow: 'visible' }}>
                                         <ColumnHeaderField col={{ ...col, label: lbl(col.id, col.label) }}
@@ -1471,6 +1481,7 @@ export default function QuotationWizard() {
     const [customLabels, setCustomLabels] = useState({});
     const [extraFields, setExtraFields] = useState([]);
     const [customCols, setCustomCols] = useState([]);
+    const [hiddenCols, setHiddenCols] = useState({});
     const [searches, setSearches] = useState({});
 
     const setCustomLabel = (key, value) => setCustomLabels(prev => ({ ...prev, [key]: value }));
@@ -1512,13 +1523,16 @@ export default function QuotationWizard() {
                 const parsed = JSON.parse(data.customLabels || '{}');
                 setExtraFields(parsed.__extraFields || []);
                 setCustomCols(parsed.__customCols || []);
+                setHiddenCols(parsed.__hiddenCols || {});
                 delete parsed.__extraFields;
                 delete parsed.__customCols;
+                delete parsed.__hiddenCols;
                 setCustomLabels(parsed);
             } catch {
                 setCustomLabels({});
                 setExtraFields([]);
                 setCustomCols([]);
+                setHiddenCols({});
             }
 
             const loadedItems = (data.lineItems || []).map(item => {
@@ -1576,10 +1590,12 @@ export default function QuotationWizard() {
 
         setSaving(true);
         try {
+            // Always save customLabels (includes hiddenCols, customCols, etc.) regardless of items
+            const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
+            await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
+
             const itemsWithIds = updatedItems.filter(it => it.id && (it.finalBrandName || it.finalRate || it.finalAmount));
             if (itemsWithIds.length === 0) return true;
-            const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols });
-            await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
             await api.put(`/quotations/${quotationId}/final`, {
                 notes,
                 items: itemsWithIds.map(it => ({
@@ -1678,7 +1694,7 @@ export default function QuotationWizard() {
         if (!updatedItems) return;
         setSaving(true);
         try {
-            const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols });
+            const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
             await api.put(`/quotations/${quotationId}`, { ...form, notes, customLabels: labelsJson });
             const itemsWithIds = updatedItems.filter(it => it.id);
             await api.put(`/quotations/${quotationId}/final`, {
@@ -1770,6 +1786,7 @@ export default function QuotationWizard() {
                             searches={searches} setSearches={setSearches}
                             customLabels={customLabels} onRenameLabel={setCustomLabel}
                             customCols={customCols} setCustomCols={setCustomCols}
+                            hiddenCols={hiddenCols} setHiddenCols={setHiddenCols}
                         />
                     )}
                     {step === 2 && (

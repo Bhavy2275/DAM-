@@ -98,13 +98,13 @@ function getCustomField(item, colId) {
 const TABLE_STYLE = "width:100%;border-collapse:collapse;font-size:7.5px;";
 
 const TH = [
-  "border:0.5px solid #999",
+  "border:0.5px solid #1a2b4c",
   "padding:5px 4px",
   "text-align:center",
   "font-weight:700",
   "font-size:7px",
-  "color:#0D1E40",
-  "background:#f0f4f8",
+  "color:#ffffff",
+  "background:#0b162c",
   "vertical-align:middle",
   "line-height:1.3",
   "white-space:nowrap",
@@ -116,29 +116,30 @@ const TD = [
   "vertical-align:middle",
   "line-height:1.4",
   "font-size:7.5px",
+  "color:#333",
 ].join(";") + ";";
 
 const TH_BRAND = [
-  "border:0.5px solid #999",
+  "border:0.5px solid #1a2b4c",
   "padding:5px 4px",
   "text-align:center",
   "font-weight:700",
   "font-size:7.5px",
-  "color:#0D1E40",
-  "background:#dbeafe",
+  "color:#F5A623",
+  "background:#0b162c",
   "vertical-align:middle",
   "line-height:1.3",
   "letter-spacing:0.5px",
 ].join(";") + ";";
 
 const TH_GREY = [
-  "border:0.5px solid #999",
+  "border:0.5px solid #1a2b4c",
   "padding:5px 4px",
   "text-align:center",
   "font-weight:700",
   "font-size:7px",
-  "color:#111",
-  "background:#d9d9d9",
+  "color:#ffffff",
+  "background:#0b162c",
   "vertical-align:middle",
   "line-height:1.3",
   "white-space:nowrap",
@@ -333,37 +334,66 @@ async function finalTableHTML(quotation) {
     cur.items.push(item);
   }
 
+  let hCols = {};
+  try {
+    const cl = typeof quotation.customLabels === "string" ? JSON.parse(quotation.customLabels) : quotation.customLabels;
+    console.log('[PDF DEBUG] raw customLabels:', quotation.customLabels);
+    console.log('[PDF DEBUG] parsed cl:', cl);
+    console.log('[PDF DEBUG] __hiddenCols:', cl?.__hiddenCols);
+    if (cl && cl.__hiddenCols) hCols = cl.__hiddenCols;
+  } catch (e) { console.log('[PDF DEBUG] parse error:', e); }
+
+  const sSno = !hCols['S.No'];
+  const sLayout = !hCols['Layout'];
+  const sCode = !hCols['Code'];
+  const sDesc = !hCols['Description / Attributes'];
+  
+  const sLp = !hCols['LP (₹)'];
+  const sLp18 = !hCols['LP+18%'];
+  const sDisc = !hCols['Disc %'];
+  const sRate = !hCols['Rate (₹)'];
+  const sUnit = !hCols['Unit'];
+  const sQty = !hCols['Qty'];
+  const sAmt = !hCols['Amount'];
+  const sMac = !hCols['Macadam'];
+
   const banner = (quotation.projectName || "") + " \u2014 " + (quotation.city || "") + " \u2014 LIGHTING QUOTATION";
-  const brandColCount = 9; // prod code, lp, lp+18%, disc%, rate, unit, qty, macadam, amount
-  const specColCount = 11; // s.no, layout, code, desc, polar, img, body, refl, cct, beam, cri
+
+  const specHeaders = [];
+  if (sSno) specHeaders.push(`<th rowspan="2" style="${TH}">S.NO</th>`);
+  if (sLayout) specHeaders.push(`<th rowspan="2" style="${TH}">LAYOUT<br>CODE</th>`);
+  if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
+  if (sDesc) {
+    specHeaders.push(`<th rowspan="2" style="${TH}width:140px">PRODUCT DESCRIPTION</th>`);
+    specHeaders.push(`<th rowspan="2" style="${TH}">POLAR<br>DIAGRAM</th>`);
+    specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
+    specHeaders.push(`<th rowspan="2" style="${TH}">BODY<br>COLOUR</th>`);
+    specHeaders.push(`<th rowspan="2" style="${TH}">REFLECTOR<br>COLOUR</th>`);
+    specHeaders.push(`<th rowspan="2" style="${TH}">COLOUR<br>TEMPERATURE</th>`);
+    specHeaders.push(`<th rowspan="2" style="${TH}">BEAM<br>ANGLE</th>`);
+    specHeaders.push(`<th rowspan="2" style="${TH}">CRI</th>`);
+  }
+  const specColCount = specHeaders.length;
+
+  const brandHeaders2 = [];
+  if (sCode) brandHeaders2.push(`<th style="${TH}">PRODUCT<br>CODE</th>`);
+  if (sLp) brandHeaders2.push(`<th style="${TH}">LIST<br>PRICE</th>`);
+  if (sLp18) brandHeaders2.push(`<th style="${TH}">LP<br>+18%</th>`);
+  if (sDisc) brandHeaders2.push(`<th style="${TH}">DISC<br>%</th>`);
+  if (sRate) brandHeaders2.push(`<th style="${TH}">RATE</th>`);
+  if (sUnit) brandHeaders2.push(`<th style="${TH}">UNIT</th>`);
+  if (sQty) brandHeaders2.push(`<th style="${TH}">QTY</th>`);
+  if (sMac) brandHeaders2.push(`<th style="${TH}">MACADAM<br>STEP</th>`);
+  if (sAmt) brandHeaders2.push(`<th style="${TH}">AMOUNT</th>`);
+  const brandColCount = brandHeaders2.length;
 
   const theadHTML = `
 <thead>
   <tr>
-    <th rowspan="2" style="${TH}">S.NO</th>
-    <th rowspan="2" style="${TH}">LAYOUT<br>CODE</th>
-    <th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>
-    <th rowspan="2" style="${TH}width:140px">PRODUCT DESCRIPTION</th>
-    <th rowspan="2" style="${TH}">POLAR<br>DIAGRAM</th>
-    <th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>
-    <th rowspan="2" style="${TH}">BODY<br>COLOUR</th>
-    <th rowspan="2" style="${TH}">REFLECTOR<br>COLOUR</th>
-    <th rowspan="2" style="${TH}">COLOUR<br>TEMPERATURE</th>
-    <th rowspan="2" style="${TH}">BEAM<br>ANGLE</th>
-    <th rowspan="2" style="${TH}">CRI</th>
-    <th colspan="${brandColCount}" style="${TH_BRAND}">BRAND</th>
+    ${specHeaders.join("")}
+    ${brandColCount > 0 ? `<th colspan="${brandColCount}" style="${TH_BRAND}">BRAND</th>` : ""}
   </tr>
-  <tr>
-    <th style="${TH}">PRODUCT<br>CODE</th>
-    <th style="${TH}">LIST<br>PRICE</th>
-    <th style="${TH}">LP<br>+18%</th>
-    <th style="${TH}">DISC<br>%</th>
-    <th style="${TH}">RATE</th>
-    <th style="${TH}">UNIT</th>
-    <th style="${TH}">QTY</th>
-    <th style="${TH}">MACADAM<br>STEP</th>
-    <th style="${TH}">AMOUNT</th>
-  </tr>
+  ${brandColCount > 0 ? `<tr>${brandHeaders2.join("")}</tr>` : ""}
 </thead>`;
 
   let rowsHTML = "";
@@ -372,8 +402,8 @@ async function finalTableHTML(quotation) {
   for (const group of groups) {
     rowsHTML += `
 <tr>
-  <td colspan="${specColCount}" style="${TD}background:#d9d9d9"></td>
-  <td colspan="${brandColCount}" style="${TD}background:#d9d9d9;color:#111;text-align:center;font-weight:700;font-size:8px;letter-spacing:0.8px">
+  <td colspan="${specColCount}" style="${TD}"></td>
+  <td colspan="${brandColCount}" style="${TD};color:#111;text-align:center;font-weight:700;font-size:8px;letter-spacing:0.8px">
     ${group.brand || "BRAND"}
   </td>
 </tr>`;
@@ -399,29 +429,31 @@ async function finalTableHTML(quotation) {
       const mac = macadamCell(item.finalMacadamStep);
       const amt = item.finalAmount != null ? fmt(item.finalAmount) : "—";
 
-      rowsHTML += `
-<tr style="background:${bg}">
-  <td style="${TD}text-align:center;background:#d9d9d9">${item.sno || globalIdx}</td>
-  <td style="${TD}text-align:center;font-size:7px;background:#d9d9d9">${item.layoutCode || "—"}</td>
-  <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;background:#d9d9d9">${item.productCode || ""}</td>
-  <td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:130px">${(item.description || "").slice(0, 220)}</td>
-  <td style="${TD}text-align:center;padding:3px">${polar}</td>
-  <td style="${TD}text-align:center;padding:3px">${prodImg}</td>
-  <td style="${TD}text-align:center">${tagLines(item.bodyColours)}</td>
-  <td style="${TD}text-align:center">${tagLines(item.reflectorColours)}</td>
-  <td style="${TD}text-align:center">${tagLines(item.colourTemps)}</td>
-  <td style="${TD}text-align:center">${tagLines(item.beamAngles)}</td>
-  <td style="${TD}text-align:center">${tagLines(item.cri)}</td>
-  <td style="${TD}text-align:center;font-size:7px">${item.finalProductCode || "—"}</td>
-  <td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${lp}</td>
-  <td style="${TD}text-align:right;font-variant-numeric:tabular-nums;color:#555">${lp18}</td>
-  <td style="${TD}text-align:center">${disc}</td>
-  <td style="${TD}text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${rate}</td>
-  <td style="${TD}text-align:center">${unit}</td>
-  <td style="${TD}text-align:center;font-weight:700">${qty}</td>
-  <td style="${TD}text-align:center">${mac}</td>
-  <td style="${TD}text-align:right;font-weight:700;color:#0D1E40;font-variant-numeric:tabular-nums">${amt}</td>
-</tr>`;
+      let rowHtml = `<tr style="background:${bg}">`;
+      if (sSno) rowHtml += `<td style="${TD}text-align:center;">${item.sno || globalIdx}</td>`;
+      if (sLayout) rowHtml += `<td style="${TD}text-align:center;font-size:7px;">${item.layoutCode || "—"}</td>`;
+      if (sCode) rowHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;">${item.productCode || ""}</td>`;
+      if (sDesc) {
+          rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:130px">${(item.description || "").slice(0, 220)}</td>`;
+          rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
+          rowHtml += `<td style="${TD}text-align:center;padding:3px">${prodImg}</td>`;
+          rowHtml += `<td style="${TD}text-align:center">${tagLines(item.bodyColours)}</td>`;
+          rowHtml += `<td style="${TD}text-align:center">${tagLines(item.reflectorColours)}</td>`;
+          rowHtml += `<td style="${TD}text-align:center">${tagLines(item.colourTemps)}</td>`;
+          rowHtml += `<td style="${TD}text-align:center">${tagLines(item.beamAngles)}</td>`;
+          rowHtml += `<td style="${TD}text-align:center">${tagLines(item.cri)}</td>`;
+      }
+      if (sCode) rowHtml += `<td style="${TD}text-align:center;font-size:7px">${item.finalProductCode || "—"}</td>`;
+      if (sLp) rowHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${lp}</td>`;
+      if (sLp18) rowHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums;color:#555">${lp18}</td>`;
+      if (sDisc) rowHtml += `<td style="${TD}text-align:center">${disc}</td>`;
+      if (sRate) rowHtml += `<td style="${TD}text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${rate}</td>`;
+      if (sUnit) rowHtml += `<td style="${TD}text-align:center">${unit}</td>`;
+      if (sQty) rowHtml += `<td style="${TD}text-align:center;font-weight:700">${qty}</td>`;
+      if (sMac) rowHtml += `<td style="${TD}text-align:center">${mac}</td>`;
+      if (sAmt) rowHtml += `<td style="${TD}text-align:right;font-weight:700;color:#0D1E40;font-variant-numeric:tabular-nums">${amt}</td>`;
+      rowHtml += `</tr>`;
+      rowsHTML += rowHtml;
     }
   }
 
@@ -437,14 +469,14 @@ async function finalTableHTML(quotation) {
     <td style="${TD}text-align:right;background:#f0f4f8;font-variant-numeric:tabular-nums">${fmt(gstAmt)}</td>
   </tr>
   <tr>
-    <td colspan="${footerSpan}" style="${TD}text-align:right;font-weight:700;background:#0D1E40;color:#fff;font-size:9.5px">GRAND TOTAL</td>
-    <td style="${TD}text-align:right;font-weight:700;background:#0D1E40;color:#fff;font-size:9.5px;font-variant-numeric:tabular-nums">${fmt(grand)}</td>
+    <td colspan="${footerSpan}" style="${TD}text-align:right;font-weight:700;background:#0b162c;color:#F5A623;font-size:9.5px">GRAND TOTAL</td>
+    <td style="${TD}text-align:right;font-weight:700;background:#0b162c;color:#F5A623;font-size:9.5px;font-variant-numeric:tabular-nums">${fmt(grand)}</td>
   </tr>
 </tfoot>`;
 
   const mainTable = `
 <div style="padding:8px 10px 0;font-family:Arial,sans-serif">
-  <div style="background:#a6a6a6;color:#111;text-align:center;font-weight:700;font-size:11px;
+  <div style="background:#0b162c;color:#ffffff;text-align:center;font-weight:700;font-size:11px;
               padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">
     ${banner}
   </div>
@@ -536,32 +568,54 @@ async function allRecsTableHTML(quotation) {
     return label;
   });
 
+  let hCols = {};
+  try {
+    const cl = typeof quotation.customLabels === "string" ? JSON.parse(quotation.customLabels) : quotation.customLabels;
+    if (cl && cl.__hiddenCols) hCols = cl.__hiddenCols;
+  } catch (e) {}
+
+  const sSno = !hCols['S.No'];
+  const sCode = !hCols['Code'];
+  const sDesc = !hCols['Description / Attributes'];
+  const sUnit = !hCols['Unit'];
+  const sQty = !hCols['Qty'];
+  const sMac = !hCols['Macadam'];
+  const sRate = !hCols['Rate (₹)'];
+  const sAmt = !hCols['Amount'];
+
   // thead — each rec: Macadam Step | Rate | Amount | Space Match %
+  const recHeaders = [];
+  if (sMac) recHeaders.push(`<th style="${TH}">Macadam<br>Step</th>`);
+  if (sRate) recHeaders.push(`<th style="${TH}">RATE</th>`);
+  if (sAmt) recHeaders.push(`<th style="${TH}">AMOUNT</th>`);
+  recHeaders.push(`<th style="${TH}">Space<br>Match (%)</th>`);
+  const recColCount = recHeaders.length;
+
   const recTh1 = brandNames.map(b =>
-    `<th colspan="4" style="${TH_GREY}letter-spacing:0.5px;">${b.toUpperCase()}</th>`
+    `<th colspan="${recColCount}" style="${TH_GREY}letter-spacing:0.5px;">${b.toUpperCase()}</th>`
   ).join("");
-  const recTh2 = activeLabels.map(() =>
-    `<th style="${TH}">Macadam<br>Step</th>
-     <th style="${TH}">RATE</th>
-     <th style="${TH}">AMOUNT</th>
-     <th style="${TH}">Space<br>Match (%)</th>`
-  ).join("");
+  const recTh2 = activeLabels.map(() => recHeaders.join("")).join("");
+
+  const specHeaders = [];
+  if (sSno) specHeaders.push(`<th rowspan="2" style="${TH}">S.NO</th>`);
+  if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
+  if (sDesc) {
+      specHeaders.push(`<th rowspan="2" style="${TH}">DESCRIPTION</th>`);
+      specHeaders.push(`<th rowspan="2" style="${TH}">POLAR</th>`);
+  }
+  if (sUnit) specHeaders.push(`<th rowspan="2" style="${TH}">UNIT</th>`);
+  if (sQty) specHeaders.push(`<th rowspan="2" style="${TH}">QTY<br>(Approx)</th>`);
 
   const theadHTML = `
 <thead>
   <tr>
-    <th rowspan="2" style="${TH}">S.NO</th>
-    <th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>
-    <th rowspan="2" style="${TH}">DESCRIPTION</th>
-    <th rowspan="2" style="${TH}">POLAR</th>
-    <th rowspan="2" style="${TH}">UNIT</th>
-    <th rowspan="2" style="${TH}">QTY<br>(Approx)</th>
+    ${specHeaders.join("")}
     ${recTh1}
   </tr>
   <tr>${recTh2}</tr>
 </thead>`;
 
-  const baseColCount = 6;
+  const baseColCount = specHeaders.length;
   const brandHeaderRow = ""; // brand names are now in thead
 
   // Data rows
@@ -578,36 +632,42 @@ async function allRecsTableHTML(quotation) {
     const recCells = activeLabels.map(label => {
       const r = (item.recommendations || []).find(r => r.label === label);
       if (!r || !r.brandName) {
-        return `<td style="${TD}text-align:center">—</td>
-                <td style="${TD}text-align:right">—</td>
-                <td style="${TD}text-align:right">—</td>
-                <td style="${TD}text-align:center">—</td>`;
+        let emptyHtml = "";
+        if (sMac) emptyHtml += `<td style="${TD}text-align:center">—</td>`;
+        if (sRate) emptyHtml += `<td style="${TD}text-align:right">—</td>`;
+        if (sAmt) emptyHtml += `<td style="${TD}text-align:right">—</td>`;
+        emptyHtml += `<td style="${TD}text-align:center">—</td>`;
+        return emptyHtml;
       }
       const mac = macadamCell(r.macadamStep);
       const space = r.macadamStep ? (MACADAM_MAP[r.macadamStep] || "—") : "—";
-      return `<td style="${TD}text-align:center">${mac}</td>
-              <td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${fmt(r.rate)}</td>
-              <td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${fmt(r.amount)}</td>
-              <td style="${TD}text-align:center;font-size:7.5px;font-weight:600;color:#0D1E40">${space}</td>`;
+      let cellHtml = "";
+      if (sMac) cellHtml += `<td style="${TD}text-align:center">${mac}</td>`;
+      if (sRate) cellHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${fmt(r.rate)}</td>`;
+      if (sAmt) cellHtml += `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${fmt(r.amount)}</td>`;
+      cellHtml += `<td style="${TD}text-align:center;font-size:7.5px;font-weight:600;color:#0D1E40">${space}</td>`;
+      return cellHtml;
     }).join("");
 
-    rowsHTML += `
-<tr style="background:${bg}">
-  <td style="${TD}text-align:center;background:#d9d9d9">${item.sno || idx + 1}</td>
-  <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;background:#d9d9d9">${item.productCode || ""}</td>
-  <td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:120px">${(item.description || "").slice(0, 180)}</td>
-  <td style="${TD}text-align:center;padding:3px">${polar}</td>
-  <td style="${TD}text-align:center;background:#d9d9d9">${unit}</td>
-  <td style="${TD}text-align:center;font-weight:700;background:#d9d9d9">${qty}</td>
-  ${recCells}
-</tr>`;
+    let rowHtml = `<tr style="background:${bg}">`;
+    if (sSno) rowHtml += `<td style="${TD}text-align:center;">${item.sno || idx + 1}</td>`;
+    if (sCode) rowHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;">${item.productCode || ""}</td>`;
+    if (sDesc) {
+        rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:120px">${(item.description || "").slice(0, 180)}</td>`;
+        rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
+    }
+    if (sUnit) rowHtml += `<td style="${TD}text-align:center;">${unit}</td>`;
+    if (sQty) rowHtml += `<td style="${TD}text-align:center;font-weight:700;">${qty}</td>`;
+    rowHtml += recCells;
+    rowHtml += `</tr>`;
+    rowsHTML += rowHtml;
   }
 
   // tfoot
   const totalDefs = [
     { label: "SUM", key: "sum", bg: "#f0f4f8", color: "#333" },
     { label: "GST 18%", key: "gst", bg: "#f0f4f8", color: "#333" },
-    { label: "TOTAL", key: "total", bg: "#0D1E40", color: "#ffffff" },
+    { label: "TOTAL", key: "total", bg: "#0b162c", color: "#F5A623" },
   ];
   let tfootHTML = "";
   for (const def of totalDefs) {
@@ -627,7 +687,7 @@ async function allRecsTableHTML(quotation) {
 
   const mainTable = `
 <div style="padding:8px 10px 0;font-family:Arial,sans-serif">
-  <div style="background:#a6a6a6;color:#111;text-align:center;font-weight:700;font-size:11px;
+  <div style="background:#0b162c;color:#ffffff;text-align:center;font-weight:700;font-size:11px;
               padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">
     ${banner}
   </div>
@@ -678,7 +738,7 @@ async function allRecsTableHTML(quotation) {
   const summaryTotalRows = [
     { label: "SUM", key: "sum", bg: "#f0f4f8", color: "#333" },
     { label: "GST 18%", key: "gst", bg: "#f0f4f8", color: "#333" },
-    { label: "TOTAL", key: "total", bg: "#0D1E40", color: "#ffffff" },
+    { label: "TOTAL", key: "total", bg: "#0b162c", color: "#F5A623" },
   ].map(def => {
     const cells = activeLabels.map(label => {
       const t = recTotals.find(r => r.label === label);
@@ -734,7 +794,7 @@ async function allRecsTableHTML(quotation) {
     });
     addOnsTable = `
 <div style="padding:16px 10px 0;font-family:Arial,sans-serif">
-  <div style="background:#a6a6a6;color:#111;text-align:center;font-weight:700;font-size:11px;
+  <div style="background:#0b162c;color:#ffffff;text-align:center;font-weight:700;font-size:11px;
               padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">ADD-ONS</div>
   <table style="${TABLE_STYLE}">
     <thead>
