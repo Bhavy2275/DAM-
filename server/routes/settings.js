@@ -91,7 +91,13 @@ router.get('/backup', requireRole('ADMIN'), async (req, res) => {
             settings
         ] = await Promise.all([
             prisma.client.findMany(),
-            prisma.quotation.findMany({ include: { items: true } }),
+            prisma.quotation.findMany({ 
+                include: { 
+                    lineItems: {
+                        include: { recommendations: true }
+                    } 
+                } 
+            }),
             prisma.product.findMany(),
             prisma.user.findMany({ select: { id: true, email: true, role: true, name: true } }),
             prisma.companySettings.findFirst()
