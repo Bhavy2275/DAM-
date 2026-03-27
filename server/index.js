@@ -66,21 +66,24 @@ app.get('/api/health', async (req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     dbStatus = 'connected';
   } catch (e) {
-    dbStatus = 'failed';
-    dbError = {
-      message: e.message,
-      code: e.code,
-      meta: e.meta
-    };
+    console.error('Health check DB probe failed:', e);
+    dbStatus = 'unavailable';
+    dbError = { message: 'unavailable' };
   }
 
-  res.json({ 
-    status: 'ok', 
+  const responseBody = {
+    status: dbStatus === 'connected' ? 'ok' : 'unhealthy',
     database: dbStatus,
     dbError,
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV
-  });
+  };
+
+  if (dbStatus !== 'connected') {
+    return res.status(503).json(responseBody);
+  }
+
+  res.json(responseBody);
 });
 
 app.get('/api/debug-db', async (req, res) => {
