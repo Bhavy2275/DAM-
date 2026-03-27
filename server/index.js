@@ -49,7 +49,7 @@ app.use('/uploads', (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/quotations', quotationRoutes);
-app.use('/api/payments', paymentRoutes);
+// app.use('/api/payments', paymentRoutes); // Disabled until table exists
 
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);

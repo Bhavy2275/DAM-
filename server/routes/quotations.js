@@ -165,7 +165,7 @@ router.put('/:id/batch', async (req, res) => {
             include: {
                 client: true,
                 lineItems: { include: { recommendations: { orderBy: { label: 'asc' } } }, orderBy: { sno: 'asc' } },
-                payments: true
+                // payments: true
             }
         });
         res.json({ ...quotation, lineItems: quotation.lineItems.map(serializeItem) });
@@ -204,7 +204,7 @@ router.get('/', async (req, res) => {
             where,
             include: {
                 client: { select: { fullName: true, companyName: true, city: true } },
-                _count: { select: { lineItems: true, payments: true } }
+                _count: { select: { lineItems: true /*, payments: true */ } }
             },
             orderBy: { createdAt: 'desc' }
         });
@@ -265,7 +265,7 @@ router.get('/:id', async (req, res) => {
                     include: { recommendations: { orderBy: { label: 'asc' } } },
                     orderBy: { sno: 'asc' }
                 },
-                payments: { orderBy: { paymentDate: 'desc' } }
+                // payments: { orderBy: { paymentDate: 'desc' } }
             }
         });
         if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
@@ -597,7 +597,7 @@ router.put('/:id/final', async (req, res) => {
             include: {
                 client: true,
                 lineItems: { include: { recommendations: { orderBy: { label: 'asc' } } }, orderBy: { sno: 'asc' } },
-                payments: true
+                // payments: true
             }
         });
         res.json({ ...quotation, lineItems: quotation.lineItems.map(serializeItem) });
@@ -645,7 +645,7 @@ router.post('/:id/import-recommendation', async (req, res) => {
             include: {
                 client: true,
                 lineItems: { include: { recommendations: { orderBy: { label: 'asc' } } }, orderBy: { sno: 'asc' } },
-                payments: true
+                // payments: true
             }
         });
         res.json({ ...quotation, lineItems: quotation.lineItems.map(serializeItem) });

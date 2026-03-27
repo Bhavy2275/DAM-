@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
         const { search } = req.query;
         let clients = await prisma.client.findMany({
             include: {
-                _count: { select: { quotations: true, payments: true } }
+                _count: { select: { quotations: true /*, payments: true */ } }
             },
             orderBy: { createdAt: 'desc' }
         });
@@ -45,19 +45,19 @@ router.get('/:id', async (req, res) => {
                         createdAt: true, gstRate: true
                     }
                 },
-                payments: {
-                    orderBy: { paymentDate: 'desc' },
-                    include: {
-                        quotation: { select: { quoteNumber: true } }
-                    }
-                }
+                // payments: {
+                //     orderBy: { paymentDate: 'desc' },
+                //     include: {
+                //         quotation: { select: { quoteNumber: true } }
+                //     }
+                // }
             }
         });
         if (!client) return res.status(404).json({ error: 'Client not found' });
 
         // Build financial summary safely parsing floats
         const totalQuoted = client.quotations.reduce((s, q) => s + (parseFloat(q.grandTotal) || 0), 0);
-        const totalPaid = client.payments
+        const totalPaid = (client.payments || [])
             .filter(p => !p.status || p.status.toUpperCase() === 'COMPLETED')
             .reduce((s, p) => s + (parseFloat(p.amountPaid) || 0), 0);
         const outstanding = totalQuoted - totalPaid;
@@ -69,7 +69,7 @@ router.get('/:id', async (req, res) => {
                 totalPaid,
                 outstanding,
                 totalQuotations: client.quotations.length,
-                totalPayments: client.payments.length
+                totalPayments: (client.payments || []).length
             }
         });
     } catch (error) {
