@@ -83,6 +83,16 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+app.get('/api/debug-db', async (req, res) => {
+  const prisma = require('./lib/prisma');
+  try {
+    const userCount = await prisma.user.count();
+    res.json({ success: true, userCount, message: "Database is REACHABLE" });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message, code: e.code });
+  }
+});
+
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
