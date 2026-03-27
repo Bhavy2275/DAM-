@@ -71,10 +71,14 @@ router.put('/:id/batch', async (req, res) => {
         await prisma.$transaction(async (tx) => {
             // 1. Update Header if provided
             if (header) {
-                const { customLabels, ...hData } = header;
-                const updateData = { ...hData };
-                if (customLabels !== undefined) {
-                    updateData.customLabels = typeof customLabels === 'string' ? customLabels : JSON.stringify(customLabels);
+                const VALID_HEADER_FIELDS = ['quoteTitle', 'projectName', 'city', 'state', 'validDays', 'gstRate', 'status', 'clientId'];
+                const updateData = {};
+                VALID_HEADER_FIELDS.forEach(f => {
+                    if (header[f] !== undefined) updateData[f] = header[f];
+                });
+
+                if (header.customLabels !== undefined) {
+                    updateData.customLabels = typeof header.customLabels === 'string' ? header.customLabels : JSON.stringify(header.customLabels);
                 }
                 if (notes !== undefined) updateData.notes = notes;
                 
@@ -429,6 +433,7 @@ router.post('/:id/items', async (req, res) => {
                 cri: JSON.stringify(cri || []),
                 unit: unit || 'NUMBERS',
                 customFields: JSON.stringify(customFields || {}),
+                // finalPriceType is excluded until DB migration is successful
             },
             include: { recommendations: true }
         });
@@ -459,6 +464,7 @@ router.put('/:id/items/:itemId', async (req, res) => {
             ...(finalQuantity !== undefined && { finalQuantity: parseFloat(finalQuantity) || null }),
             ...(finalAmount !== undefined && { finalAmount: parseFloat(finalAmount) || null }),
             ...(finalMacadamStep !== undefined && { finalMacadamStep: finalMacadamStep || null }),
+            // finalPriceType is excluded until DB migration is successful
         };
         if (currentCustomFields !== undefined) {
             dataToUpdate.customFields = typeof currentCustomFields === 'string' ? currentCustomFields : JSON.stringify(currentCustomFields);
@@ -571,6 +577,8 @@ router.put('/:id/final', async (req, res) => {
                 if (item.finalAmount      !== undefined) data.finalAmount      = parseFloat(item.finalAmount)     || null;
                 if (item.finalMacadamStep !== undefined) data.finalMacadamStep = item.finalMacadamStep || null;
                 if (item.finalUnit        !== undefined) data.finalUnit        = item.finalUnit        || null;
+                // finalPriceType is excluded until DB migration is successful
+                
                 if (item.customFields     !== undefined) {
                     data.customFields = typeof item.customFields === 'string' ? item.customFields : JSON.stringify(item.customFields);
                 }
