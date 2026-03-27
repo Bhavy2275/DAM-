@@ -56,9 +56,31 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check with DB diagnosis
+app.get('/api/health', async (req, res) => {
+  const prisma = require('./lib/prisma');
+  let dbStatus = 'testing';
+  let dbError = null;
+  
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = 'connected';
+  } catch (e) {
+    dbStatus = 'failed';
+    dbError = {
+      message: e.message,
+      code: e.code,
+      meta: e.meta
+    };
+  }
+
+  res.json({ 
+    status: 'ok', 
+    database: dbStatus,
+    dbError,
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
 });
 
 // Error handler
