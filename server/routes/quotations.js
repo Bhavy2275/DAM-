@@ -87,76 +87,102 @@ router.put('/:id/batch', async (req, res) => {
                 await tx.quotation.update({ where: { id }, data: { notes } });
             }
 
-            // 2. Update Items & Recommendations
-            if (items && items.length > 0) {
-                for (const item of items) {
-                    const { id: itemId, recommendations, customFields, ...itemData } = item;
-                    if (!itemId) continue; // Safety check
+            // 2. ITEMS
+                if (items && items.length > 0) {
+                    for (const itemData of items) {
+                        const { id: itemId, recommendations, _tempId, ...rest } = itemData;
 
-                    // 2.2. Sanitize itemData to only include valid QuotationItem fields
-                    const VALID_ITEM_FIELDS = [
-                        'productId', 'productCode', 'layoutCode', 'description', 'basePrice',
-                        'polarDiagramUrl', 'productImageUrl', 'bodyColours', 'reflectorColours',
-                        'colourTemps', 'beamAngles', 'cri', 'unit',
-                        'finalBrandName', 'finalProductCode', 'finalListPrice', 'finalDiscount',
-                        'finalRate', 'finalQuantity', 'finalAmount', 'finalMacadamStep', 'finalUnit',
-                        'customFields'
-                    ];
+                        const VALID_ITEM_FIELDS = [
+                            'productId', 'productCode', 'layoutCode', 'description', 
+                            'productImageUrl', 'polarDiagramUrl', 'bodyColours', 'reflectorColours', 
+                            'colourTemps', 'beamAngles', 'cri', 'unit',
+                            'finalBrandName', 'finalProductCode', 'finalListPrice', 'finalDiscount',
+                            'finalRate', 'finalQuantity', 'finalAmount', 'finalMacadamStep', 'finalUnit',
+                            'customFields'
+                        ];
 
-                    const dataToUpdate = {};
-                    VALID_ITEM_FIELDS.forEach(field => {
-                        if (item[field] !== undefined) {
-                            dataToUpdate[field] = item[field];
+                        const dataToSave = {};
+                        VALID_ITEM_FIELDS.forEach(field => {
+                            if (rest[field] !== undefined) {
+                                dataToSave[field] = rest[field];
+                            }
+                        });
+
+                        // Stringify attribute arrays
+                        ['bodyColours', 'reflectorColours', 'colourTemps', 'beamAngles', 'cri'].forEach(key => {
+                            if (dataToSave[key] !== undefined) {
+                                dataToSave[key] = Array.isArray(dataToSave[key]) ? JSON.stringify(dataToSave[key]) : dataToSave[key];
+                            }
+                        });
+
+                        // Special handling for customFields
+                        if (dataToSave.customFields !== undefined) {
+                            dataToSave.customFields = typeof dataToSave.customFields === 'string' 
+                                ? dataToSave.customFields 
+                                : JSON.stringify(dataToSave.customFields || {});
                         }
-                    });
 
-                    // Stringify attribute arrays if present in dataToUpdate
-                    ['bodyColours', 'reflectorColours', 'colourTemps', 'beamAngles', 'cri'].forEach(key => {
-                        if (dataToUpdate[key] !== undefined) {
-                            dataToUpdate[key] = JSON.stringify(dataToUpdate[key] || []);
-                        }
-                    });
+                        // Ensure numeric types are floats
+                        ['finalListPrice', 'finalDiscount', 'finalRate', 'finalQuantity', 'finalAmount'].forEach(key => {
+                            if (dataToSave[key] !== undefined) {
+                                dataToSave[key] = parseFloat(dataToSave[key]) || null;
+                            }
+                        });
 
-                    // Special handling for customFields
-                    if (dataToUpdate.customFields !== undefined) {
-                        dataToUpdate.customFields = typeof dataToUpdate.customFields === 'string' 
-                            ? dataToUpdate.customFields 
-                            : JSON.stringify(dataToUpdate.customFields || {});
-                    }
+                        // Check if itemId is a valid UUID
+                        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+                        const isExisting = itemId && uuidRegex.test(itemId);
 
-                    // Update item itself
-                    await tx.quotationItem.update({
-                        where: { id: itemId },
-                        data: dataToUpdate
-                    });
-
-                    // Update recommendations if provided
-                    if (recommendations !== undefined) {
-                        await tx.itemRecommendation.deleteMany({ where: { quotationItemId: itemId } });
-                        if (Array.isArray(recommendations) && recommendations.length > 0) {
-                            await tx.itemRecommendation.createMany({
-                                data: recommendations.map(r => ({
-                                    quotationItemId: itemId,
-                                    label: r.label,
-                                    brandName: r.brandName || '',
-                                    productCode: r.productCode || '',
-                                    listPrice: parseFloat(r.listPrice) || 0,
-                                    listPriceWithGst: parseFloat(r.listPriceWithGst) || parseFloat(r.listPrice || 0) * 1.18,
-                                    discountPercent: parseFloat(r.discountPercent) || 0,
-                                    rate: parseFloat(r.rate) || 0,
-                                    unit: r.unit || 'NUMBERS',
-                                    quantity: parseFloat(r.quantity) || 0,
-                                    amount: parseFloat(r.amount) || 0,
-                                    macadamStep: r.macadamStep || '',
-                                }))
+                        let finalItemId;
+                        if (isExisting) {
+                            // Update existing
+                            await tx.quotationItem.update({
+                                where: { id: itemId },
+                                data: { ...dataToSave, sno: rest.sno }
                             });
+                            finalItemId = itemId;
+                        } else {
+                            // Create new
+                            const newItem = await tx.quotationItem.create({
+                                data: {
+                                    ...dataToSave,
+                                    quotationId: id,
+                                    sno: rest.sno || 1
+                                }
+                            });
+                            finalItemId = newItem.id;
+                        }
+
+                        // 3. RECOMMENDATIONS for this item
+                        if (recommendations !== undefined) {
+                            await tx.itemRecommendation.deleteMany({
+                                where: { quotationItemId: finalItemId }
+                            });
+
+                            if (Array.isArray(recommendations) && recommendations.length > 0) {
+                                await tx.itemRecommendation.createMany({
+                                    data: recommendations.map(r => ({
+                                        quotationItemId: finalItemId,
+                                        label: r.label,
+                                        brandName: r.brandName || '',
+                                        productCode: r.productCode || '',
+                                        listPrice: parseFloat(r.listPrice) || 0,
+                                        listPriceWithGst: parseFloat(r.listPriceWithGst) || parseFloat(r.listPrice || 0) * 1.18,
+                                        discountPercent: parseFloat(r.discountPercent) || 0,
+                                        rate: parseFloat(r.rate) || 0,
+                                        unit: r.unit || 'NUMBERS',
+                                        quantity: parseFloat(r.quantity) || 0,
+                                        amount: parseFloat(r.amount) || 0,
+                                        macadamStep: r.macadamStep || '',
+                                    }))
+                                });
+                            }
                         }
                     }
                 }
-            }
 
-            // 3. Recalculate Totals inside the transaction
-            await recalculateQuotationTotal(id, tx);
+                // 4. Recalculate Totals inside the transaction
+                await recalculateQuotationTotal(id, tx);
         });
 
         // Fetch fresh state to return
