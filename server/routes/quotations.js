@@ -425,7 +425,7 @@ router.put('/:id', validateBody(quoteHeaderSchema.partial()), async (req, res) =
 });
 
 // DELETE /api/quotations/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
     try {
         // Cascade is set in schema so just delete the quotation
         await prisma.quotation.delete({ where: { id: req.params.id } });

@@ -15,6 +15,7 @@ const TABS = [
 
 export default function Settings() {
     const { user } = useAuth();
+    const filteredTabs = TABS.filter(tab => tab.key !== 'users' || user?.role === 'ADMIN');
     const [activeTab, setActiveTab] = useState('company');
     const [settings, setSettings] = useState(null);
     const [users, setUsers] = useState([]);
@@ -81,7 +82,7 @@ export default function Settings() {
             <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24 }}>
                 {/* Tab Nav */}
                 <motion.div variants={fadeUp} className="space-y-1">
-                    {TABS.map(tab => (
+                    {filteredTabs.map(tab => (
                         <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                             className="flex items-center gap-2 w-full"
                             style={{
@@ -196,7 +197,7 @@ export default function Settings() {
                                                     </select>
                                                 </td>
                                                 <td>
-                                                    {u.id !== user?.id && (
+                                                    {user?.role === 'ADMIN' && u.id !== user?.id && (
                                                         <button onClick={() => handleDeleteUser(u.id)} style={{ padding: 6, borderRadius: 6, background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', transition: 'all 0.15s' }}
                                                             onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-danger)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
                                                             onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>

@@ -6,12 +6,14 @@ import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { fadeUp, staggerContainer, modalOverlay, modalContent } from '../lib/animations';
 import { EditableField } from '../components/FieldArrow';
+import { useAuth } from '../hooks/useAuth';
 import { inputStyle } from '../lib/styles';
 
 function getInitials(name = '') { return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2); }
 function getAvatarColor(name = '') { const colors = ['#F5A623','#10B981','#6c63ff','#f43f5e','#06b6d4','#8b5cf6']; return colors[name.charCodeAt(0) % colors.length]; }
 
 export default function Clients() {
+    const { user } = useAuth();
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -160,11 +162,13 @@ export default function Clients() {
                                                 onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
                                                 <Edit size={16} />
                                             </button>
-                                            <button onClick={() => handleDelete(c.id)} style={{ padding: 6, borderRadius: 6, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
-                                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-danger)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
-                                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
-                                                <Trash2 size={16} />
-                                            </button>
+                                            {user?.role === 'ADMIN' && (
+                                                <button onClick={() => handleDelete(c.id)} style={{ padding: 6, borderRadius: 6, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
+                                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-danger)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 

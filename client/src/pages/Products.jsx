@@ -8,6 +8,7 @@ import AttributeTagPills from '../components/AttributeTagPills';
 import { SkeletonCard } from '../components/SkeletonCard';
 import { EditableField } from '../components/FieldArrow';
 import { inputStyle } from '../lib/styles';
+import { useAuth } from '../hooks/useAuth';
 
 const BODY_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'TITANIUM', 'TITANIUM_SILVER'];
 const REFLECTOR_COLOURS = ['BLACK', 'WHITE', 'BRASS', 'COPPER', 'DARK_GREY', 'GOLD', 'MATT_SILVER', 'CHROME', 'TITANIUM_SILVER'];
@@ -101,6 +102,7 @@ function MultiCheckGroup({ label, options, selected, onChange, formatLabel }) {
 }
 
 export default function Products() {
+    const { user } = useAuth();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -355,10 +357,12 @@ export default function Products() {
                                             onMouseEnter={e => e.currentTarget.style.color = 'var(--color-accent)'}
                                             onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
                                         ><Edit2 size={14} /></button>
-                                        <button onClick={() => setDeleteConfirm(product.id)} style={{ padding: 6, borderRadius: 6, border: 'none', background: 'var(--color-elevated)', color: 'var(--color-text-secondary)', cursor: 'pointer', transition: 'all 0.15s' }}
-                                            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-danger)'}
-                                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
-                                        ><Trash2 size={14} /></button>
+                                        {user?.role === 'ADMIN' && (
+                                            <button onClick={() => setDeleteConfirm(product.id)} style={{ padding: 6, borderRadius: 6, border: 'none', background: 'var(--color-elevated)', color: 'var(--color-text-secondary)', cursor: 'pointer', transition: 'all 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.color = 'var(--color-danger)'}
+                                                onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+                                            ><Trash2 size={14} /></button>
+                                        )}
                                     </div>
                                 </div>
 
