@@ -480,10 +480,19 @@ const Step3QuoteInfo = memo(function Step3QuoteInfo({ form, setForm, clients, cu
 });
 
 // ─── Recommendation Column Cell ─────────────────────────────────────────────
-function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemId, hiddenCols = {} }) {
+function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemId, hiddenCols = {}, products = [] }) {
     const color = REC_COLORS[label] || 'var(--color-accent)';
     const handleChange = (key, val) => {
         const updated = { ...rec, [key]: val };
+        
+        // Auto-fetch LP if user typed a productCode that matches a known product
+        if (key === 'productCode' && val && val.trim() !== '') {
+            const match = products.find(p => (p.productCode || '').toLowerCase() === val.trim().toLowerCase());
+            if (match && match.listPrice != null) {
+                updated.listPrice = match.listPrice;
+            }
+        }
+
         onChange(recalcRec(updated));
     };
 
@@ -775,7 +784,7 @@ function ProductAttributeModal({ product, initialAttrs, editingItem, onConfirm, 
 }
 
 // ─── Step 3: Recommendations ────────────────────────────────────────────────
-const Step4Recommendations = memo(function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstRate, products, quotationId, customLabels, onRenameLabel, customCols, setCustomCols }) {
+const Step4Recommendations = memo(function Step4Recommendations({ items, setItems, activeLabels, toggleLabel, gstRate, products, quotationId, customLabels, onRenameLabel, customCols, setCustomCols, hiddenCols, setHiddenCols }) {
     const [productSearch, setProductSearch] = useState('');
     const [showProductPicker, setShowProductPicker] = useState(false);
     const [filterAttr, setFilterAttr] = useState({ bodyColour: '', cct: '', beamAngle: '', cri: '' });
@@ -1014,6 +1023,7 @@ const Step4Recommendations = memo(function Step4Recommendations({ items, setItem
                                                 itemId={item._tempId || item.id}
                                                 rec={item.recommendations[label] || emptyRecommendation(label)}
                                                 onChange={rec => updateRec(idx, label, rec)}
+                                                products={products}
                                                 customLabels={customLabels} onRenameLabel={onRenameLabel} hiddenCols={hiddenCols} />
                                         ))}
                                         <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>
@@ -2065,6 +2075,7 @@ export default function QuotationWizard() {
                             quotationId={quotationId}
                             customLabels={customLabels} onRenameLabel={setCustomLabel}
                             customCols={customCols} setCustomCols={setCustomCols}
+                            hiddenCols={hiddenCols} setHiddenCols={setHiddenCols}
                         />
                     )}
                 </motion.div>
