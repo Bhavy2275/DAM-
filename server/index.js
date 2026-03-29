@@ -28,8 +28,8 @@ const PORT = process.env.PORT || 5000;
 
 // Custom CORS middleware for production reliability
 const ALLOWED_ORIGINS = [
-  'https://dam-lighting.vercel.app',
-  'https://dam-lighting-dashboard.vercel.app',
+  'https://www.damlightings.com',
+  'https://damlightings.com',
   'http://localhost:5173',
   'http://localhost:3000',
 ];
