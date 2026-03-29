@@ -3,7 +3,14 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const { runInit } = require('./prisma/init-admin');
+
+// Validate critical env vars at startup
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is not set. Server cannot start.');
+    process.exit(1);
+}
 
 const authRoutes = require('./routes/auth');
 const clientRoutes = require('./routes/clients');
@@ -14,16 +21,26 @@ const dashboardRoutes = require('./routes/dashboard');
 const settingsRoutes = require('./routes/settings');
 const userRoutes = require('./routes/users');
 const productRoutes = require('./routes/products');
+const { authenticate } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Custom CORS middleware for production reliability
-// Nuclear CORS fix for production stability (v3)
+const ALLOWED_ORIGINS = [
+  'https://dam-lighting.vercel.app',
+  'https://dam-lighting-dashboard.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
 app.use((req, res, next) => {
   const origin = req.get('Origin');
-  
-  res.header('Access-Control-Allow-Origin', origin || '*');
+  const isAllowed = origin && ALLOWED_ORIGINS.includes(origin);
+
+  if (isAllowed) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, Origin');
@@ -45,7 +62,25 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(path.join(__dirname, 'uploads')));
 
+// Rate limiting
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 300,
+  message: { error: 'Too many requests, please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Routes
+app.use('/api/auth', loginLimiter);   // 10 attempts / 15 min on ALL auth routes
+app.use('/api', apiLimiter);          // 300 req/min on all other API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/quotations', quotationRoutes);
@@ -76,7 +111,6 @@ app.get('/api/health', async (req, res) => {
     database: dbStatus,
     dbError,
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
   };
 
   if (dbStatus !== 'connected') {
@@ -86,13 +120,13 @@ app.get('/api/health', async (req, res) => {
   res.json(responseBody);
 });
 
-app.get('/api/debug-db', async (req, res) => {
+app.get('/api/debug-db', authenticate, async (req, res) => {
   const prisma = require('./lib/prisma');
   try {
     const userCount = await prisma.user.count();
     res.json({ success: true, userCount, message: "Database is REACHABLE" });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message, code: e.code });
+    res.status(500).json({ success: false, error: 'Database unavailable' });
   }
 });
 

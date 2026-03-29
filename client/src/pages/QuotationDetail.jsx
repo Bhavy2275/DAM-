@@ -68,23 +68,6 @@ export default function QuotationDetail() {
         catch { toast.error('Failed'); }
     };
 
-    const handleAddPayment = async () => {
-        try {
-            await api.post('/payments', {
-                quotationId: id, clientId: quotation.clientId,
-                amountPaid: parseFloat(paymentForm.amountPaid),
-                paymentDate: paymentForm.paymentDate,
-                paymentMethod: paymentForm.paymentMethod,
-                referenceNumber: paymentForm.referenceNumber,
-                notes: paymentForm.notes
-            });
-            toast.success('Payment added');
-            setShowPaymentModal(false); loadQuotation();
-        } catch { toast.error('Failed to add payment'); }
-    };
-
-
-
     if (loading) return (
         <div style={{ padding: 32 }}>
             <div className="skeleton" style={{ height: 40, width: 240, marginBottom: 24 }} />
@@ -473,7 +456,7 @@ export default function QuotationDetail() {
                                         </td>
                                         <td style={tdStyle()}>{item.finalBrandName || '—'}</td>
                                         <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalListPrice != null ? formatINR(item.finalListPrice) : '—'}</td>
-                                        <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalListPrice != null ? formatINR(item.finalListPrice * 1.18) : '—'}</td>
+                                        <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalListPrice != null ? formatINR(item.finalListPrice * (1 + (quotation.gstRate || 18) / 100)) : '—'}</td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalDiscount != null ? `${item.finalDiscount}%` : '—'}</td>
                                         <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalRate != null ? formatINR(item.finalRate) : '—'}</td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>

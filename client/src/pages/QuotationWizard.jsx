@@ -81,13 +81,19 @@ export function getImageUrl(url) {
 // Fix 3: zIndex: 99999 on dropdown + capture-phase outside-click listener
 function EditableAttributeTags({ values = [], options, onChange, label }) {
     const [open, setOpen] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
+    const [customVal, setCustomVal] = useState('');
     const ref = useRef(null);
 
     // Capture phase so table row handlers don't intercept outside-click detection
     useEffect(() => {
         if (!open) return;
         const handler = (e) => {
-            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+            if (ref.current && !ref.current.contains(e.target)) {
+                setOpen(false);
+                setIsAdding(false);
+                setCustomVal('');
+            }
         };
         document.addEventListener('mousedown', handler, true);
         return () => document.removeEventListener('mousedown', handler, true);
@@ -218,7 +224,95 @@ function EditableAttributeTags({ values = [], options, onChange, label }) {
                                 </button>
                             );
                         })}
+
+                        {/* Custom values (those not in the options list) */}
+                        {values.filter(v => !options.includes(v)).map(cv => (
+                            <button
+                                key={cv}
+                                type="button"
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    toggle(cv);
+                                }}
+                                style={{
+                                    ...getTagStyle(cv),
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    padding: '3px 7px',
+                                    borderRadius: 4,
+                                    border: '2px solid var(--color-accent)',
+                                    cursor: 'pointer',
+                                    outline: 'none',
+                                    boxShadow: '0 0 6px rgba(245,166,35,0.45)',
+                                    userSelect: 'none',
+                                }}
+                            >
+                                ✓ {formatTagLabel(cv)}
+                            </button>
+                        ))}
                     </div>
+
+                    {/* Add Color+ Input */}
+                    {(label === 'Body' || label === 'Reflector') && (
+                        <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--color-border)' }}>
+                            {isAdding ? (
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    <input
+                                        autoFocus
+                                        value={customVal}
+                                        onChange={e => setCustomVal(e.target.value)}
+                                        onMouseDown={e => e.stopPropagation()}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                if (customVal.trim()) {
+                                                    toggle(customVal.trim().toUpperCase());
+                                                    setCustomVal('');
+                                                    setIsAdding(false);
+                                                }
+                                            }
+                                        }}
+                                        placeholder="Color..."
+                                        style={{
+                                            flex: 1, fontSize: 10, padding: '4px 6px', borderRadius: 4,
+                                            background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-accent)',
+                                            color: '#fff', outline: 'none'
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                            e.preventDefault(); e.stopPropagation();
+                                            if (customVal.trim()) {
+                                                toggle(customVal.trim().toUpperCase());
+                                                setCustomVal('');
+                                                setIsAdding(false);
+                                            }
+                                        }}
+                                        style={{
+                                            fontSize: 9, padding: '3px 8px', borderRadius: 4,
+                                            background: 'var(--color-accent)', color: '#000',
+                                            border: 'none', cursor: 'pointer', fontWeight: 700,
+                                        }}
+                                    >Add</button>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setIsAdding(true); }}
+                                    style={{
+                                        fontSize: 9, fontWeight: 700, color: 'var(--color-accent)',
+                                        background: 'none', border: '1px dashed var(--color-accent)',
+                                        borderRadius: 4, padding: '3px 8px', cursor: 'pointer', width: '100%',
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    + Add Color
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     <div style={{
                         marginTop: 8, paddingTop: 6,
@@ -242,6 +336,7 @@ function EditableAttributeTags({ values = [], options, onChange, label }) {
         </div>
     );
 }
+
 
 // ─── EditableAttributeGroup ─────────────────────────────────────────────────
 function EditableAttributeGroup({ item, onUpdate }) {
@@ -506,6 +601,9 @@ function ProductAttributeModal({ product, initialAttrs, editingItem, onConfirm, 
     } : initialAttrs;
 
     const [selected, setSelected] = useState(initialAttrs);
+    const [addingKey, setAddingKey] = useState(null);
+    const [customVal, setCustomVal] = useState('');
+
 
     const toggle = (key, value) => {
         setSelected(prev => ({
@@ -593,6 +691,66 @@ function ProductAttributeModal({ product, initialAttrs, editingItem, onConfirm, 
                                             </button>
                                         );
                                     })}
+
+                                    {/* Selected custom colors not in the available list */}
+                                    {selected[key].filter(v => !available.includes(v)).map(v => (
+                                        <button key={v} type="button" onClick={() => toggle(key, v)}
+                                            style={{
+                                                padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+                                                border: `2px solid var(--color-accent)`,
+                                                background: 'var(--color-accent)',
+                                                color: '#000',
+                                                transform: 'scale(1.05)',
+                                                boxShadow: `0 2px 8px rgba(245,166,35,0.35)`,
+                                            }}
+                                        >
+                                            {fmtAttr(v)}
+                                        </button>
+                                    ))}
+
+                                    {/* Add Color Button */}
+                                    {(key === 'bodyColours' || key === 'reflectorColours') && (
+                                        <div style={{ width: '100%', marginTop: 4 }}>
+                                            {addingKey === key ? (
+                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                    <input
+                                                        autoFocus
+                                                        value={customVal}
+                                                        onChange={e => setCustomVal(e.target.value)}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                if (customVal.trim()) {
+                                                                    toggle(key, customVal.trim().toUpperCase());
+                                                                    setCustomVal('');
+                                                                    setAddingKey(null);
+                                                                }
+                                                            }
+                                                            if (e.key === 'Escape') setAddingKey(null);
+                                                        }}
+                                                        placeholder="Add custom color..."
+                                                        style={{
+                                                            flex: 1, fontSize: 11, padding: '6px 10px', borderRadius: 6,
+                                                            background: 'var(--color-base)', border: '1px solid var(--color-accent)',
+                                                            color: '#fff', outline: 'none'
+                                                        }}
+                                                    />
+                                                    <button type="button" onClick={() => {
+                                                        if (customVal.trim()) {
+                                                            toggle(key, customVal.trim().toUpperCase());
+                                                            setCustomVal('');
+                                                            setAddingKey(null);
+                                                        }
+                                                    }} style={{ background: 'var(--color-accent)', color: '#000', border: 'none', borderRadius: 6, px: 12, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Add</button>
+                                                </div>
+                                            ) : (
+                                                <button type="button" onClick={() => setAddingKey(key)}
+                                                    style={{ fontSize: 10, padding: '4px 12px', borderRadius: 6, border: '1px dashed var(--color-accent)', background: 'transparent', color: 'var(--color-accent)', cursor: 'pointer', fontWeight: 600 }}>
+                                                    + Add Color
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -1681,7 +1839,7 @@ export default function QuotationWizard() {
         }
         setSaving(true);
         try {
-            const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols });
+            const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
             if (!quotationId) {
                 const { data } = await api.post('/quotations', { ...form, notes, customLabels: labelsJson });
                 setQuotationId(data.id);
@@ -1758,6 +1916,7 @@ export default function QuotationWizard() {
                 finalAmount: it.finalAmount,
                 finalMacadamStep: it.finalMacadamStep,
                 finalUnit: it.finalUnit,
+                finalPriceType: it.finalPriceType || 'LP',
                 customFields: it.customFields || {},
                 bodyColours: it.bodyColours || [],
                 reflectorColours: it.reflectorColours || [],

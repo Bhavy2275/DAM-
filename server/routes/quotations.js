@@ -2,11 +2,66 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
+const { requireRole } = require('../middleware/role');
+const { z } = require('zod');
+const { validateBody } = require('../middleware/validate');
 const { generateQuoteNumber } = require('../utils/quoteNumber');
+
+const quoteHeaderSchema = z.object({
+    quoteTitle: z.string().max(255),
+    clientId: z.string().uuid(),
+    projectName: z.string().max(255).optional(),
+    city: z.string().max(100).optional(),
+    state: z.string().max(100).optional(),
+    status: z.string().max(50).optional(),
+    validDays: z.number().int().optional(),
+    gstRate: z.number().optional(),
+    notes: z.string().max(5000).optional(),
+    customLabels: z.any().optional()
+});
+
+const quoteItemSchema = z.object({
+    id: z.string().uuid().optional(),
+    productId: z.string().uuid().optional().nullable(),
+    productCode: z.string().max(100).optional(),
+    layoutCode: z.string().max(100).optional().nullable(),
+    description: z.string().max(2000).optional(),
+    polarDiagramUrl: z.string().max(255).optional().nullable(),
+    productImageUrl: z.string().max(255).optional().nullable(),
+    bodyColours: z.any().optional(),
+    reflectorColours: z.any().optional(),
+    colourTemps: z.any().optional(),
+    beamAngles: z.any().optional(),
+    cri: z.any().optional(),
+    unit: z.string().max(50).optional(),
+    sno: z.number().optional(),
+    finalBrandName: z.string().max(150).optional().nullable(),
+    finalProductCode: z.string().max(150).optional().nullable(),
+    finalListPrice: z.union([z.number(), z.string()]).optional().nullable(),
+    finalDiscount: z.union([z.number(), z.string()]).optional().nullable(),
+    finalRate: z.union([z.number(), z.string()]).optional().nullable(),
+    finalQuantity: z.union([z.number(), z.string()]).optional().nullable(),
+    finalAmount: z.union([z.number(), z.string()]).optional().nullable(),
+    finalMacadamStep: z.string().max(20).optional().nullable(),
+    finalUnit: z.string().max(50).optional().nullable(),
+    finalPriceType: z.string().max(20).optional().nullable(),
+    customFields: z.any().optional(),
+    currentCustomFields: z.any().optional(),
+    recommendations: z.any().optional(),
+    _tempId: z.any().optional()
+});
+
+// Used fully atomic batch endpoint
+const batchSchema = z.object({
+    header: quoteHeaderSchema.partial().optional(),
+    items: z.array(quoteItemSchema).optional(),
+    notes: z.string().max(5000).optional()
+});
 
 router.use(authenticate);
 
 function parseArr(str) { try { return JSON.parse(str || '[]'); } catch { return []; } }
+function parseObj(str) { try { const v = JSON.parse(str || '{}'); return typeof v === 'object' && v !== null && !Array.isArray(v) ? v : {}; } catch { return {}; } }
 
 function serializeItem(item) {
     const recs = (item.recommendations || []).reduce((acc, r) => {
@@ -20,7 +75,7 @@ function serializeItem(item) {
         colourTemps: parseArr(item.colourTemps),
         beamAngles: parseArr(item.beamAngles),
         cri: parseArr(item.cri),
-        customFields: parseArr(item.customFields || '{}'),
+        customFields: parseObj(item.customFields || '{}'),
         recommendations: item.recommendations || [],
         recommendationsByLabel: recs,
     };
@@ -63,12 +118,16 @@ async function recalculateQuotationTotal(quotationId, tx = prisma) {
 // ... existing routes ...
 
 // PUT /api/quotations/:id/batch  — fully atomic save for header + all items + all recs
-router.put('/:id/batch', async (req, res) => {
+router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const { header, items, notes } = req.body;
 
         await prisma.$transaction(async (tx) => {
+            // Fetch gstRate for calculations
+            const currentQuotation = await tx.quotation.findUnique({ where: { id }, select: { gstRate: true } });
+            const gstMult = 1 + (Number(currentQuotation?.gstRate) || 18) / 100;
+
             // 1. Update Header if provided
             if (header) {
                 const VALID_HEADER_FIELDS = ['quoteTitle', 'projectName', 'city', 'state', 'validDays', 'gstRate', 'status', 'clientId'];
@@ -89,6 +148,13 @@ router.put('/:id/batch', async (req, res) => {
 
             // 2. ITEMS
                 if (items && items.length > 0) {
+                    // Pre-fetch existing items for ownership verification
+                    const existingItems = await tx.quotationItem.findMany({
+                        where: { quotationId: id },
+                        select: { id: true }
+                    });
+                    const existingIds = new Set(existingItems.map(i => i.id));
+
                     for (const itemData of items) {
                         const { id: itemId, recommendations, _tempId, ...rest } = itemData;
 
@@ -98,7 +164,7 @@ router.put('/:id/batch', async (req, res) => {
                             'colourTemps', 'beamAngles', 'cri', 'unit',
                             'finalBrandName', 'finalProductCode', 'finalListPrice', 'finalDiscount',
                             'finalRate', 'finalQuantity', 'finalAmount', 'finalMacadamStep', 'finalUnit',
-                            'customFields'
+                            'finalPriceType', 'customFields'
                         ];
 
                         const dataToSave = {};
@@ -135,6 +201,10 @@ router.put('/:id/batch', async (req, res) => {
 
                         let finalItemId;
                         if (isExisting) {
+                            // Verify item belongs to this quotation
+                            if (!existingIds.has(itemId)) {
+                                return res.status(403).json({ error: 'Item does not belong to this quotation' });
+                            }
                             // Update existing
                             await tx.quotationItem.update({
                                 where: { id: itemId },
@@ -167,7 +237,7 @@ router.put('/:id/batch', async (req, res) => {
                                         brandName: r.brandName || '',
                                         productCode: r.productCode || '',
                                         listPrice: parseFloat(r.listPrice) || 0,
-                                        listPriceWithGst: parseFloat(r.listPriceWithGst) || parseFloat(r.listPrice || 0) * 1.18,
+                                        listPriceWithGst: parseFloat(r.listPriceWithGst) || parseFloat(r.listPrice || 0) * gstMult,
                                         discountPercent: parseFloat(r.discountPercent) || 0,
                                         rate: parseFloat(r.rate) || 0,
                                         unit: r.unit || 'NUMBERS',
@@ -203,8 +273,11 @@ router.put('/:id/batch', async (req, res) => {
         });
         res.status(500).json({ 
             error: 'Failed to perform batch save', 
-            detail: error.message,
-            code: error.code // Prisma error code (e.g., P2002)
+            ...(process.env.NODE_ENV !== 'production' && {
+                detail: error.message,
+                code: error.code,
+                meta: error.meta
+            })
         });
     }
 });
@@ -219,11 +292,11 @@ router.get('/', async (req, res) => {
         if (clientId) where.clientId = clientId;
         if (search) {
             where.OR = [
-                { quoteNumber: { contains: search } },
-                { quoteTitle: { contains: search } },
-                { projectName: { contains: search } },
-                { client: { fullName: { contains: search } } },
-                { client: { companyName: { contains: search } } },
+                { quoteNumber: { contains: search, mode: 'insensitive' } },
+                { quoteTitle: { contains: search, mode: 'insensitive' } },
+                { projectName: { contains: search, mode: 'insensitive' } },
+                { client: { fullName: { contains: search, mode: 'insensitive' } } },
+                { client: { companyName: { contains: search, mode: 'insensitive' } } },
             ];
         }
         const quotations = await prisma.quotation.findMany({
@@ -242,7 +315,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/quotations/recalculate-all
-router.get('/recalculate-all', async (req, res) => {
+router.get('/recalculate-all', requireRole('ADMIN'), async (req, res) => {
     try {
         const quotations = await prisma.quotation.findMany({
             include: { lineItems: { include: { recommendations: true } } }
@@ -306,7 +379,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/quotations  — create header (Step 3)
-router.post('/', async (req, res) => {
+router.post('/', validateBody(quoteHeaderSchema), async (req, res) => {
     try {
         const { quoteTitle, clientId, projectName, city, state, validDays, gstRate, notes, customLabels } = req.body;
         const quoteNumber = await generateQuoteNumber();
@@ -330,7 +403,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/quotations/:id  — update header
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateBody(quoteHeaderSchema.partial()), async (req, res) => {
     try {
         const { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes, customLabels } = req.body;
         const updateData = { quoteTitle, clientId, projectName, city, state, status, validDays, gstRate, notes };
@@ -355,7 +428,6 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         // Cascade is set in schema so just delete the quotation
-        await prisma.payment.deleteMany({ where: { quotationId: req.params.id } });
         await prisma.quotation.delete({ where: { id: req.params.id } });
         res.json({ message: 'Quotation deleted' });
     } catch (error) {
@@ -434,7 +506,7 @@ router.post('/:id/duplicate', async (req, res) => {
 // ── LINE ITEMS
 
 // POST /api/quotations/:id/items  — add a product row
-router.post('/:id/items', async (req, res) => {
+router.post('/:id/items', validateBody(quoteItemSchema), async (req, res) => {
     try {
         const { productId, productCode, layoutCode, description, polarDiagramUrl, productImageUrl,
             bodyColours, reflectorColours, colourTemps, beamAngles, cri, unit, customFields } = req.body;
@@ -472,8 +544,11 @@ router.post('/:id/items', async (req, res) => {
 });
 
 // PUT /api/quotations/:id/items/:itemId  — update item info AND final fields
-router.put('/:id/items/:itemId', async (req, res) => {
+router.put('/:id/items/:itemId', validateBody(quoteItemSchema), async (req, res) => {
     try {
+        const itemCheck = await prisma.quotationItem.findUnique({ where: { id: req.params.itemId }, select: { quotationId: true } });
+        if (!itemCheck || itemCheck.quotationId !== req.params.id) return res.status(403).json({ error: 'Item does not belong to this quotation' });
+        
         const {
             unit, sno, productCode, layoutCode, description, currentCustomFields,
             finalBrandName, finalProductCode, finalListPrice, finalDiscount,
@@ -511,6 +586,9 @@ router.put('/:id/items/:itemId', async (req, res) => {
 // DELETE /api/quotations/:id/items/:itemId
 router.delete('/:id/items/:itemId', async (req, res) => {
     try {
+        const itemCheck = await prisma.quotationItem.findUnique({ where: { id: req.params.itemId }, select: { quotationId: true } });
+        if (!itemCheck || itemCheck.quotationId !== req.params.id) return res.status(403).json({ error: 'Item does not belong to this quotation' });
+
         await prisma.quotationItem.delete({ where: { id: req.params.itemId } });
         // Re-number remaining items
         const remaining = await prisma.quotationItem.findMany({
@@ -530,7 +608,14 @@ router.delete('/:id/items/:itemId', async (req, res) => {
 // PUT /api/quotations/:id/items/:itemId/recommendations  — save all A-F recs for one item
 router.put('/:id/items/:itemId/recommendations', async (req, res) => {
     try {
+        const itemCheck = await prisma.quotationItem.findUnique({ where: { id: req.params.itemId }, select: { quotationId: true } });
+        if (!itemCheck || itemCheck.quotationId !== req.params.id) return res.status(403).json({ error: 'Item does not belong to this quotation' });
+
         const { recommendations } = req.body; // array of rec objects
+
+        // Fetch quotation gstRate for fallback listPriceWithGst calculation
+        const quotation = await prisma.quotation.findUnique({ where: { id: req.params.id }, select: { gstRate: true } });
+        const gstMult = 1 + (Number(quotation?.gstRate) || 18) / 100;
 
         // Delete existing recs for this item, then recreate
         await prisma.itemRecommendation.deleteMany({ where: { quotationItemId: req.params.itemId } });
@@ -543,7 +628,7 @@ router.put('/:id/items/:itemId/recommendations', async (req, res) => {
                     brandName: r.brandName || '',
                     productCode: r.productCode || '',
                     listPrice: parseFloat(r.listPrice) || 0,
-                    listPriceWithGst: parseFloat(r.listPriceWithGst) || parseFloat(r.listPrice || 0) * 1.18,
+                    listPriceWithGst: parseFloat(r.listPriceWithGst) || parseFloat(r.listPrice || 0) * gstMult,
                     discountPercent: parseFloat(r.discountPercent) || 0,
                     rate: parseFloat(r.rate) || 0,
                     unit: r.unit || 'NUMBERS',
@@ -636,7 +721,11 @@ router.put('/:id/final', async (req, res) => {
 // POST /api/quotations/:id/import-recommendation  — copy rec into final fields for all items
 router.post('/:id/import-recommendation', async (req, res) => {
     try {
-        const { label } = req.body; // "A" | "B" | etc.
+        const { label } = req.body;
+        const VALID_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
+        if (!label || !VALID_LABELS.includes(label)) {
+            return res.status(400).json({ error: `label must be one of: ${VALID_LABELS.join(', ')}` });
+        }
         const items = await prisma.quotationItem.findMany({
             where: { quotationId: req.params.id },
             include: { recommendations: true },
@@ -685,6 +774,12 @@ router.post('/:id/import-recommendation', async (req, res) => {
 router.post('/:id/items/reorder', async (req, res) => {
     try {
         const { itemIds } = req.body; // ordered array of item IDs
+
+        const validItems = await prisma.quotationItem.findMany({ where: { quotationId: req.params.id }, select: { id: true } });
+        const validIds = new Set(validItems.map(i => i.id));
+        const allValid = itemIds.every(id => validIds.has(id));
+        if (!allValid) return res.status(403).json({ error: 'One or more items do not belong to this quotation' });
+
         for (let i = 0; i < itemIds.length; i++) {
             await prisma.quotationItem.update({ where: { id: itemIds[i] }, data: { sno: i + 1 } });
         }

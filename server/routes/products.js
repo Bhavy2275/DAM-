@@ -2,6 +2,25 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
+const { requireRole } = require('../middleware/role');
+const { z } = require('zod');
+const { validateBody } = require('../middleware/validate');
+
+const productSchema = z.object({
+    productCode: z.string().max(100),
+    layoutCode: z.string().max(100).optional().nullable(),
+    description: z.string().max(2000).optional().nullable(),
+    basePrice: z.union([z.string(), z.number()]).optional(),
+    brandName: z.string().max(150).optional().nullable(),
+    listPrice: z.union([z.string(), z.number()]).optional().nullable(),
+    discountPercent: z.union([z.string(), z.number()]).optional().nullable(),
+    bodyColours: z.any().optional(),
+    reflectorColours: z.any().optional(),
+    colourTemps: z.any().optional(),
+    beamAngles: z.any().optional(),
+    cri: z.any().optional(),
+    customAttributes: z.any().optional(),
+});
 
 // ─── Cloudinary multer upload ──────────────────────────────────────────────
 const { uploadProductFiles } = require('../utils/cloudinary');
@@ -60,7 +79,7 @@ function buildData(body, files) {
         data.productImageUrl = files.productImage[0].path;
     }
 
-    console.log('📦 Incoming buildData:', JSON.stringify(body, null, 2));
+    if (process.env.NODE_ENV !== 'production') console.log('📦 Incoming buildData:', JSON.stringify(body, null, 2));
     return data;
 }
 
@@ -115,7 +134,7 @@ function runUpload(req, res, next) {
 }
 
 // POST /api/products — accepts multipart/form-data with optional Cloudinary uploads
-router.post('/', runUpload, async (req, res) => {
+router.post('/', requireRole('ADMIN'), runUpload, validateBody(productSchema), async (req, res) => {
     try {
         const product = await prisma.product.create({ data: buildData(req.body, req.files) });
         res.status(201).json(serializeProduct(product));
@@ -127,7 +146,7 @@ router.post('/', runUpload, async (req, res) => {
 });
 
 // PUT /api/products/:id — accepts multipart/form-data with optional Cloudinary uploads
-router.put('/:id', runUpload, async (req, res) => {
+router.put('/:id', requireRole('ADMIN'), runUpload, validateBody(productSchema.partial()), async (req, res) => {
     try {
         const product = await prisma.product.update({
             where: { id: req.params.id },
@@ -142,7 +161,7 @@ router.put('/:id', runUpload, async (req, res) => {
 });
 
 // DELETE /api/products/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
     try {
         await prisma.product.delete({ where: { id: req.params.id } });
         res.json({ message: 'Product deleted' });

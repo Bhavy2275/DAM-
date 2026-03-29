@@ -2,6 +2,23 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
+const { requireRole } = require('../middleware/role');
+const { z } = require('zod');
+const { validateBody } = require('../middleware/validate');
+
+const clientSchema = z.object({
+    fullName: z.string().max(150),
+    companyName: z.string().max(150).optional().nullable(),
+    address: z.string().max(500).optional().nullable(),
+    city: z.string().max(100).optional().nullable(),
+    state: z.string().max(100).optional().nullable(),
+    pinCode: z.string().max(20).optional().nullable(),
+    mobileNumber: z.string().max(50).optional().nullable(),
+    emailId: z.string().email().max(150).optional().nullable(),
+    companyGstNumber: z.string().max(50).optional().nullable(),
+    companyAddress: z.string().max(500).optional().nullable(),
+    customFields: z.any().optional().nullable(), // allowed to be json dynamically by frontend
+});
 
 router.use(authenticate);
 
@@ -18,9 +35,9 @@ router.get('/', async (req, res) => {
         if (search) {
             const s = search.toLowerCase();
             clients = clients.filter(c =>
-                c.fullName.toLowerCase().includes(s) ||
-                c.companyName.toLowerCase().includes(s) ||
-                c.city.toLowerCase().includes(s) ||
+                (c.fullName || '').toLowerCase().includes(s) ||
+                (c.companyName || '').toLowerCase().includes(s) ||
+                (c.city || '').toLowerCase().includes(s) ||
                 (c.emailId || '').toLowerCase().includes(s)
             );
         }
@@ -79,7 +96,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/clients
-router.post('/', async (req, res) => {
+router.post('/', validateBody(clientSchema), async (req, res) => {
     try {
         const { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress, customAttributes, customLabels } = req.body;
         const client = await prisma.client.create({
@@ -97,7 +114,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/clients/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateBody(clientSchema.partial()), async (req, res) => {
     try {
         const { fullName, companyName, address, city, state, pinCode, mobileNumber, emailId, companyGstNumber, companyAddress, customAttributes, customLabels } = req.body;
         const client = await prisma.client.update({
@@ -115,7 +132,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/clients/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
     try {
         await prisma.client.delete({ where: { id: req.params.id } });
         res.json({ message: 'Client deleted' });

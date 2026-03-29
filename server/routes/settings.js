@@ -5,14 +5,43 @@ const { authenticate } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 const multer = require('multer');
 const path = require('path');
+const { z } = require('zod');
+const { validateBody } = require('../middleware/validate');
+
+const settingsSchema = z.object({
+    companyName: z.string().max(150).optional(),
+    address: z.string().max(500).optional(),
+    bankName: z.string().max(150).optional(),
+    accountName: z.string().max(150).optional(),
+    accountNumber: z.string().max(50).optional(),
+    ifscCode: z.string().max(30).optional(),
+    gstNumber: z.string().max(50).optional(),
+    logoUrl: z.string().max(255).optional().nullable(),
+    polarDiagramUrl: z.string().max(255).optional().nullable(),
+    defaultTerms: z.string().max(5000).optional(),
+    defaultPaymentTerms: z.string().max(5000).optional(),
+    prePrintedTerms: z.boolean().optional(),
+    prePrintedPaymentTerms: z.boolean().optional(),
+    defaultGstRate: z.union([z.number(), z.string()]).optional()
+});
 
 router.use(authenticate);
 
 const logoStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
-    filename: (req, file, cb) => cb(null, 'logo' + path.extname(file.originalname))
+    filename: (req, file, cb) => cb(null, 'logo' + path.extname(file.originalname).toLowerCase())
 });
-const uploadLogo = multer({ storage: logoStorage });
+const uploadLogo = multer({ 
+    storage: logoStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+    fileFilter: (req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowed.includes(file.mimetype)) {
+            return cb(new Error('Only JPG, PNG, and WEBP images are allowed'));
+        }
+        cb(null, true);
+    }
+});
 
 // GET /api/settings
 router.get('/', async (req, res) => {
@@ -45,17 +74,29 @@ router.get('/', async (req, res) => {
 });
 
 // PUT /api/settings
-router.put('/', requireRole('ADMIN'), async (req, res) => {
+router.put('/', requireRole('ADMIN'), validateBody(settingsSchema), async (req, res) => {
     try {
-        const settings = await prisma.companySettings.findFirst();
-        if (!settings) return res.status(404).json({ error: 'Settings not found' });
-
-        const { id, ...updateData } = req.body;
-
-        const updated = await prisma.companySettings.update({
-            where: { id: settings.id },
-            data: updateData
-        });
+        const {
+            companyName, address, bankName, accountName, accountNumber,
+            ifscCode, gstNumber, logoUrl, polarDiagramUrl,
+            defaultTerms, defaultPaymentTerms,
+            prePrintedTerms, prePrintedPaymentTerms,
+        } = req.body;
+        const data = {
+            companyName, address, bankName, accountName, accountNumber,
+            ifscCode, gstNumber, logoUrl, polarDiagramUrl,
+            defaultTerms, defaultPaymentTerms,
+            prePrintedTerms, prePrintedPaymentTerms,
+        };
+        // Handle both field names (client sends defaultGstRate, schema uses defaultGst)
+        if (req.body.defaultGstRate != null) {
+            data.defaultGst = parseFloat(req.body.defaultGstRate) || 18;
+        }
+        Object.keys(data).forEach(k => data[k] === undefined && delete data[k]);
+        const existing = await prisma.companySettings.findFirst();
+        const updated = existing
+            ? await prisma.companySettings.update({ where: { id: existing.id }, data })
+            : await prisma.companySettings.create({ data });
         res.json(updated);
     } catch (error) {
         console.error('Update settings error:', error);
@@ -98,7 +139,7 @@ router.get('/backup', requireRole('ADMIN'), async (req, res) => {
                 } 
             }),
             prisma.product.findMany(),
-            prisma.user.findMany({ select: { id: true, email: true, role: true, name: true, passwordHash: true } }),
+            prisma.user.findMany({ select: { id: true, email: true, role: true, name: true } }),
             prisma.companySettings.findFirst()
         ]);
 

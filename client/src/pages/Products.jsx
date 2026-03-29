@@ -222,6 +222,7 @@ export default function Products() {
             if (!p.productCode.toLowerCase().includes(s) && !p.description.toLowerCase().includes(s) && !(p.layoutCode || '').toLowerCase().includes(s)) return false;
         }
         if (filters.bodyColour && !(p.bodyColours || []).includes(filters.bodyColour)) return false;
+        if (filters.reflectorColour && !(p.reflectorColours || []).includes(filters.reflectorColour)) return false;
         if (filters.cct && !(p.colourTemps || []).includes(filters.cct)) return false;
         if (filters.beamAngle && !(p.beamAngles || []).includes(filters.beamAngle)) return false;
         if (filters.cri && !(p.cri || []).includes(filters.cri)) return false;

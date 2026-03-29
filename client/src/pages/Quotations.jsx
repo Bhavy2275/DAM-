@@ -31,12 +31,12 @@ export default function Quotations() {
 
     const debouncedSearch = useDebounce(search, 300);
 
-    useEffect(() => { 
-        const init = async () => {
-            await api.get('/quotations/recalculate-all').catch(() => {});
-            loadQuotations();
-        };
-        init();
+    useEffect(() => {
+        api.get('/quotations/recalculate-all').catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        loadQuotations();
     }, [debouncedSearch, statusFilter]);
 
     const loadQuotations = async () => {

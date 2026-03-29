@@ -4,7 +4,17 @@ const path = require("path");
 const https = require("https");
 const http = require("http");
 
-const MACADAM_MAP = { "5A": "75%", "4A": "90%", "3A": "100%", "2A": "50%", "1A": "40%" };
+const MACADAM_MAP = { "5A": "100%", "4A": "90%", "3A": "75%", "2A": "50%", "1A": "40%" };
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(amount) {
@@ -26,7 +36,7 @@ function tagLines(val) {
   const items = parseArr(val);
   if (!items.length) return "—";
   return items.map(v =>
-    `<div style="font-size:6.5px;line-height:1.6;color:#333;text-align:center">${v.replace(/DEG/g, "°").replace(/_/g, " ")}</div>`
+    `<div style="font-size:6.5px;line-height:1.6;color:#333;text-align:center">${esc(v.replace(/DEG/g, "°").replace(/_/g, " "))}</div>`
   ).join("");
 }
 
@@ -152,14 +162,14 @@ function coverHTML(quotation, settings) {
   const client = quotation.client || {};
   const s = settings || {};
 
-  const companyName = s.companyName || "Dam Lighting Solution LLP";
+  const companyName = esc(s.companyName) || "Dam Lighting Solution LLP";
   const companyPhone = s.phone || "";
   const companyEmail = s.email || "";
   const companyWebsite = s.website || "";
-  const companyAddress = s.address || "";
+  const companyAddress = esc(s.address) || "";
 
-  const clientName = client.companyName || client.fullName || "";
-  const clientPerson = (client.companyName && client.fullName) ? client.fullName : "";
+  const clientName = esc(client.companyName || client.fullName || "");
+  const clientPerson = (client.companyName && client.fullName) ? esc(client.fullName) : "";
 
   const cityParts = [];
   if (client.city) cityParts.push(client.city);
@@ -206,7 +216,7 @@ function coverHTML(quotation, settings) {
           ${clientName}
         </p>
         ${clientPerson ? `<p style="font-size:11px;color:#444;margin:0 0 6px 0">${clientPerson}</p>` : ""}
-        ${client.address ? `<p style="font-size:11px;color:#444;line-height:1.7;margin:0 0 6px 0">${client.address}</p>` : ""}
+          ${esc(client.address) ? `<p style="font-size:11px;color:#444;line-height:1.7;margin:0 0 6px 0">${esc(client.address)}</p>` : ""}
         ${clientCityLine ? `<p style="font-size:11px;color:#444;margin:0 0 4px 0">${clientCityLine}.</p>` : ""}
         ${clientPinLine ? `<p style="font-size:11px;color:#444;margin:0">${clientPinLine}</p>` : ""}
       </div>
@@ -254,12 +264,12 @@ function termsAndBankHTML(quotation, settings) {
     : '<p style="font-size:8px;color:#999">No terms specified.</p>';
 
   const bankRows = [
-    ["Account Name", s.accountName || ""],
-    ["Bank Name", s.bankName || ""],
-    ["Account Number", s.accountNumber || ""],
-    ["IFSC Code", s.ifscCode || ""],
-    ["Address", s.address || ""],
-    ["GST", s.gstNumber || ""],
+    ["Account Name", esc(s.accountName || "")],
+    ["Bank Name", esc(s.bankName || "")],
+    ["Account Number", esc(s.accountNumber || "")],
+    ["IFSC Code", esc(s.ifscCode || "")],
+    ["Address", esc(s.address || "")],
+    ["GST", esc(s.gstNumber || "")],
     ["Contact No", s.phone || ""],
   ].map(([k, v]) => `
     <tr>
@@ -359,7 +369,7 @@ async function finalTableHTML(quotation) {
   const sAmt = !hCols['Amount'];
   const sMac = false; // Always false for final quote table per user request
 
-  const banner = (quotation.projectName || "") + " \u2014 " + (quotation.city || "") + " \u2014 LIGHTING QUOTATION";
+  const banner = esc(quotation.projectName || "") + " \u2014 " + esc(quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
   const specHeaders = [];
   if (sSno) specHeaders.push(`<th rowspan="2" style="${TH}">S.NO</th>`);
@@ -425,7 +435,8 @@ async function finalTableHTML(quotation) {
         : "—";
 
       const lp = item.finalListPrice != null ? fmt(item.finalListPrice) : "—";
-      const lp18 = item.finalListPrice != null ? fmt(Number(item.finalListPrice) * 1.18) : "—";
+      const gstMult = 1 + (Number(quotation.gstRate) || 18) / 100;
+      const lp18 = item.finalListPrice != null ? fmt(Number(item.finalListPrice) * gstMult) : "—";
       const disc = item.finalDiscount != null ? item.finalDiscount + "%" : "—";
       const rate = item.finalRate != null ? fmt(item.finalRate) : "—";
       const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
@@ -438,7 +449,7 @@ async function finalTableHTML(quotation) {
       if (sLayout) rowHtml += `<td style="${TD}text-align:center;font-size:7px;">${item.layoutCode || "—"}</td>`;
       if (sCode) rowHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;">${item.productCode || ""}</td>`;
       if (sDesc) {
-          rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:130px">${(item.description || "").slice(0, 220)}</td>`;
+          rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:130px">${esc((item.description || "").slice(0, 220))}</td>`;
       }
       if (sPolar) rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
       if (sProdImg) rowHtml += `<td style="${TD}text-align:center;padding:3px">${prodImg}</td>`;
@@ -513,7 +524,7 @@ async function finalTableHTML(quotation) {
 <tr style="background:${bg}">
   <td style="${TD}text-align:center;font-weight:700;color:#0D1E40">${item.sno || addOnsIdx}</td>
   <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px">${item.productCode || "—"}</td>
-  <td style="${TD}font-size:7px;color:#333">${(item.description || "").slice(0, 100)}</td>
+  <td style="${TD}font-size:7px;color:#333">${esc((item.description || "").slice(0, 100))}</td>
   ${customTds}
 </tr>`;
     }
@@ -563,7 +574,7 @@ async function allRecsTableHTML(quotation) {
   });
 
   const polarB64s = await Promise.all(items.map(i => toBase64(i.polarDiagramUrl)));
-  const banner = (quotation.projectName || "") + " \u2014 " + (quotation.city || "") + " \u2014 LIGHTING QUOTATION";
+  const banner = esc(quotation.projectName || "") + " \u2014 " + esc(quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
   // Brand names for header row
   const brandNames = activeLabels.map(label => {
@@ -660,7 +671,7 @@ async function allRecsTableHTML(quotation) {
     if (sSno) rowHtml += `<td style="${TD}text-align:center;">${item.sno || idx + 1}</td>`;
     if (sCode) rowHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;">${item.productCode || ""}</td>`;
     if (sDesc) {
-        rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:120px">${(item.description || "").slice(0, 180)}</td>`;
+        rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:120px">${esc((item.description || "").slice(0, 180))}</td>`;
     }
     if (sPolar) rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
     if (sUnit) rowHtml += `<td style="${TD}text-align:center;">${unit}</td>`;
@@ -673,7 +684,7 @@ async function allRecsTableHTML(quotation) {
   // tfoot
   const totalDefs = [
     { label: "SUM", key: "sum", bg: "#f0f4f8", color: "#333" },
-    { label: "GST 18%", key: "gst", bg: "#f0f4f8", color: "#333" },
+    { label: `GST ${gstRate}%`, key: "gst", bg: "#f0f4f8", color: "#333" },
     { label: "TOTAL", key: "total", bg: "#0b162c", color: "#F5A623" },
   ];
   let tfootHTML = "";
@@ -746,7 +757,7 @@ async function allRecsTableHTML(quotation) {
 
   const summaryTotalRows = [
     { label: "SUM", key: "sum", bg: "#f0f4f8", color: "#333" },
-    { label: "GST 18%", key: "gst", bg: "#f0f4f8", color: "#333" },
+    { label: `GST ${gstRate}%`, key: "gst", bg: "#f0f4f8", color: "#333" },
     { label: "TOTAL", key: "total", bg: "#0b162c", color: "#F5A623" },
   ].map(def => {
     const cells = activeLabels.map(label => {
@@ -797,7 +808,7 @@ async function allRecsTableHTML(quotation) {
 <tr style="background:${bg}">
   <td style="${TD}text-align:center;font-weight:700;color:#0D1E40">${item.sno || i + 1}</td>
   <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px">${item.productCode || "—"}</td>
-  <td style="${TD}font-size:7px;color:#333">${(item.description || "").slice(0, 100)}</td>
+  <td style="${TD}font-size:7px;color:#333">${esc((item.description || "").slice(0, 100))}</td>
   ${customTds}
 </tr>`;
     });

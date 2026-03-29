@@ -6,7 +6,8 @@ const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 
 async function main() {
-    const passwordHash = await bcrypt.hash('admin123', 10);
+    const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+    const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
     const admin = await prisma.user.upsert({
         where: { email: 'admin@damlighting.com' },
@@ -20,6 +21,9 @@ async function main() {
     });
 
     console.log('✅ Admin user ready:', admin.email);
+    if (!process.env.ADMIN_DEFAULT_PASSWORD) {
+        console.warn('⚠️  Using default admin password. Set ADMIN_DEFAULT_PASSWORD env var for production.');
+    }
 
     // Bootstrap company settings only if missing
     const existing = await prisma.companySettings.findFirst();
@@ -52,7 +56,11 @@ async function runInit() {
         console.error('❌ Init failed:', e);
         throw e;
     } finally {
-        await prisma.$disconnect();
+        // Only disconnect when running as standalone script.
+        // When imported from index.js the shared prisma instance must stay alive.
+        if (require.main === module) {
+            await prisma.$disconnect();
+        }
     }
 }
 

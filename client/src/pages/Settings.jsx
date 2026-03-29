@@ -20,7 +20,7 @@ export default function Settings() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showInviteModal, setShowInviteModal] = useState(false);
-    const [inviteForm, setInviteForm] = useState({ name: '', email: '', password: '', role: 'MEMBER' });
+    const [inviteForm, setInviteForm] = useState({ name: '', email: '', password: '', role: 'STAFF' });
 
     useEffect(() => { loadSettings(); loadUsers(); }, []);
 
@@ -38,7 +38,7 @@ export default function Settings() {
     };
 
     const handleInvite = async () => {
-        try { await api.post('/users/invite', inviteForm); toast.success('User created'); setShowInviteModal(false); setInviteForm({ name: '', email: '', password: '', role: 'MEMBER' }); loadUsers(); }
+        try { await api.post('/users/invite', inviteForm); toast.success('User created'); setShowInviteModal(false); setInviteForm({ name: '', email: '', password: '', role: 'STAFF' }); loadUsers(); }
         catch (err) { toast.error(err.response?.data?.error || 'Failed to create user'); }
     };
 
@@ -230,7 +230,7 @@ export default function Settings() {
                                 <div><label htmlFor="invite-name" className="label">Name</label><input id="invite-name" name="name" type="text" value={inviteForm.name} onChange={e => setInviteForm({ ...inviteForm, name: e.target.value })} className="input-dark" autoComplete="off" /></div>
                                 <div><label htmlFor="invite-email" className="label">Email</label><input id="invite-email" name="email" type="email" value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} className="input-dark" autoComplete="off" /></div>
                                 <div><label htmlFor="invite-password" className="label">Password</label><input id="invite-password" name="password" type="password" value={inviteForm.password} onChange={e => setInviteForm({ ...inviteForm, password: e.target.value })} className="input-dark" autoComplete="new-password" /></div>
-                                <div><label htmlFor="invite-role" className="label">Role</label><select id="invite-role" name="role" value={inviteForm.role} onChange={e => setInviteForm({ ...inviteForm, role: e.target.value })} className="input-dark"><option value="ADMIN">Admin</option><option value="MEMBER">Member</option></select></div>
+                                <div><label htmlFor="invite-role" className="label">Role</label><select id="invite-role" name="role" value={inviteForm.role} onChange={e => setInviteForm({ ...inviteForm, role: e.target.value })} className="input-dark"><option value="ADMIN">Admin</option><option value="STAFF">Staff</option></select></div>
                             </div>
                             <div className="flex gap-3" style={{ marginTop: 24 }}>
                                 <button onClick={() => setShowInviteModal(false)} className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>

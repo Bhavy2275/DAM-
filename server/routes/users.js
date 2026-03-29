@@ -4,6 +4,22 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
+const { z } = require('zod');
+const { validateBody } = require('../middleware/validate');
+
+const inviteSchema = z.object({
+    name: z.string().max(100).optional(),
+    email: z.string().email().max(100),
+    password: z.string().min(6).max(255),
+    role: z.enum(['ADMIN', 'STAFF'])
+});
+
+const updateSchema = z.object({
+    name: z.string().max(100).optional(),
+    email: z.string().email().max(100).optional(),
+    password: z.string().min(6).max(255).optional(),
+    role: z.enum(['ADMIN', 'STAFF']).optional()
+});
 
 router.use(authenticate);
 router.use(requireRole('ADMIN'));
@@ -21,15 +37,16 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/users/invite
-router.post('/invite', async (req, res) => {
+router.post('/invite', requireRole('ADMIN'), validateBody(inviteSchema), async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) return res.status(400).json({ error: 'Email already exists' });
 
+        const validRole = ['ADMIN', 'STAFF'].includes(role) ? role : 'STAFF';
         const passwordHash = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
-            data: { name, email, passwordHash, role: role || 'STAFF' },
+            data: { name: name || '', email, passwordHash, role: validRole },
             select: { id: true, name: true, email: true, role: true }
         });
         res.status(201).json(user);
@@ -38,8 +55,10 @@ router.post('/invite', async (req, res) => {
     }
 });
 
+const roleSchema = z.object({ role: z.enum(['ADMIN', 'STAFF']) });
+
 // PUT /api/users/:id/role
-router.put('/:id/role', async (req, res) => {
+router.put('/:id/role', validateBody(roleSchema), async (req, res) => {
     try {
         const { role } = req.body;
         const user = await prisma.user.update({
