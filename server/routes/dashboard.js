@@ -67,13 +67,15 @@ router.get('/stats', async (req, res) => {
         }));
 
         res.json({
-            totalQuotations,
-            pending,
-            accepted,
-            totalQuotedValue,
-            monthlyQuotedValue,
-            statusCounts,
-            recentQuotations,
+            totalQuotations: totalQuotations || 0,
+            pending: pending || 0,
+            accepted: accepted || 0,
+            totalQuotedValue: totalQuotedValue || 0,
+            totalRevenue: totalQuotedValue || 0, // Legacy fallback
+            monthlyQuotedValue: monthlyQuotedValue || [],
+            monthlyRevenue: monthlyQuotedValue || [], // Legacy fallback
+            statusCounts: statusCounts || {},
+            recentQuotations: recentQuotations || [],
         });
 
 
