@@ -128,6 +128,7 @@ model QuotationItem {
   finalAmount      Float?
   finalMacadamStep String?
   finalUnit        String?
+  finalPriceType   String? @default("LP")
   customFields     String? // JSON storing dynamic custom columns values
 }
 

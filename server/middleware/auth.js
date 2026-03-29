@@ -22,7 +22,7 @@ const authenticate = async (req, res, next) => {
         });
 
         if (!user) {
-            return res.status(401).json({ error: 'User not found' });
+            return res.status(401).json({ error: 'User session invalid' });
         }
 
         req.user = user;
@@ -31,7 +31,12 @@ const authenticate = async (req, res, next) => {
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ error: 'Token expired' });
         }
-        return res.status(401).json({ error: 'Invalid token' });
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        // If it's a Prisma error or something else, it's a 500, not a 401!
+        console.error('Authentication error:', error);
+        return res.status(500).json({ error: 'Internal authentication error' });
     }
 };
 

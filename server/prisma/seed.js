@@ -8,8 +8,10 @@ async function main() {
     console.log('🌱 Seeding database...');
 
     // ── Users
-    const adminHash = await bcrypt.hash('admin123', 10);
-    const staffHash = await bcrypt.hash('staff123', 10);
+    const defaultAdminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+    const defaultStaffPassword = process.env.STAFF_DEFAULT_PASSWORD || 'staff123';
+    const adminHash = await bcrypt.hash(defaultAdminPassword, 10);
+    const staffHash = await bcrypt.hash(defaultStaffPassword, 10);
     const admin = await prisma.user.upsert({
         where: { email: 'admin@damlighting.com' },
         update: {},
@@ -21,6 +23,9 @@ async function main() {
         create: { name: 'Staff', email: 'staff@damlighting.com', passwordHash: staffHash, role: 'STAFF' }
     });
     console.log('✅ Users created');
+    if (!process.env.ADMIN_DEFAULT_PASSWORD || !process.env.STAFF_DEFAULT_PASSWORD) {
+        console.warn('⚠️  Using default passwords for seed users. Set ADMIN_DEFAULT_PASSWORD and STAFF_DEFAULT_PASSWORD for production.');
+    }
 
     // ── Company Settings
     const existingSettings = await prisma.companySettings.findFirst();

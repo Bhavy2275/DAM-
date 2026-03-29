@@ -4,15 +4,18 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
+const { z } = require('zod');
+const { validateBody } = require('../middleware/validate');
+
+const loginSchema = z.object({
+    email: z.string().email().max(100),
+    password: z.string().min(1).max(255)
+});
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', validateBody(loginSchema), async (req, res) => {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password required' });
-        }
-
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -29,16 +32,14 @@ router.post('/login', async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        const isProd = process.env.NODE_ENV === 'production';
         res.cookie('token', token, {
             httpOnly: true,
-            secure: isProd,
-            sameSite: isProd ? 'none' : 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
         res.json({
-            token, // send token in body for cross-domain use
             user: { id: user.id, name: user.name, email: user.email, role: user.role }
         });
     } catch (error) {
@@ -49,7 +50,11 @@ router.post('/login', async (req, res) => {
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-    res.clearCookie('token');
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+    });
     res.json({ message: 'Logged out' });
 });
 
