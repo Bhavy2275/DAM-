@@ -79,29 +79,17 @@ export default function Dashboard() {
                 <StatCard label="Total Quotations" value={stats?.totalQuotations || 0} icon={FileText} color="rgba(59,130,246,0.15)" index={0} />
                 <StatCard label="Pending Quotes" value={stats?.pending || 0} icon={Clock} color="var(--color-accent-glow)" index={1} />
                 <StatCard label="Accepted" value={stats?.accepted || 0} icon={TrendingUp} color="rgba(16,185,129,0.15)" index={2} />
-                <StatCard label="Total Revenue" value={formatINR(stats?.totalRevenue)} icon={CreditCard} color="rgba(139,92,246,0.15)" index={3} isCurrency />
+                <StatCard label="Total Quoted Value" value={formatINR(stats?.totalQuotedValue)} icon={TrendingUp} color="rgba(139,92,246,0.15)" index={3} isCurrency />
             </div>
-
-            {/* Payment Summary */}
-            <motion.div variants={fadeUp} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 32 }}>
-                <div className="card-surface" style={{ padding: 24, borderTop: '2px solid var(--color-status-accepted)', cursor: 'default' }}>
-                    <div style={{ fontSize: 12, color: 'var(--color-status-accepted)', fontWeight: 600, marginBottom: 4 }}>Payments Received</div>
-                    <div className="font-display tabular-nums" style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-status-accepted)' }}>{formatINR(stats?.totalPaid)}</div>
-                </div>
-                <div className="card-surface" style={{ padding: 24, borderTop: '2px solid var(--color-accent)', cursor: 'default' }}>
-                    <div style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 600, marginBottom: 4 }}>Payments Pending</div>
-                    <div className="font-display tabular-nums" style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-accent)' }}>{formatINR(stats?.totalPendingPayments)}</div>
-                </div>
-            </motion.div>
 
 
 
             {/* Charts */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 32 }}>
                 <motion.div variants={fadeUp} className="card-surface" style={{ padding: 24, borderTop: '2px solid var(--color-accent)', cursor: 'default' }}>
-                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Monthly Revenue</h3>
+                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Monthly Quotations</h3>
                     <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={stats?.monthlyRevenue || []}>
+                        <BarChart data={stats?.monthlyQuotedValue || []}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                             <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} stroke="var(--color-border)" />
                             <YAxis tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} stroke="var(--color-border)" tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />

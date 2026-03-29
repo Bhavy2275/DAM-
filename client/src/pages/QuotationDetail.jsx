@@ -115,9 +115,7 @@ export default function QuotationDetail() {
     const finalGst      = finalSubtotal * (quotation.gstRate / 100);
     const finalGrandTotal = finalSubtotal + finalGst;
 
-    const totalPaid  = (quotation.payments || []).reduce((s, p) => s + p.amountPaid, 0);
     const grandTotal = finalGrandTotal || recTotals[0]?.total || 0;
-    const balance    = grandTotal - totalPaid;
 
     // ── How many sub-cols per recommendation ──────────────────────────────
     // We show: Brand | Qty | Rate | Amount | Macadam  → 5 sub-cols
@@ -196,20 +194,7 @@ export default function QuotationDetail() {
                     <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{quotation.city}, {quotation.state}</div>
                     <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Valid {quotation.validDays} days · GST {quotation.gstRate}%</div>
                 </motion.div>
-                <motion.div variants={fadeUp} className="card-surface"
-                    style={{ padding: 20, borderTop: '2px solid var(--color-accent)', cursor: 'default' }}>
-                    <div className="label" style={{ color: 'var(--color-accent)' }}>Payment Status</div>
-                    <div className="font-display tabular-nums"
-                        style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-accent)' }}>
-                        {formatINR(grandTotal)}
-                    </div>
-                    <div style={{ fontSize: 12, marginTop: 6 }}>
-                        Paid: <span style={{ color: 'var(--color-status-accepted)', fontWeight: 600 }}>{formatINR(totalPaid)}</span>
-                    </div>
-                    <div style={{ fontSize: 12 }}>
-                        Balance: <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>{formatINR(balance)}</span>
-                    </div>
-                </motion.div>
+
 
             </div>
 
@@ -505,103 +490,7 @@ export default function QuotationDetail() {
                 </motion.div>
             )}
 
-            {/* ── Payments ───────────────────────────────────────────────── */}
-            {quotation.payments?.length > 0 && (
-                <motion.div variants={fadeUp} className="card-surface"
-                    style={{ overflow: 'hidden', marginBottom: 24, cursor: 'default' }}>
 
-                    <div style={{
-                        padding: '14px 20px',
-                        fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15,
-                        borderBottom: '2px solid var(--color-accent)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    }}>
-                        <span>Payment History</span>
-                        <span style={{ fontSize: 12, fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)', fontWeight: 400 }}>
-                            {quotation.payments.length} transaction{quotation.payments.length !== 1 ? 's' : ''}
-                        </span>
-                    </div>
-
-                    <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', fontSize: 13 }}>
-                        <colgroup>
-                            <col style={{ width: '15%' }} />
-                            <col style={{ width: '18%' }} />
-                            <col style={{ width: '30%' }} />
-                            <col style={{ width: '20%' }} />
-                            <col style={{ width: '17%' }} />
-                        </colgroup>
-                        <thead>
-                            <tr style={{ background: 'var(--color-base)', borderBottom: '1px solid var(--color-border)' }}>
-                                {[
-                                    { label: 'Date',      align: 'left'  },
-                                    { label: 'Method',    align: 'left'  },
-                                    { label: 'Reference', align: 'left'  },
-                                    { label: 'Amount',    align: 'right' },
-                                    { label: 'Status',    align: 'left'  },
-                                ].map(({ label, align }) => (
-                                    <th key={label} style={{
-                                        padding: '11px 20px', textAlign: align,
-                                        fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
-                                        letterSpacing: 0.8, color: 'var(--color-text-muted)', whiteSpace: 'nowrap',
-                                    }}>
-                                        {label}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {quotation.payments.map((p, idx) => (
-                                <tr key={p.id}
-                                    style={{ borderBottom: idx < quotation.payments.length - 1 ? '1px solid var(--color-border)' : 'none', transition: 'background 0.15s' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-elevated)'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                >
-                                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                                        {new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                    </td>
-                                    <td style={{ padding: '14px 20px' }}>
-                                        <span style={{
-                                            display: 'inline-block', padding: '3px 10px', borderRadius: 20,
-                                            fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
-                                            background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-                                            color: 'var(--color-text-primary)', whiteSpace: 'nowrap',
-                                        }}>
-                                            {p.paymentMethod.replace('_', ' ')}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '14px 20px', color: 'var(--color-text-muted)', fontSize: 12, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                                        {p.referenceNumber || '—'}
-                                    </td>
-                                    <td style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 700, fontSize: 14, fontVariantNumeric: 'tabular-nums', color: 'var(--color-status-accepted)', whiteSpace: 'nowrap' }}>
-                                        {formatINR(p.amountPaid)}
-                                    </td>
-                                    <td style={{ padding: '14px 20px' }}>
-                                        <StatusBadge status={p.status} />
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            <tr style={{ borderTop: '2px solid var(--color-border)', background: 'var(--color-base)' }}>
-                                <td colSpan={3} style={{ padding: '12px 20px', fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', textAlign: 'right' }}>Total Paid</td>
-                                <td style={{ padding: '12px 20px', textAlign: 'right', fontWeight: 800, fontSize: 15, fontVariantNumeric: 'tabular-nums', color: 'var(--color-status-accepted)', whiteSpace: 'nowrap' }}>
-                                    {formatINR(totalPaid)}
-                                </td>
-                                <td style={{ padding: '12px 20px' }} />
-                            </tr>
-                            {balance > 0 && (
-                                <tr style={{ background: 'var(--color-base)' }}>
-                                    <td colSpan={3} style={{ padding: '6px 20px 12px', fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', textAlign: 'right' }}>Balance Due</td>
-                                    <td style={{ padding: '6px 20px 12px', textAlign: 'right', fontWeight: 800, fontSize: 15, fontVariantNumeric: 'tabular-nums', color: 'var(--color-danger)', whiteSpace: 'nowrap' }}>
-                                        {formatINR(balance)}
-                                    </td>
-                                    <td style={{ padding: '6px 20px 12px' }} />
-                                </tr>
-                            )}
-                        </tfoot>
-                    </table>
-                </motion.div>
-            )}
 
 
 

@@ -11,7 +11,7 @@ async function main() {
 
     const admin = await prisma.user.upsert({
         where: { email: 'admin@damlighting.com' },
-        update: {}, // don't overwrite anything if already exists
+        update: { passwordHash }, // Update password if already exists
         create: {
             name: 'Admin',
             email: 'admin@damlighting.com',

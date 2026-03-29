@@ -24,31 +24,25 @@ router.get('/stats', async (req, res) => {
         const pending  = quotations.filter(q => q.status === 'DRAFT' || q.status === 'SENT').length;
         const accepted = quotations.filter(q => q.status === 'ACCEPTED').length;
 
-        const totalRevenue = quotations
-            .filter(q => q.status === 'ACCEPTED' || q.status === 'INVOICED')
+        const totalQuotedValue = quotations
+            .filter(q => q.status !== 'REJECTED') // Include all except rejected for total value
             .reduce((sum, q) => sum + (q.grandTotal || 0), 0);
 
-        // Schema confirmed: Payment.amountPaid Float, status default "COMPLETED"
-        const totalPaid = 0; // payments.filter(p => p.status === 'COMPLETED').reduce((s, p) => s + (p.amountPaid || 0), 0);
-
-        const totalPendingPayments = 0; // payments.filter(p => p.status === 'PENDING').reduce((s, p) => s + (p.amountPaid || 0), 0);
-
-        // Monthly revenue — last 12 months from payments
-        const monthlyRevenue = [];
+        // Monthly quoted value — last 12 months from quotations
+        const monthlyQuotedValue = [];
         const now = new Date();
         for (let i = 11; i >= 0; i--) {
             const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const amt = 0; 
-            /*
-            const monthEnd   = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-            const amt = payments
-                .filter(p => {
-                    const d = new Date(p.paymentDate);
+            const monthEnd   = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+            
+            const amt = quotations
+                .filter(q => {
+                    const d = new Date(q.createdAt);
                     return d >= monthStart && d <= monthEnd;
                 })
-                .reduce((s, p) => s + (p.amountPaid || 0), 0);
-            */
-            monthlyRevenue.push({
+                .reduce((s, q) => s + (q.grandTotal || 0), 0);
+
+            monthlyQuotedValue.push({
                 month: monthStart.toLocaleString('default', { month: 'short', year: 'numeric' }),
                 amount: amt
             });
@@ -76,10 +70,8 @@ router.get('/stats', async (req, res) => {
             totalQuotations,
             pending,
             accepted,
-            totalRevenue,
-            totalPaid,
-            totalPendingPayments,
-            monthlyRevenue,
+            totalQuotedValue,
+            monthlyQuotedValue,
             statusCounts,
             recentQuotations,
         });

@@ -38,7 +38,7 @@ export default function ClientDetail() {
     if (loading) return <div style={{ padding: 32 }}><div className="skeleton" style={{ height: 200 }} /></div>;
     if (!client) return <div style={{ padding: 32, color: 'var(--color-text-muted)' }}>Client not found</div>;
 
-    const summary = client.summary || { totalQuoted: 0, totalPaid: 0, outstanding: 0, totalQuotations: 0 };
+    const summary = client.summary || { totalQuoted: 0, totalQuotations: 0 };
 
     return (
         <motion.div variants={staggerContainer} initial="hidden" animate="visible" style={{ padding: 32, maxWidth: 1200, margin: '0 auto' }}>
@@ -65,12 +65,8 @@ export default function ClientDetail() {
             </motion.div>
 
             {/* Financial Summary Strip */}
-            <motion.div variants={fadeUp} className="card-surface" style={{ marginBottom: 24, display: 'grid', gridTemplateColumns: '1fr 1px 1fr 1px 1fr', cursor: 'default', overflow: 'hidden' }}>
+            <motion.div variants={fadeUp} className="card-surface" style={{ marginBottom: 24, display: 'grid', gridTemplateColumns: '1fr', cursor: 'default', overflow: 'hidden' }}>
                 <SummaryCard label="Total Quoted" value={formatINR(summary.totalQuoted)} valueColor="var(--color-text-primary)" icon={TrendingUp} iconColor="var(--color-accent)" />
-                <div style={{ background: 'var(--color-border)', margin: '16px 0' }} />
-                <SummaryCard label="Total Paid" value={formatINR(summary.totalPaid)} valueColor="var(--color-status-accepted)" icon={DollarSign} iconColor="var(--color-status-accepted)" />
-                <div style={{ background: 'var(--color-border)', margin: '16px 0' }} />
-                <SummaryCard label="Outstanding" value={formatINR(summary.outstanding)} valueColor={summary.outstanding > 0 ? 'var(--color-danger)' : 'var(--color-status-accepted)'} icon={AlertCircle} iconColor={summary.outstanding > 0 ? 'var(--color-danger)' : 'var(--color-status-accepted)'} />
             </motion.div>
 
             {/* Quotations */}
@@ -107,33 +103,7 @@ export default function ClientDetail() {
                 ) : <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-muted)' }}>No quotations yet</div>}
             </motion.div>
 
-            {/* Payments */}
-            {client.payments?.length > 0 && (
-                <motion.div variants={fadeUp} className="card-surface" style={{ overflow: 'hidden', cursor: 'default' }}>
-                    <div style={{ padding: '14px 20px', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, borderBottom: '1px solid var(--color-border)' }}>Payment History</div>
-                    <table className="dark-table" style={{ tableLayout: 'fixed', width: '100%' }}>
-                        <colgroup>
-                            <col style={{ width: '18%' }} />
-                            <col style={{ width: '22%' }} />
-                            <col style={{ width: '20%' }} />
-                            <col style={{ width: '20%' }} />
-                            <col style={{ width: '20%' }} />
-                        </colgroup>
-                        <thead><tr><th>Date</th><th>Quote #</th><th>Method</th><th style={{ textAlign: 'right' }}>Amount</th><th>Status</th></tr></thead>
-                        <tbody>
-                            {client.payments.map(p => (
-                                <tr key={p.id}>
-                                    <td style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
-                                    <td style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{p.quotation?.quoteNumber || '—'}</td>
-                                    <td style={{ color: 'var(--color-text-primary)' }}>{p.paymentMethod}</td>
-                                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-status-accepted)' }}>{formatINR(p.amountPaid)}</td>
-                                    <td><StatusBadge status={p.status} /></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </motion.div>
-            )}
+
         </motion.div>
     );
 }
