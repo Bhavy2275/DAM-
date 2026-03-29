@@ -27,7 +27,7 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
         }
 
         const token = jwt.sign(
-            { userId: user.id, role: user.role },
+            { id: user.id, email: user.email, role: user.role, name: user.name },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -43,8 +43,8 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
             user: { id: user.id, name: user.name, email: user.email, role: user.role }
         });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Login failed' });
+        console.error('Login FATAL error:', error);
+        res.status(500).json({ error: 'Login completely failed', detail: error.message, stack: error.stack });
     }
 });
 
