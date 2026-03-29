@@ -14,10 +14,11 @@ const clientSchema = z.object({
     state: z.string().max(100).optional().nullable(),
     pinCode: z.string().max(20).optional().nullable(),
     mobileNumber: z.string().max(50).optional().nullable(),
-    emailId: z.string().email().max(150).optional().nullable(),
+    emailId: z.string().email().max(150).or(z.literal("")).optional().nullable(),
     companyGstNumber: z.string().max(50).optional().nullable(),
     companyAddress: z.string().max(500).optional().nullable(),
-    customFields: z.any().optional().nullable(), // allowed to be json dynamically by frontend
+    customAttributes: z.any().optional().nullable(),
+    customLabels: z.any().optional().nullable(),
 });
 
 router.use(authenticate);
