@@ -481,6 +481,7 @@ const Step3QuoteInfo = memo(function Step3QuoteInfo({ form, setForm, clients, cu
 
 // ─── Recommendation Column Cell ─────────────────────────────────────────────
 function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemId, hiddenCols = {}, products = [] }) {
+    const [openSearch, setOpenSearch] = useState(false);
     const color = REC_COLORS[label] || 'var(--color-accent)';
     const handleChange = (key, val) => {
         const updated = { ...rec, [key]: val };
@@ -536,15 +537,67 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
                                 onRenameOptions={onRenameLabel ? (opts) => onRenameLabel(`rec_${itemId}_${label}_${f.key}`, opts) : undefined}
                             >
                                 <input
+                                    id={`rec-code-${itemId}-${label}-${f.key}`}
                                     type={f.type}
                                     name={`rec_${label}_${f.key}`}
                                     autoComplete="off"
                                     aria-label={getCustomLabel(customLabels, `rec_${itemId}_${label}_${f.key}`, f.label)}
                                     value={rec[f.key] || ''}
                                     onChange={e => handleChange(f.key, e.target.value)}
+                                    onFocus={() => { if (f.key === 'productCode') setOpenSearch(true); }}
+                                    onBlur={() => { if (f.key === 'productCode') setTimeout(() => setOpenSearch(false), 200); }}
                                     placeholder={getPlaceholder(customLabels, `rec_${itemId}_${label}_${f.key}`, '')}
-                                    style={{ ...inputStyle, fontSize: 11, padding: '0 6px' }}
+                                    style={{ ...inputStyle, fontSize: 11, padding: '0 6px', width: '100%' }}
                                 />
+                                {f.key === 'productCode' && openSearch && (
+                                    (() => {
+                                        const searchVal = rec[f.key] || '';
+                                        const filteredProd = searchVal
+                                            ? products.filter(p =>
+                                                (p.productCode || '').toLowerCase().includes(searchVal.toLowerCase()) ||
+                                                (p.description || '').toLowerCase().includes(searchVal.toLowerCase()))
+                                            : products.slice(0, 10);
+                                        
+                                        if (filteredProd.length === 0) return null;
+
+                                        return createPortal((
+                                            <div
+                                                ref={el => {
+                                                    if (!el) return;
+                                                    const input = document.getElementById(`rec-code-${itemId}-${label}-${f.key}`);
+                                                    if (input) {
+                                                        const rect = input.getBoundingClientRect();
+                                                        el.style.top = (rect.bottom + 4) + 'px';
+                                                        el.style.left = rect.left + 'px';
+                                                        el.style.width = Math.max(rect.width, 240) + 'px';
+                                                    }
+                                                }}
+                                                onMouseDown={e => e.stopPropagation()}
+                                                style={{ position: 'fixed', zIndex: 999999, background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                                            >
+                                                {filteredProd.map(p => (
+                                                    <div key={p.id}
+                                                        onMouseDown={e => {
+                                                            e.preventDefault();
+                                                            handleChange('productCode', p.productCode);
+                                                            if (p.brandName) handleChange('brandName', p.brandName);
+                                                            setOpenSearch(false);
+                                                        }}
+                                                        style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)' }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-accent-glow)'}
+                                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                    >
+                                                        <div style={{ fontWeight: 700, color: 'var(--color-accent)', fontSize: 12 }}>{p.productCode}</div>
+                                                        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                                                            {(p.description || '').slice(0, 60)}…
+                                                            {p.listPrice ? ` | LP: ₹${p.listPrice.toLocaleString('en-IN')}` : ''}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ), document.body);
+                                    })()
+                                )}
                             </EditableField>
                         )}
                     </div>
