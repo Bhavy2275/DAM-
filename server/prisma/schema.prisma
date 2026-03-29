@@ -77,7 +77,7 @@ model Quotation {
   gstRate     Float           @default(18)
   status      String          @default("DRAFT") // DRAFT | SENT | ACCEPTED | REJECTED | INVOICED
   clientId    String
-  client      Client          @relation(fields: [clientId], references: [id])
+  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdById String
   notes         String?
   customLabels  String? // JSON: { "quoteTitle": "Site Title", "col_brand": "Make", ... }
@@ -154,9 +154,9 @@ model ItemRecommendation {
 model Payment {
   id              String   @id @default(uuid())
   quotationId     String
-  quotation       Quotation @relation(fields: [quotationId], references: [id])
+  quotation       Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   clientId        String
-  client          Client   @relation(fields: [clientId], references: [id])
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   amountPaid      Float
   paymentDate     DateTime
   paymentMethod   String // CASH | BANK_TRANSFER | UPI | CHEQUE
