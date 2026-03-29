@@ -579,8 +579,11 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
                                                     <div key={p.id}
                                                         onMouseDown={e => {
                                                             e.preventDefault();
-                                                            handleChange('productCode', p.productCode);
-                                                            if (p.brandName) handleChange('brandName', p.brandName);
+                                                            const updated = { ...rec, productCode: p.productCode };
+                                                            if (p.brandName) updated.brandName = p.brandName;
+                                                            if (p.listPrice != null) updated.listPrice = p.listPrice;
+                                                            if (p.unit) updated.unit = p.unit;
+                                                            onChange(recalcRec(updated));
                                                             setOpenSearch(false);
                                                         }}
                                                         style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)' }}
