@@ -480,7 +480,7 @@ const Step3QuoteInfo = memo(function Step3QuoteInfo({ form, setForm, clients, cu
 });
 
 // ─── Recommendation Column Cell ─────────────────────────────────────────────
-function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemId }) {
+function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemId, hiddenCols = {} }) {
     const color = REC_COLORS[label] || 'var(--color-accent)';
     const handleChange = (key, val) => {
         const updated = { ...rec, [key]: val };
@@ -490,7 +490,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
     const editableFields = [
         { key: 'brandName', label: 'Brand', type: 'text' },
         { key: 'productCode', label: 'Prod Code', type: 'text' },
-        { key: 'listPrice', label: 'LP (₹)', type: 'number' },
+        { key: 'listPrice', label: 'Listing price', type: 'number' },
         { key: 'listPriceWithGst', label: 'LP+18%', readOnly: true },
         { key: 'discountPercent', label: 'Disc %', type: 'number' },
         { key: 'rate', label: 'Rate (₹)', readOnly: true },
@@ -509,7 +509,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
                         {headerLabel}
                     </div>
                 </div>
-                {editableFields.map(f => (
+                {editableFields.filter(f => !hiddenCols[f.label]).map(f => (
                     <div key={f.key} style={{ marginBottom: 5 }}>
                         <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginBottom: 2, letterSpacing: 0.3 }}>
                             {getCustomLabel(customLabels, `rec_${itemId}_${label}_${f.key}`, f.label)}
@@ -1014,7 +1014,7 @@ const Step4Recommendations = memo(function Step4Recommendations({ items, setItem
                                                 itemId={item._tempId || item.id}
                                                 rec={item.recommendations[label] || emptyRecommendation(label)}
                                                 onChange={rec => updateRec(idx, label, rec)}
-                                                customLabels={customLabels} onRenameLabel={onRenameLabel} />
+                                                customLabels={customLabels} onRenameLabel={onRenameLabel} hiddenCols={hiddenCols} />
                                         ))}
                                         <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>
                                             <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: 4, borderRadius: 4, transition: 'color 0.15s' }}
@@ -1292,13 +1292,14 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                         </button>
                     );
                 })}
-                {/* PDF Image Toggles */}
+                {/* Visibility Toggles */}
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.5 }}>PDF IMAGES:</span>
+                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.5 }}>HIDE/SHOW:</span>
                     {[
-                        { key: 'Polar Diagram', label: '📐 Polar' },
-                        { key: 'Product Image', label: '🖼 Photo' },
-                    ].map(({ key, label }) => {
+                        { key: 'Polar Diagram', label: '📐 Polar', tip: 'in PDF' },
+                        { key: 'Product Image', label: '🖼 Photo', tip: 'in PDF' },
+                        { key: 'LP+18%', label: '📄 LP+18%', tip: 'Globally' },
+                    ].map(({ key, label, tip }) => {
                         const hidden = hiddenCols[key];
                         return (
                             <button key={key} type="button"
@@ -1310,7 +1311,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                     color: hidden ? 'var(--color-error)' : 'var(--color-text-secondary)',
                                     display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s',
                                 }}
-                                title={`${hidden ? 'Show' : 'Hide'} ${key} in PDF`}>
+                                title={`${hidden ? 'Show' : 'Hide'} ${key} ${tip}`}>
                                 {hidden ? <EyeOff size={11} /> : <Eye size={11} />} {label}
                             </button>
                         );
@@ -1330,7 +1331,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                     <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1100 }}>
                         <thead>
                             <tr style={{ background: 'var(--color-base)' }}>
-                                {['S.No', 'Code', 'Description / Attributes', 'Layout', 'Brand', 'LP (₹)', 'Disc %', 'Rate (₹)', 'Unit', 'Qty', 'Amount'].map(h => {
+                                {['S.No', 'Code', 'Description / Attributes', 'Layout', 'Brand', 'Listing Price', 'Disc %', 'Rate (₹)', 'Unit', 'Qty', 'Amount'].map(h => {
                                     const isHidden = hiddenCols[h];
                                     return (
                                         <th key={h} style={{ padding: '10px 8px', fontSize: 10, color: isHidden ? 'var(--color-border)' : 'var(--color-text-muted)', fontWeight: 600, letterSpacing: 0.4, textAlign: 'left', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>

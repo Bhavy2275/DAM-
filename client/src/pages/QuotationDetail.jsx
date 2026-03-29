@@ -102,6 +102,13 @@ export default function QuotationDetail() {
         } catch { return []; }
     })();
 
+    const hiddenCols = (() => {
+        try {
+            const cl = typeof quotation.customLabels === 'string' ? JSON.parse(quotation.customLabels) : quotation.customLabels || {};
+            return cl.hiddenCols || {};
+        } catch { return {}; }
+    })();
+
 
     // Final quote totals
     const finalSubtotal = quotation.lineItems.reduce((acc, i) => acc + (i.finalAmount || 0), 0);
@@ -416,9 +423,9 @@ export default function QuotationDetail() {
                             </colgroup>
                             <thead>
                                 <tr style={{ background: 'var(--color-base)' }}>
-                                    {['S.No','Code','Description','Brand','LP','LP+18%','Disc%','Rate','Unit','Qty','Amount','Macadam'].map((h, i) => (
+                                    {['S.No','Code','Description','Brand','Listing Price', !hiddenCols['LP+18%'] ? 'LP+18%' : null,'Disc%','Rate','Unit','Qty','Amount','Macadam'].filter(Boolean).map((h, i) => (
                                         <th key={h} rowSpan={customCols.length ? 2 : 1} style={thStyle({
-                                            textAlign: [4,5,7,11].includes(i) ? 'right' : [0,6,8,9,10].includes(i) ? 'center' : 'left',
+                                            textAlign: ['Amount', 'Rate', 'Listing Price', 'LP+18%'].includes(h) ? 'right' : ['S.No', 'Disc%', 'Unit', 'Qty', 'Macadam'].includes(h) ? 'center' : 'left',
                                             borderRight: '1px solid var(--color-border)',
                                         })}>
                                             {h}
@@ -456,7 +463,7 @@ export default function QuotationDetail() {
                                         </td>
                                         <td style={tdStyle()}>{item.finalBrandName || '—'}</td>
                                         <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalListPrice != null ? formatINR(item.finalListPrice) : '—'}</td>
-                                        <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalListPrice != null ? formatINR(item.finalListPrice * (1 + (quotation.gstRate || 18) / 100)) : '—'}</td>
+                                        {!hiddenCols['LP+18%'] && <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalListPrice != null ? formatINR(item.finalListPrice * (1 + (quotation.gstRate || 18) / 100)) : '—'}</td>}
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalDiscount != null ? `${item.finalDiscount}%` : '—'}</td>
                                         <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalRate != null ? formatINR(item.finalRate) : '—'}</td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
@@ -481,15 +488,15 @@ export default function QuotationDetail() {
                             </tbody>
                             <tfoot>
                                 <tr style={{ background: 'var(--color-base)', borderTop: '1px solid var(--color-border)' }}>
-                                    <td colSpan={10} style={{ textAlign: 'right', fontWeight: 600, padding: '8px 14px', fontSize: 12 }}>Sub-Total</td>
+                                    <td colSpan={hiddenCols['LP+18%'] ? 9 : 10} style={{ textAlign: 'right', fontWeight: 600, padding: '8px 14px', fontSize: 12 }}>Sub-Total</td>
                                     <td colSpan={2 + customCols.length} style={{ textAlign: 'left', paddingLeft: 18, fontWeight: 700, padding: '8px 14px', fontVariantNumeric: 'tabular-nums' }}>{formatINR(finalSubtotal)}</td>
                                 </tr>
                                 <tr style={{ background: 'var(--color-base)' }}>
-                                    <td colSpan={10} style={{ textAlign: 'right', padding: '4px 14px', fontSize: 12 }}>GST {quotation.gstRate}%</td>
+                                    <td colSpan={hiddenCols['LP+18%'] ? 9 : 10} style={{ textAlign: 'right', padding: '4px 14px', fontSize: 12 }}>GST {quotation.gstRate}%</td>
                                     <td colSpan={2 + customCols.length} style={{ textAlign: 'left', paddingLeft: 18, padding: '4px 14px', fontVariantNumeric: 'tabular-nums' }}>{formatINR(finalGst)}</td>
                                 </tr>
                                 <tr style={{ background: 'var(--color-accent)' }}>
-                                    <td colSpan={10} style={{ textAlign: 'right', fontWeight: 800, padding: '10px 14px', color: 'var(--color-base)', fontSize: 13 }}>GRAND TOTAL</td>
+                                    <td colSpan={hiddenCols['LP+18%'] ? 9 : 10} style={{ textAlign: 'right', fontWeight: 800, padding: '10px 14px', color: 'var(--color-base)', fontSize: 13 }}>GRAND TOTAL</td>
                                     <td colSpan={2 + customCols.length} style={{ textAlign: 'left', paddingLeft: 18, fontWeight: 800, padding: '10px 14px', color: 'var(--color-base)', fontVariantNumeric: 'tabular-nums', fontSize: 13 }}>{formatINR(finalGrandTotal)}</td>
                                 </tr>
                             </tfoot>
