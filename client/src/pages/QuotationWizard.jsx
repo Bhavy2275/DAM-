@@ -692,7 +692,6 @@ function ProductAttributeModal({ product, initialAttrs, editingItem, onConfirm, 
         <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.88)', backdropFilter: 'blur(10px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-            onClick={e => e.target === e.currentTarget && onCancel()}
         >
             <motion.div
                 initial={{ scale: 0.93, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.93, opacity: 0 }}
@@ -1140,8 +1139,7 @@ const Step4Recommendations = memo(function Step4Recommendations({ items, setItem
             <AnimatePresence>
                 {showProductPicker && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-                        onClick={e => e.target === e.currentTarget && setShowProductPicker(false)}>
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                         <motion.div variants={scaleIn} initial="hidden" animate="visible" exit="hidden"
                             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', width: '100%', maxWidth: 640, maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderTop: '3px solid var(--color-accent)' }}>
                             <div style={{ padding: '20px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

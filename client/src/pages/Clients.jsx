@@ -189,7 +189,6 @@ export default function Clients() {
                 {showModal && (
                     <motion.div variants={modalOverlay} initial="hidden" animate="visible" exit="exit"
                         style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => setShowModal(false)}
                     >
                         <motion.div variants={modalContent} initial="hidden" animate="visible" exit="exit"
                             onClick={e => e.stopPropagation()}
