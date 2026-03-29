@@ -1573,8 +1573,8 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                                             }}
                                                             style={{ ...selectStyle, fontSize: 9, padding: '0 4px', border: 'none' }}
                                                         >
-                                                            <option value="LP">LP</option>
-                                                            <option value="LP_INC">LP + 18% (INC)</option>
+                                                            <option value="LP">Listing price</option>
+                                                            <option value="LP_INC">Listing price + 18% (INC)</option>
                                                         </select>
                                                     </FilterField>
                                                     <EditableField style={{ height: 28, flex: 1, borderRadius: '0 6px 6px 0' }}>
