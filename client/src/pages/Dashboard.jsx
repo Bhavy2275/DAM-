@@ -78,6 +78,7 @@ export default function Dashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 32 }}>
                 <StatCard label="Total Quotations" value={stats?.totalQuotations || 0} icon={FileText} color="rgba(59,130,246,0.15)" index={0} />
                 <StatCard label="Pending Quotes" value={stats?.pending || 0} icon={Clock} color="var(--color-accent-glow)" index={1} />
+                <StatCard label="Accepted" value={stats?.accepted || 0} icon={TrendingUp} color="rgba(16,185,129,0.15)" index={2} />
                 <StatCard 
                     label="Total Quoted Value" 
                     value={formatINR(stats?.totalQuotedValue ?? stats?.totalRevenue ?? 0)} 
