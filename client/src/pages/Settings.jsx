@@ -219,7 +219,7 @@ export default function Settings() {
                 {showInviteModal && (
                     <motion.div variants={modalOverlay} initial="hidden" animate="visible" exit="exit"
                         style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => setShowInviteModal(false)}>
+                    >
                         <motion.div variants={modalContent} initial="hidden" animate="visible" exit="exit" onClick={e => e.stopPropagation()}
                             style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderTop: '2px solid var(--color-accent)', borderRadius: 'var(--radius-lg)', padding: 32, width: '100%', maxWidth: 420, boxShadow: '0 20px 80px rgba(0,0,0,0.5)' }}>
                             <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>

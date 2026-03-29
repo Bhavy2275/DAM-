@@ -390,7 +390,6 @@ export default function Products() {
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-                        onClick={e => e.target === e.currentTarget && setShowModal(false)}
                     >
                         <motion.div
                             variants={scaleIn} initial="hidden" animate="visible" exit="hidden"
