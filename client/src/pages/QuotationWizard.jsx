@@ -71,7 +71,7 @@ export function getPlaceholder(customLabels, key, defaultPlaceholder) {
 export function getImageUrl(url) {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : '';
     return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
@@ -2084,7 +2084,7 @@ export default function QuotationWizard() {
 
             <motion.div variants={fadeUp} className="flex items-center gap-2" style={{ marginBottom: 28 }}>
                 {STEPS.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={s} className="flex items-center gap-2">
                         <button onClick={() => i <= step && setStep(i)}
                             style={{
                                 padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500,

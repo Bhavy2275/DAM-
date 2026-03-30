@@ -50,7 +50,10 @@ export default function QuotationDetail() {
     const handleDownloadPDF = async (mode) => {
         setPdfLoading(mode);
         try {
-            const response = await api.get(`/quotations/${id}/pdf?mode=${mode}`, { responseType: 'blob' });
+            // Explicitly using the abstract 'api' instance to ensure no hardcoding
+            const response = await api.get(`/quotations/${id}/pdf?mode=${mode}`, { 
+                responseType: 'blob' 
+            });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -59,8 +62,10 @@ export default function QuotationDetail() {
             window.URL.revokeObjectURL(url);
             toast.success('PDF downloaded');
             setShowPdfModal(false);
-        } catch { toast.error('PDF generation failed'); }
-        finally { setPdfLoading(null); }
+        } catch (err) { 
+            console.error('PDF Download Error:', err);
+            toast.error('PDF generation failed'); 
+        } finally { setPdfLoading(null); }
     };
 
     const handleSendEmail = async () => {
@@ -228,8 +233,8 @@ export default function QuotationDetail() {
                                 <col style={{ width: COL.desc }} />
                                 <col style={{ width: COL.unit }} />
                                 {customCols.map(c => <col key={c.id} style={{ width: 85 }} />)}
-                                {usedLabels.flatMap(() =>
-                                    recColW.map((w, i) => <col key={i} style={{ width: w }} />)
+                                {usedLabels.flatMap((label) =>
+                                    recColW.map((w, idx) => <col key={`${label}-${idx}`} style={{ width: w }} />)
                                 )}
                             </colgroup>
 
@@ -240,8 +245,8 @@ export default function QuotationDetail() {
                                     <th rowSpan={2} style={thStyle({ borderRight: '1px solid var(--color-border)' })}>Code</th>
                                     <th rowSpan={2} style={thStyle({ borderRight: '1px solid var(--color-border)' })}>Description</th>
                                     <th rowSpan={2} style={thStyle({ textAlign: 'center', borderRight: '2px solid var(--color-border)' })}>Unit</th>
-                                    {customCols.map(c => (
-                                        <th key={c.id} rowSpan={2} style={thStyle({
+                                    {customCols.map((c, idx) => (
+                                        <th key={c.id || `custom-${idx}`} rowSpan={2} style={thStyle({
                                             textAlign: 'center', color: 'var(--color-accent)', background: 'rgba(59, 130, 246, 0.05)',
                                             borderRight: '2px solid var(--color-border)',
                                         })}>
@@ -428,7 +433,7 @@ export default function QuotationDetail() {
                                 {customCols.length > 0 && (
                                     <tr style={{ background: 'var(--color-base)' }}>
                                         {customCols.map((c, i) => (
-                                            <th key={c.id} style={thStyle({
+                                            <th key={c.id || `custom-header-${i}`} style={thStyle({
                                                 textAlign: 'center', color: 'var(--color-accent)', background: 'rgba(59, 130, 246, 0.05)',
                                                 borderRight: i === customCols.length - 1 ? 'none' : '1px solid var(--color-border)',
                                             })}>
@@ -463,7 +468,7 @@ export default function QuotationDetail() {
                                             const val = cf[c.id];
                                             const display = (val === 'true' || val === true) ? '✓' : (val === 'false' || val === false) ? '✗' : (val != null && val !== '' ? String(val) : '—');
                                             return (
-                                                <td key={c.id} style={tdStyle({ textAlign: 'center', borderRight: i === customCols.length - 1 ? 'none' : '1px solid var(--color-border)' })}>
+                                                <td key={c.id || `custom-cell-${i}`} style={tdStyle({ textAlign: 'center', borderRight: i === customCols.length - 1 ? 'none' : '1px solid var(--color-border)' })}>
                                                     {display}
                                                 </td>
                                             );

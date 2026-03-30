@@ -49,24 +49,60 @@ function macadamCell(step) {
 
 function toBase64(imageUrl) {
   if (!imageUrl) return Promise.resolve(null);
+  
+  // Handle HTTP/HTTPS URLs
   if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
     return new Promise((resolve) => {
-      const pdfUrl = imageUrl.includes("res.cloudinary.com")
-        ? imageUrl.replace("/upload/", "/upload/w_150,q_auto,f_png/")
-        : imageUrl;
-      const client = pdfUrl.startsWith("https") ? https : http;
-      client.get(pdfUrl, (res) => {
-        const chunks = [];
-        res.on("data", c => chunks.push(c));
-        res.on("end", () => {
-          const buf = Buffer.concat(chunks);
-          const mime = res.headers["content-type"] || "image/png";
-          resolve("data:" + mime + ";base64," + buf.toString("base64"));
+      let resolved = false;
+      const timer = setTimeout(() => {
+        if (!resolved) { resolved = true; resolve(null); }
+      }, 10000); // 10s timeout per image
+
+      try {
+        const pdfUrl = imageUrl.includes("res.cloudinary.com")
+          ? imageUrl.replace("/upload/", "/upload/w_150,q_auto,f_png/")
+          : imageUrl;
+        const client = pdfUrl.startsWith("https") ? https : http;
+        
+        const req = client.get(pdfUrl, (res) => {
+          const chunks = [];
+          res.on("data", c => chunks.push(c));
+          res.on("end", () => {
+            if (resolved) return;
+            clearTimeout(timer);
+            resolved = true;
+            try {
+              const buf = Buffer.concat(chunks);
+              const mime = res.headers["content-type"] || "image/png";
+              resolve("data:" + mime + ";base64," + buf.toString("base64"));
+            } catch (e) { resolve(null); }
+          });
+          res.on("error", () => { 
+            if (resolved) return; 
+            clearTimeout(timer); 
+            resolved = true; 
+            resolve(null); 
+          });
         });
-        res.on("error", () => resolve(null));
-      }).on("error", () => resolve(null));
+        req.on("error", () => {
+           if (resolved) return;
+           clearTimeout(timer);
+           resolved = true;
+           resolve(null);
+        });
+        req.on("timeout", () => {
+           if (resolved) return;
+           clearTimeout(timer);
+           resolved = true;
+           resolve(null);
+        });
+      } catch (e) { 
+        if (!resolved) { clearTimeout(timer); resolved = true; resolve(null); }
+      }
     });
   }
+  
+  // Handle local files
   try {
     const rel = imageUrl.startsWith("/") ? imageUrl.slice(1) : imageUrl;
     const full = path.join(__dirname, "..", rel);
@@ -77,7 +113,10 @@ function toBase64(imageUrl) {
         : ext === "svg" ? "image/svg+xml" : "image/" + ext;
       return Promise.resolve("data:" + mime + ";base64," + buf.toString("base64"));
     }
-  } catch (e) { console.error("toBase64 local:", e.message); }
+  } catch (e) { 
+    console.error("toBase64 local error:", e.message); 
+  }
+  
   return Promise.resolve(null);
 }
 
@@ -347,11 +386,8 @@ async function finalTableHTML(quotation) {
   let hCols = {};
   try {
     const cl = typeof quotation.customLabels === "string" ? JSON.parse(quotation.customLabels) : quotation.customLabels;
-    console.log('[PDF DEBUG] raw customLabels:', quotation.customLabels);
-    console.log('[PDF DEBUG] parsed cl:', cl);
-    console.log('[PDF DEBUG] __hiddenCols:', cl?.__hiddenCols);
     if (cl && cl.__hiddenCols) hCols = cl.__hiddenCols;
-  } catch (e) { console.log('[PDF DEBUG] parse error:', e); }
+  } catch (e) { }
 
   const sSno = !hCols['S.No'];
   const sLayout = !hCols['Layout'];
@@ -553,7 +589,20 @@ async function finalTableHTML(quotation) {
 // ALL RECS TABLE — all recommendations side by side + summary table
 // ════════════════════════════════════════════════════════════════════════════
 async function allRecsTableHTML(quotation) {
-  const items = quotation.lineItems || [];
+  const items = (quotation.lineItems || []).map(item => ({
+    ...item,
+    bodyColours: item.bodyColours || '[]',
+    reflectorColours: item.reflectorColours || '[]',
+    colourTemps: item.colourTemps || '[]',
+    beamAngles: item.beamAngles || '[]',
+    cri: item.cri || '[]',
+    customFields: item.customFields || '{}',
+    recommendations: (item.recommendations || []).map(r => ({
+        ...r,
+        amount: String(r.amount || 0),
+        rate: String(r.rate || 0)
+    }))
+  }));
   const customCols = getCustomCols(quotation);
   const hasCustomCols = customCols.length > 0;
   const gstRate = quotation.gstRate || 18;
@@ -590,43 +639,54 @@ async function allRecsTableHTML(quotation) {
   try {
     const cl = typeof quotation.customLabels === "string" ? JSON.parse(quotation.customLabels) : quotation.customLabels;
     if (cl && cl.__hiddenCols) hCols = cl.__hiddenCols;
-  } catch (e) {}
-
-  const sSno = !hCols['S.No'];
-  const sCode = !hCols['Code'];
-  const sDesc = !hCols['Description / Attributes'];
-  const sPolar = !hCols['Polar Diagram'];
-  const sUnit = !hCols['Unit'];
-  const sQty = !hCols['Qty'];
-  const sMac = !hCols['Macadam'];
-  const sRate = !hCols['Rate (₹)'];
-  const sAmt = !hCols['Amount'];
-
-  // thead — each rec: Macadam Step | Rate | Amount | Space Match %
-  const recHeaders = [];
-  if (sMac) recHeaders.push(`<th style="${TH}">Macadam<br>Step</th>`);
-  if (sRate) recHeaders.push(`<th style="${TH}">RATE</th>`);
-  if (sAmt) recHeaders.push(`<th style="${TH}">AMOUNT</th>`);
-  recHeaders.push(`<th style="${TH}">Space<br>Match (%)</th>`);
-  const recColCount = recHeaders.length;
-
-  const recTh1 = brandNames.map(b =>
-    `<th colspan="${recColCount}" style="${TH_GREY}letter-spacing:0.5px;">${b.toUpperCase()}</th>`
-  ).join("");
-  const recTh2 = activeLabels.map(() => recHeaders.join("")).join("");
-
-  const specHeaders = [];
-  if (sSno) specHeaders.push(`<th rowspan="2" style="${TH}">S.NO</th>`);
-  if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
-  if (sDesc) {
-      specHeaders.push(`<th rowspan="2" style="${TH}">DESCRIPTION</th>`);
+  } catch (e) {
+    console.error("allRecsTableHTML customLabels parse error:", e.message);
+    if (typeof require !== 'undefined') {
+        require('fs').writeFileSync('temp_q_failed.json', JSON.stringify(quotation, null, 2));
+    }
   }
-  if (sPolar) specHeaders.push(`<th rowspan="2" style="${TH}">POLAR</th>`);
-  if (sProdImg) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
-  if (sUnit) specHeaders.push(`<th rowspan="2" style="${TH}">UNIT</th>`);
-  if (sQty) specHeaders.push(`<th rowspan="2" style="${TH}">QTY<br>(Approx)</th>`);
 
-  const theadHTML = `
+  try {
+    const sSno = !hCols['S.No'];
+    const sCode = !hCols['Code'];
+    const sDesc = !hCols['Description / Attributes'];
+    const sPolar = !hCols['Polar Diagram'];
+    const sUnit = !hCols['Unit'];
+    const sQty = !hCols['Qty'];
+    const sMac = !hCols['Macadam'];
+    const sRate = !hCols['Rate (₹)'];
+    const sAmt = !hCols['Amount'];
+    const sProdImg = !hCols['Product Image'];
+    
+    if (items.length > 0 && activeLabels.length === 0) {
+       console.warn("allRecsTableHTML: items exist but no activeLabels found (recommendations might be missing)");
+    }
+
+    // ── thead — each rec: Macadam Step | Rate | Amount | Space Match % ──
+    const recHeaders = [];
+    if (sMac) recHeaders.push(`<th style="${TH}">Macadam<br>Step</th>`);
+    if (sRate) recHeaders.push(`<th style="${TH}">RATE</th>`);
+    if (sAmt) recHeaders.push(`<th style="${TH}">AMOUNT</th>`);
+    recHeaders.push(`<th style="${TH}">Space<br>Match (%)</th>`);
+    const recColCount = recHeaders.length;
+
+    const recTh1 = brandNames.map(b =>
+      `<th colspan="${recColCount}" style="${TH_GREY}letter-spacing:0.5px;">${(b || "BRAND").toUpperCase()}</th>`
+    ).join("");
+    const recTh2 = activeLabels.map(() => recHeaders.join("")).join("");
+
+    const specHeaders = [];
+    if (sSno) specHeaders.push(`<th rowspan="2" style="${TH}">S.NO</th>`);
+    if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
+    if (sDesc) {
+        specHeaders.push(`<th rowspan="2" style="${TH}">DESCRIPTION</th>`);
+    }
+    if (sPolar) specHeaders.push(`<th rowspan="2" style="${TH}">POLAR</th>`);
+    if (sProdImg) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
+    if (sUnit) specHeaders.push(`<th rowspan="2" style="${TH}">UNIT</th>`);
+    if (sQty) specHeaders.push(`<th rowspan="2" style="${TH}">QTY<br>(Approx)</th>`);
+
+    const theadHTML = `
 <thead>
   <tr>
     ${specHeaders.join("")}
@@ -635,8 +695,7 @@ async function allRecsTableHTML(quotation) {
   <tr>${recTh2}</tr>
 </thead>`;
 
-  const baseColCount = specHeaders.length;
-  const brandHeaderRow = ""; // brand names are now in thead
+    const baseColCount = specHeaders.length;
 
   // Data rows
   let rowsHTML = "";
@@ -706,7 +765,7 @@ async function allRecsTableHTML(quotation) {
     }).join("");
     tfootHTML += `
 <tr>
-  <td colspan="${baseColCount}" style="${TD}text-align:right;font-weight:700;background:${def.bg};color:${def.color};font-size:8.5px">${def.label}</td>
+  <td colspan="${baseColCount || 1}" style="${TD}text-align:right;font-weight:700;background:${def.bg};color:${def.color};font-size:8.5px">${def.label}</td>
   ${recAmtCells}
 </tr>`;
   }
@@ -836,7 +895,16 @@ async function allRecsTableHTML(quotation) {
 </div>`;
   }
 
-  return mainTable + summaryTable + addOnsTable;
+    return mainTable + summaryTable + addOnsTable;
+  } catch (err) {
+    console.error("allRecsTableHTML ERROR:", err.message);
+    try {
+        const logFile = path.join(process.cwd(), "pdf_error_trace.log");
+        const logMsg = `[${new Date().toISOString()}] ERROR: ${err.stack}\nQUOTATION ID: ${quotation.id}\n---\n`;
+        fs.appendFileSync(logFile, logMsg);
+    } catch(e) {}
+    throw err;
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -902,7 +970,8 @@ async function generatePDF(quotation, settings, mode) {
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1056, height: 816 });
-    await page.setContent(html, { waitUntil: "networkidle0", timeout: 60000 });
+    // Relaxed wait condition for better resilience to slow images
+    await page.setContent(html, { waitUntil: "networkidle2", timeout: 90000 });
     await page.evaluateHandle("document.fonts.ready");
 
     return await page.pdf({

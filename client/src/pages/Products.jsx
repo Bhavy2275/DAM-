@@ -117,7 +117,7 @@ export default function Products() {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [priceType, setPriceType] = useState('LP'); // 'LP' or 'LP_GST'
     const [priceValue, setPriceValue] = useState('');
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : '';
 
     useEffect(() => { loadProducts(); }, []);
 
