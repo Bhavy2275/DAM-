@@ -392,7 +392,7 @@ async function finalTableHTML(quotation) {
   const brandHeaders2 = [];
   if (sCode) brandHeaders2.push(`<th style="${TH}">PRODUCT<br>CODE</th>`);
   if (sLp) brandHeaders2.push(`<th style="${TH}">LIST<br>PRICE</th>`);
-  if (sLp18) brandHeaders2.push(`<th style="${TH}">LP<br>+18%</th>`);
+  if (sLp18) brandHeaders2.push(`<th style="${TH}">LISTING PRICE<br>+18%</th>`);
   if (sDisc) brandHeaders2.push(`<th style="${TH}">DISC<br>%</th>`);
   if (sRate) brandHeaders2.push(`<th style="${TH}">RATE</th>`);
   if (sUnit) brandHeaders2.push(`<th style="${TH}">UNIT</th>`);
@@ -574,6 +574,7 @@ async function allRecsTableHTML(quotation) {
   });
 
   const polarB64s = await Promise.all(items.map(i => toBase64(i.polarDiagramUrl)));
+  const productB64s = await Promise.all(items.map(i => toBase64(i.productImageUrl)));
   const banner = esc(quotation.projectName || "") + " \u2014 " + esc(quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
   // Brand names for header row
@@ -621,6 +622,7 @@ async function allRecsTableHTML(quotation) {
       specHeaders.push(`<th rowspan="2" style="${TH}">DESCRIPTION</th>`);
   }
   if (sPolar) specHeaders.push(`<th rowspan="2" style="${TH}">POLAR</th>`);
+  if (sProdImg) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
   if (sUnit) specHeaders.push(`<th rowspan="2" style="${TH}">UNIT</th>`);
   if (sQty) specHeaders.push(`<th rowspan="2" style="${TH}">QTY<br>(Approx)</th>`);
 
@@ -643,6 +645,9 @@ async function allRecsTableHTML(quotation) {
     const bg = idx % 2 === 0 ? "#ffffff" : "#f7f9fc";
     const polar = polarB64s[idx]
       ? `<img src="${polarB64s[idx]}" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto"/>`
+      : "—";
+    const prodImg = productB64s[idx]
+      ? `<img src="${productB64s[idx]}" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto"/>`
       : "—";
     const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
     const qty = item.finalQuantity != null ? item.finalQuantity : "—";
@@ -674,6 +679,7 @@ async function allRecsTableHTML(quotation) {
         rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:120px">${esc((item.description || "").slice(0, 180))}</td>`;
     }
     if (sPolar) rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
+    if (sProdImg) rowHtml += `<td style="${TD}text-align:center;padding:3px">${prodImg}</td>`;
     if (sUnit) rowHtml += `<td style="${TD}text-align:center;">${unit}</td>`;
     if (sQty) rowHtml += `<td style="${TD}text-align:center;font-weight:700;">${qty}</td>`;
     rowHtml += recCells;

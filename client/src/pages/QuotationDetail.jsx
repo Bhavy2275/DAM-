@@ -408,9 +408,9 @@ export default function QuotationDetail() {
                             </colgroup>
                             <thead>
                                 <tr style={{ background: 'var(--color-base)' }}>
-                                    {['S.No','Code','Description','Brand','Listing Price', !hiddenCols['LP+18%'] ? 'LP+18%' : null,'Disc%','Rate','Unit','Qty','Amount','Macadam'].filter(Boolean).map((h, i) => (
+                                    {['S.No','Code','Description','Brand','Listing Price', !hiddenCols['LP+18%'] ? 'Listing price+18%' : null,'Disc%','Rate','Unit','Qty','Amount','Macadam'].filter(Boolean).map((h, i) => (
                                         <th key={h} rowSpan={customCols.length ? 2 : 1} style={thStyle({
-                                            textAlign: ['Amount', 'Rate', 'Listing Price', 'LP+18%'].includes(h) ? 'right' : ['S.No', 'Disc%', 'Unit', 'Qty', 'Macadam'].includes(h) ? 'center' : 'left',
+                                            textAlign: ['Amount', 'Rate', 'Listing Price', 'Listing price+18%'].includes(h) ? 'right' : ['S.No', 'Disc%', 'Unit', 'Qty', 'Macadam'].includes(h) ? 'center' : 'left',
                                             borderRight: '1px solid var(--color-border)',
                                         })}>
                                             {h}

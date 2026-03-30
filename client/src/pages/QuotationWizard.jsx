@@ -501,7 +501,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
         { key: 'brandName', label: 'Brand', type: 'text' },
         { key: 'productCode', label: 'Prod Code', type: 'text' },
         { key: 'listPrice', label: 'Listing price', type: 'number' },
-        { key: 'listPriceWithGst', label: 'LP+18%', readOnly: true },
+        { key: 'listPriceWithGst', label: 'Listing price+18%', readOnly: true },
         { key: 'discountPercent', label: 'Disc %', type: 'number' },
         { key: 'rate', label: 'Rate (₹)', readOnly: true },
         { key: 'quantity', label: 'Qty', type: 'number' },
@@ -1362,7 +1362,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                     {[
                         { key: 'Polar Diagram', label: '📐 Polar', tip: 'in PDF' },
                         { key: 'Product Image', label: '🖼 Photo', tip: 'in PDF' },
-                        { key: 'LP+18%', label: '📄 LP+18%', tip: 'Globally' },
+                        { key: 'LP+18%', label: '📄 Listing price+18%', tip: 'Globally' },
                     ].map(({ key, label, tip }) => {
                         const hidden = hiddenCols[key];
                         return (
