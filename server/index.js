@@ -83,8 +83,8 @@ const apiLimiter = rateLimit({
 
 
 // Routes
-app.use('/api/auth', loginLimiter);   // 10 attempts / 15 min on ALL auth routes
-app.use('/api', apiLimiter);          // 300 req/min on all other API routes
+// app.use('/api/auth', loginLimiter);   // 10 attempts / 15 min on ALL auth routes
+// app.use('/api', apiLimiter);          // 300 req/min on all other API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/quotations', quotationRoutes);

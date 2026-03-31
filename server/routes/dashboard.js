@@ -40,7 +40,7 @@ router.get('/stats', async (req, res) => {
                     const d = new Date(q.createdAt);
                     return d >= monthStart && d <= monthEnd;
                 })
-                .reduce((s, q) => s + (q.grandTotal || 0), 0);
+                .reduce((s, q) => s + (q.total || 0), 0);
 
             monthlyQuotedValue.push({
                 month: monthStart.toLocaleString('default', { month: 'short', year: 'numeric' }),
@@ -67,17 +67,14 @@ router.get('/stats', async (req, res) => {
         }));
 
         res.json({
-            totalQuotations: totalQuotations || 0,
-            pending: pending || 0,
-            accepted: accepted || 0,
-            totalQuotedValue: totalQuotedValue || 0,
-            totalRevenue: totalQuotedValue || 0, // Legacy fallback
-            monthlyQuotedValue: monthlyQuotedValue || [],
-            monthlyRevenue: monthlyQuotedValue || [], // Legacy fallback
-            statusCounts: statusCounts || {},
-            recentQuotations: recentQuotations || [],
+            totalQuotations,
+            pending,
+            accepted,
+            totalQuotedValue,
+            monthlyQuotedValue,
+            statusCounts,
+            recentQuotations
         });
-
 
     } catch (error) {
         console.error('Dashboard stats error:', error);

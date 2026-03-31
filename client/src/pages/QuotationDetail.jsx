@@ -458,8 +458,8 @@ export default function QuotationDetail() {
                                         <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalRate != null ? formatINR(item.finalRate) : '—'}</td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalQuantity != null ? item.finalQuantity : '—'}</td>
-                                        <td style={tdStyle({ textAlign: 'center', borderRight: '1px solid var(--color-border)' })}><MacadamBadge step={item.finalMacadamStep} showSpace /></td>
-                                        <td style={tdStyle({ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)', fontVariantNumeric: 'tabular-nums', borderRight: customCols.length ? '1px solid var(--color-border)' : 'none' })}>{item.finalAmount != null ? formatINR(item.finalAmount) : '—'}</td>
+                                        <td style={tdStyle({ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>{item.finalAmount != null ? formatINR(item.finalAmount) : '—'}</td>
+                                        <td style={tdStyle({ textAlign: 'center', borderRight: customCols.length ? '1px solid var(--color-border)' : 'none' })}><MacadamBadge step={item.finalMacadamStep} showSpace /></td>
                                         {customCols.map((c, i) => {
                                             const cf = (() => {
                                                 try { return typeof item.customFields === 'string' ? JSON.parse(item.customFields) : item.customFields || {}; }
