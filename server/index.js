@@ -39,12 +39,14 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+    // Log origin for production debugging
+    if (process.env.NODE_ENV === 'production') console.log(`[CORS] Request from origin: ${origin || 'NO ORIGIN'}`);
+    
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
     } else {
-      callback(null, false); // Block CSRF
+      console.warn(`[CORS] REJECTED origin: ${origin}`);
+      callback(null, false);
     }
   },
   credentials: true,
