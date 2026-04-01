@@ -39,14 +39,23 @@ const ALLOWED_ORIGINS = [
 
 // Global Logger for Production Debugging
 app.use((req, res, next) => {
-  if (process.env.NODE_ENV === 'production') {
-    console.log(`[REQ] ${req.method} ${req.url} - Origin: ${req.get('Origin') || 'No Origin'}`);
+  if (process.env.NODE_ENV === 'production' || true) { // Force log during outage
+    console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.url} - Origin: ${req.get('Origin') || 'No Origin'}`);
   }
   next();
 });
 
+// Robust CORS configuration
 app.use(cors({
-  origin: ALLOWED_ORIGINS,
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.indexOf(origin) !== -1 || origin.includes('damlightings.com')) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS REJECTED] ${origin}`);
+      callback(null, false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin', 'X-DAM-API-Version'],
@@ -55,7 +64,7 @@ app.use(cors({
 
 // Set API Version header for monitoring
 app.use((req, res, next) => {
-  res.header('X-DAM-API-Version', '3.1.1');
+  res.header('X-DAM-API-Version', '3.1.2');
   next();
 });
 
@@ -166,17 +175,28 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 async function start() {
-  // Start listening immediately to avoid 502 Bad Gateway timeouts
+  // 1. Diagnostics: Basic Database connectivity test
+  console.log('[STARTUP] Checking database connectivity...');
+  try {
+    const prisma = require('./lib/prisma');
+    await prisma.$connect();
+    console.log('✅ [STARTUP] Database connection successful');
+  } catch (err) {
+    console.error('❌ [STARTUP] FATAL: Database connection failed:', err);
+    // Don't exit(1) yet, allow express to start to provide health check info if possible
+  }
+
+  // 2. Start Express immediately to avoid Railway start timeouts (502/Bad Gateway)
   app.listen(PORT, () => {
-    console.log(`DAM Lighting API running on port ${PORT}`);
+    console.log(`[STARTUP] DAM Lighting API v3.1.2 running on port ${PORT}`);
   });
 
+  // 3. Background bootstrap (Admin setup)
   try {
-    // Run DB initialization in the background
     await runInit();
-    console.log('✅ Admin/bootstrap initialisation complete');
+    console.log('✅ [STARTUP] Admin/bootstrap initialisation complete');
   } catch (e) {
-    console.error('❌ Admin/bootstrap initialisation failed:', e);
+    console.error('❌ [STARTUP] Admin/bootstrap initialisation failed:', e);
   }
 }
 
