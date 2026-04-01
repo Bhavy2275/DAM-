@@ -7,10 +7,18 @@ const bcrypt = require('bcryptjs');
 
 async function main() {
     const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD;
-    if (!defaultPassword) {
-        console.error('FATAL: ADMIN_DEFAULT_PASSWORD environment variable is not set. Server cannot start.');
+    const existingAdmin = await prisma.user.findUnique({ where: { email: 'admin@damlighting.com' } });
+    
+    if (!defaultPassword && !existingAdmin) {
+        console.error('FATAL: ADMIN_DEFAULT_PASSWORD environment variable is not set and no admin user exists. Server cannot start.');
         process.exit(1);
     }
+    
+    if (!defaultPassword) {
+        console.warn('⚠️ [STARTUP] WARNING: ADMIN_DEFAULT_PASSWORD missing, using existing admin credentials.');
+        return; // Already initialized
+    }
+
     const passwordHash = await bcrypt.hash(defaultPassword, 12);
 
     const admin = await prisma.user.upsert({
