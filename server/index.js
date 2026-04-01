@@ -37,18 +37,16 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ];
 
+// Global Logger for Production Debugging
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`[REQ] ${req.method} ${req.url} - Origin: ${req.get('Origin') || 'No Origin'}`);
+  }
+  next();
+});
+
 app.use(cors({
-  origin: (origin, callback) => {
-    // Log origin for production debugging
-    if (process.env.NODE_ENV === 'production') console.log(`[CORS] Request from origin: ${origin || 'NO ORIGIN'}`);
-    
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`[CORS] REJECTED origin: ${origin}`);
-      callback(null, false);
-    }
-  },
+  origin: ALLOWED_ORIGINS,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin', 'X-DAM-API-Version'],
@@ -57,7 +55,7 @@ app.use(cors({
 
 // Set API Version header for monitoring
 app.use((req, res, next) => {
-  res.header('X-DAM-API-Version', '3.1.0');
+  res.header('X-DAM-API-Version', '3.1.1');
   next();
 });
 
