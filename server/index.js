@@ -32,26 +32,30 @@ const PORT = process.env.PORT || 5000;
 const ALLOWED_ORIGINS = [
   'https://www.damlightings.com',
   'https://damlightings.com',
+  'https://dam-omega.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
 ];
 
+app.use(cors({
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(null, false); // Block CSRF
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin', 'X-DAM-API-Version'],
+  exposedHeaders: ['X-DAM-API-Version']
+}));
+
+// Set API Version header for monitoring
 app.use((req, res, next) => {
-  const origin = req.get('Origin');
-  const isAllowed = origin && ALLOWED_ORIGINS.includes(origin);
-
-  if (isAllowed) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, Origin');
-  res.header('X-DAM-API-Version', '3.0.0');
-
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).send();
-  }
+  res.header('X-DAM-API-Version', '3.1.0');
   next();
 });
 
