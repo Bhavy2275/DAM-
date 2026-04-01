@@ -1988,8 +1988,8 @@ export default function QuotationWizard() {
             });
             
             // NOTE: Batch recommendation updates are now handled in saveFinalDraft/saveFinal via /batch endpoint
-            // Return currentItems with mapped IDs so caller can proceed
-            return items.map(it => idMapping[it._tempId] ? { ...it, id: idMapping[it._tempId] } : it);
+            // Return the updated items with mapped IDs so callers like saveFinalDraft/saveFinal can access new IDs immediately
+            return finalItems;
         } catch (err) {
             console.error('saveRecommendations failed:', err);
             toast.error('Failed to prepare items on server');

@@ -71,6 +71,11 @@ router.post('/', validateBody(paymentSchema), async (req, res) => {
         ]);
         if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
         if (!client) return res.status(404).json({ error: 'Client not found' });
+        
+        // Security check: Ensure the quotation belongs to that client
+        if (quotation.clientId !== clientId) {
+            return res.status(400).json({ error: 'Quotation does not belong to this client' });
+        }
         const payment = await prisma.payment.create({
             data: {
                 quotationId,

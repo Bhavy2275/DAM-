@@ -283,7 +283,8 @@ router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
         console.error('BATCH SAVE FATAL ERROR:', {
             message: error.message,
             stack: error.stack,
-            body: JSON.stringify(req.body).substring(0, 1000)
+            itemCount: req.body?.items?.length || 0,
+            quotationId: req.body?.id || 'new'
         });
         res.status(500).json({ 
             error: 'Failed to perform batch save'

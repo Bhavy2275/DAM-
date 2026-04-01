@@ -418,7 +418,7 @@ async function finalTableHTML(quotation) {
   const sPolar = !hCols['Polar Diagram'];
   const sProdImg = !hCols['Product Image'];
 
-  const sLp = !hCols['Listing Price'];
+  const sLp = !hCols['Listing Price'] && !hCols['LP (₹)'];
   const sLp18 = !hCols['LP+18%'];
   const sDisc = !hCols['Disc %'];
   const sRate = !hCols['Rate (₹)'];
@@ -730,8 +730,6 @@ async function allRecsTableHTML(quotation) {
       ? `<img src="${productB64s[idx]}" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto"/>`
       : "—";
     const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
-    const qRec = (item.recommendations || []).find(r => (r.quantity || 0) > 0);
-    const qty = (qRec && qRec.quantity > 0) ? qRec.quantity : (item.finalQuantity != null && item.finalQuantity > 0 ? item.finalQuantity : "—");
 
     const recCells = activeLabels.map(label => {
       const r = (item.recommendations || []).find(r => r.label === label);
@@ -839,8 +837,8 @@ async function allRecsTableHTML(quotation) {
 </tr>`;
   }
 
-  const summaryRecTh = activeLabels.map((l, i) =>
-    `<th style="${TH}">AMOUNT (${["A", "B", "C", "D", "E", "F"][i]})</th>`
+  const summaryRecTh = activeLabels.map((label, i) =>
+    `<th style="${TH}">AMOUNT (${label})</th>`
   ).join("");
 
   const summaryTotalRows = [

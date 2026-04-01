@@ -78,15 +78,26 @@ router.delete('/:id', async (req, res) => {
         if (req.params.id === req.user.id) {
             return res.status(400).json({ error: 'Cannot delete yourself' });
         }
-        const userToDelete = await prisma.user.findUnique({ where: { id: req.params.id } });
-        if (!userToDelete) return res.status(404).json({ error: 'User not found' });
-        if (userToDelete.role === 'ADMIN') {
-            const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
-            if (adminCount <= 1) return res.status(400).json({ error: 'Cannot delete the last admin user' });
-        }
-        await prisma.user.delete({ where: { id: req.params.id } });
+        await prisma.$transaction(async (tx) => {
+            const userToDelete = await tx.user.findUnique({ where: { id: req.params.id } });
+            if (!userToDelete) throw { statusCode: 404, message: 'User not found' };
+            
+            if (userToDelete.role === 'ADMIN') {
+                const adminCount = await tx.user.count({ where: { role: 'ADMIN' } });
+                if (adminCount <= 1) {
+                    throw { statusCode: 400, message: 'Cannot delete the last admin user' };
+                }
+            }
+            
+            await tx.user.delete({ where: { id: req.params.id } });
+        });
+
         res.json({ message: 'User deleted' });
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
+        console.error('Delete user error:', error);
         res.status(500).json({ error: 'Failed to delete user' });
     }
 });

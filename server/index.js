@@ -147,19 +147,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  const prisma = require('./lib/prisma');
-  await prisma.$disconnect();
-  process.exit(0);
-});
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully...');
-  const prisma = require('./lib/prisma');
-  await prisma.$disconnect();
-  process.exit(0);
-});
+// Unified graceful shutdown helper
+async function gracefulShutdown(signal) {
+  console.log(`${signal} received, shutting down gracefully...`);
+  try {
+    const prisma = require('./lib/prisma');
+    await prisma.$disconnect();
+    console.log(`✅ ${signal} handled: Database connection closed.`);
+    process.exit(0);
+  } catch (err) {
+    console.error(`❌ ${signal} error during shutdown:`, err);
+    process.exit(1);
+  }
+}
+
+// OS signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 async function start() {
   // Start listening immediately to avoid 502 Bad Gateway timeouts

@@ -61,7 +61,8 @@ export default function QuotationDetail() {
                 link.setAttribute('download', `${quotation.quoteNumber}-${mode}.pdf`);
                 document.body.appendChild(link); link.click(); link.remove();
             } finally {
-                window.URL.revokeObjectURL(url);
+                // Defer revocation so the browser has time to finish the download triggered by link.click()
+                setTimeout(() => window.URL.revokeObjectURL(url), 1000);
             }
             toast.success('PDF downloaded');
             setShowPdfModal(false);
