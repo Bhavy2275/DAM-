@@ -169,20 +169,20 @@ function getCustomField(item, colId) {
 const TABLE_STYLE = "width:100%;border-collapse:collapse;font-size:7.5px;";
 
 const TH = [
-  "border:0.5px solid #1a2b4c",
+  "border:0.5px solid #888",
   "padding:5px 4px",
   "text-align:center",
   "font-weight:700",
   "font-size:7px",
   "color:#ffffff",
-  "background:#0b162c",
+  "background:#292b73",
   "vertical-align:middle",
   "line-height:1.3",
   "white-space:nowrap",
 ].join(";") + ";";
 
 const TD = [
-  "border:0.5px solid #ccc",
+  "border:0.5px solid #888",
   "padding:4px 4px",
   "vertical-align:middle",
   "line-height:1.4",
@@ -191,20 +191,20 @@ const TD = [
 ].join(";") + ";";
 
 const TH_BRAND = [
-  "border:0.5px solid #1a2b4c",
+  "border:0.5px solid #292b73",
   "padding:5px 4px",
   "text-align:center",
   "font-weight:700",
   "font-size:7.5px",
   "color:#F5A623",
-  "background:#0b162c",
+  "background:#292b73",
   "vertical-align:middle",
   "line-height:1.3",
   "letter-spacing:0.5px",
 ].join(";") + ";";
 
 const TH_GREY = [
-  "border:0.5px solid #1a2b4c",
+  "border:0.5px solid #292b73",
   "padding:5px 4px",
   "text-align:center",
   "font-weight:700",
@@ -219,7 +219,7 @@ const TH_GREY = [
 // ════════════════════════════════════════════════════════════════════════════
 // COVER PAGE — A3 landscape, all pages landscape
 // ════════════════════════════════════════════════════════════════════════════
-function coverHTML(quotation, settings) {
+function coverHTML(quotation, settings, logoB64) {
   const client = quotation.client || {};
   const s = settings || {};
 
@@ -252,58 +252,59 @@ function coverHTML(quotation, settings) {
 
       <!-- Left: Developed By -->
       <div style="flex:1;padding:24px 32px;border-right:1px solid #ddd">
-        <p style="font-size:9px;font-weight:700;color:#0D1E40;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px 0">
+        <p style="font-family:'Calibri',sans-serif;font-size:16px;font-weight:700;color:#292b73;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px 0">
           Developed &amp; Illuminated By
         </p>
-        <p style="font-size:15px;font-weight:700;color:#111;margin:0 0 10px 0">
+        <p style="font-size:32px;font-weight:700;color:#111;margin:0 0 10px 0">
           ${companyName}
         </p>
-        <p style="font-size:11px;color:#444;line-height:1.9;margin:0 0 10px 0">
+        <p style="font-size:15px;color:#444;line-height:1.9;margin:0 0 10px 0">
           ${companyPhone}<br>
           ${companyEmail}<br>
           ${companyWebsite}
         </p>
-        <p style="font-size:11px;color:#444;line-height:1.7;margin:0">
+        <p style="font-size:15px;color:#444;line-height:1.7;margin:0">
           ${addrLines}
         </p>
       </div>
 
       <!-- Right: Developed For -->
       <div style="flex:1;padding:24px 32px">
-        <p style="font-size:9px;font-weight:700;color:#0D1E40;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px 0">
+        <p style="font-family:'Calibri',sans-serif;font-size:16px;font-weight:700;color:#292b73;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px 0">
           Developed &amp; Illuminated For
         </p>
-        <p style="font-size:15px;font-weight:700;color:#111;margin:0 0 10px 0">
+        <p style="font-size:32px;font-weight:700;color:#111;margin:0 0 10px 0">
           ${clientName}
         </p>
-        ${clientPerson ? `<p style="font-size:11px;color:#444;margin:0 0 6px 0">${clientPerson}</p>` : ""}
-          ${esc(client.address) ? `<p style="font-size:11px;color:#444;line-height:1.7;margin:0 0 6px 0">${esc(client.address)}</p>` : ""}
-        ${clientCityLine ? `<p style="font-size:11px;color:#444;margin:0 0 4px 0">${clientCityLine}.</p>` : ""}
-        ${clientPinLine ? `<p style="font-size:11px;color:#444;margin:0">${clientPinLine}</p>` : ""}
+        ${clientPerson ? `<p style="font-size:15px;color:#444;margin:0 0 6px 0">${clientPerson}</p>` : ""}
+          ${esc(client.address) ? `<p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 6px 0">${esc(client.address)}</p>` : ""}
+        ${clientCityLine ? `<p style="font-size:15px;color:#444;margin:0 0 4px 0">${clientCityLine}.</p>` : ""}
+        ${clientPinLine ? `<p style="font-size:15px;color:#444;margin:0">${clientPinLine}</p>` : ""}
       </div>
 
     </div>
   </div>
 
   <!-- BOTTOM NAVY SECTION (55%) -->
-  <div style="position:absolute;bottom:0;left:0;right:0;height:55%;background:#0D1E40;
-              display:flex;align-items:flex-end;justify-content:space-between;
-              padding:44px 60px;box-sizing:border-box">
+  <div style="position:absolute;bottom:0;left:0;right:0;height:50%;background:#292b73;
+              display:flex;align-items:center;justify-content:space-between;
+              padding:0 80px;box-sizing:border-box">
 
     <!-- Light Quotation serif text -->
-    <div style="font-family:Georgia,'Times New Roman',serif;font-size:72px;font-weight:700;
-                color:#ffffff;line-height:1.0;letter-spacing:-1px">
+    <div style="font-family:'Times New Roman',Times,serif;font-size:84px;font-weight:700;
+                color:#ffffff;line-height:0.9;letter-spacing:-2px">
       Light<br>Quotation
     </div>
 
     <!-- DAM logo -->
     <div style="text-align:right">
+      ${logoB64 ? `<img src="${logoB64}" style="width:240px;object-fit:contain;margin-left:auto;"/>` : `
       <div style="font-family:'Arial Black',Arial,sans-serif;font-size:68px;font-weight:900;
                   color:#ffffff;letter-spacing:-3px;line-height:1">DAM</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:2px;
                   margin-top:8px;font-family:Arial,sans-serif">
         design. allocate. maintain.
-      </div>
+      </div>`}
     </div>
 
   </div>
@@ -358,10 +359,9 @@ function termsAndBankHTML(quotation, settings) {
 </div>`;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
 // FINAL TABLE — selected recommendation per item
 // ════════════════════════════════════════════════════════════════════════════
-async function finalTableHTML(quotation) {
+async function finalTableHTML(quotation, logoB64) {
   let items = quotation.lineItems || [];
   const customCols = getCustomCols(quotation);
   const hasCustomCols = customCols.length > 0;
@@ -543,14 +543,14 @@ async function finalTableHTML(quotation) {
     <td style="${TD}text-align:right;background:#f0f4f8;font-variant-numeric:tabular-nums">${fmt(gstAmt)}</td>
   </tr>
   <tr>
-    <td colspan="${footerSpan}" style="${TD}text-align:right;font-weight:700;background:#0b162c;color:#F5A623;font-size:9.5px">GRAND TOTAL</td>
-    <td style="${TD}text-align:right;font-weight:700;background:#0b162c;color:#F5A623;font-size:9.5px;font-variant-numeric:tabular-nums">${fmt(grand)}</td>
+    <td colspan="${footerSpan}" style="${TD}text-align:right;font-weight:700;background:#292b73;color:#F5A623;font-size:9.5px">GRAND TOTAL</td>
+    <td style="${TD}text-align:right;font-weight:700;background:#292b73;color:#F5A623;font-size:9.5px;font-variant-numeric:tabular-nums">${fmt(grand)}</td>
   </tr>
 </tfoot>`;
 
   const mainTable = `
 <div style="padding:8px 10px 0;font-family:Arial,sans-serif">
-  <div style="background:#0b162c;color:#ffffff;text-align:center;font-weight:700;font-size:11px;
+  <div style="background:#292b73;color:#ffffff;text-align:center;font-weight:700;font-size:11px;
               padding:9px 14px;letter-spacing:1.5px;margin-bottom:0">
     ${banner}
   </div>
@@ -606,6 +606,40 @@ async function finalTableHTML(quotation) {
   return mainTable + addOnsTable;
 }
 
+// Helper to get brand logo as Base64 with absolute local resolution
+let cachedLogoB64 = null;
+async function getBrandLogoB64() {
+  if (cachedLogoB64) return cachedLogoB64;
+  
+  const logoPath = path.join(__dirname, "logo.png"); // Local asset in the same folder
+  try {
+    if (fs.existsSync(logoPath)) {
+      const buf = fs.readFileSync(logoPath);
+      cachedLogoB64 = "data:image/png;base64," + buf.toString("base64");
+      console.log(`✅ [PDF] Brand logo matched at: ${logoPath}`);
+      return cachedLogoB64;
+    }
+  } catch (e) {
+    console.error(`❌ [PDF] Error reading logo at ${logoPath}:`, e.message);
+  }
+
+  // Backup search
+  const alternativePaths = [
+    path.join(__dirname, "..", "assets", "logo.png"),
+    path.join(process.cwd(), "server", "assets", "logo.png"),
+  ];
+
+  for (const p of alternativePaths) {
+    if (fs.existsSync(p)) {
+      const buf = fs.readFileSync(p);
+      cachedLogoB64 = "data:image/png;base64," + buf.toString("base64");
+      return cachedLogoB64;
+    }
+  }
+
+  return null;
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // ALL RECS TABLE — all recommendations side by side + summary table
 // ════════════════════════════════════════════════════════════════════════════
@@ -645,6 +679,7 @@ async function allRecsTableHTML(quotation) {
 
   const polarB64s = await Promise.all(items.map(i => toBase64(i.polarDiagramUrl)));
   const productB64s = await Promise.all(items.map(i => toBase64(i.productImageUrl)));
+  const logoB64 = await getBrandLogoB64();
   const banner = esc(quotation.projectName || "") + " \u2014 " + esc(quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
   // Brand names for header row
@@ -707,6 +742,17 @@ async function allRecsTableHTML(quotation) {
 
     const theadHTML = `
 <thead>
+  <tr>
+    <th colspan="${baseColCount + (activeLabels.length * recColCount)}" style="background:#292b73;color:#fff;padding:8px 15px;text-align:center;font-size:10px;letter-spacing:2px;border:none;">
+      ${banner.toUpperCase()}
+    </th>
+  </tr>
+  <tr>
+    <th colspan="${baseColCount + (activeLabels.length * recColCount)}" style="background:#292b73;color:#fff;padding:8px 15px;text-align:center;font-size:10px;letter-spacing:2px;border:none;">
+      ${banner.toUpperCase()}
+    </th>
+  </tr>
+  <tr style="height:10px;"></tr>
   <tr>
     ${specHeaders.join("")}
     ${recTh1}
@@ -844,7 +890,7 @@ async function allRecsTableHTML(quotation) {
   const summaryTotalRows = [
     { label: "SUM", key: "sum", bg: "#f0f4f8", color: "#333" },
     { label: `GST ${gstRate}%`, key: "gst", bg: "#f0f4f8", color: "#333" },
-    { label: "TOTAL", key: "total", bg: "#0b162c", color: "#F5A623" },
+    { label: "TOTAL", key: "total", bg: "#292b73", color: "#F5A623" },
   ].map(def => {
     const cells = activeLabels.map(label => {
       const t = recTotals.find(r => r.label === label);
@@ -924,11 +970,12 @@ async function allRecsTableHTML(quotation) {
 async function generatePDF(quotation, settings, mode) {
   mode = mode || "final";
 
-  const cover = coverHTML(quotation, settings);
+  const logoB64 = await getBrandLogoB64();
+  const cover = coverHTML(quotation, settings, logoB64);
   const terms = termsAndBankHTML(quotation, settings);
   const tableHTML = mode === "all_recs"
     ? await allRecsTableHTML(quotation)
-    : await finalTableHTML(quotation);
+    : await finalTableHTML(quotation, logoB64);
 
   // All pages: Letter landscape (279 × 216 mm)
   const html = `<!DOCTYPE html>
@@ -958,9 +1005,13 @@ async function generatePDF(quotation, settings, mode) {
   ${cover}
 </div>
 
-<!-- ── TABLE PAGES (A3 landscape) ── -->
+<!-- ── TABLE PAGES ── -->
 <div style="page-break-before:always;break-before:page">
   ${tableHTML}
+</div>
+
+<!-- ── FINAL PAGE (TERMS & BANK) ── -->
+<div style="page-break-before:always;break-before:page">
   ${terms}
 </div>
 

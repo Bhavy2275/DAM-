@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { slideInLeft } from '../lib/animations';
+import logo from '../assets/logo.png';
 
 const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -31,21 +32,20 @@ export default function Sidebar() {
             style={{ background: 'var(--color-base)', borderRight: '1px solid var(--color-border)' }}
         >
             {/* Logo */}
-            <div className="px-4 py-5 flex items-center gap-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                <div
-                    className="flex items-center justify-center flex-shrink-0"
-                    style={{
-                        width: 36, height: 36, borderRadius: 'var(--radius-md)',
-                        background: 'var(--color-accent)', color: 'var(--color-base)',
-                        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18
-                    }}
-                >
-                    D
-                </div>
-                {!collapsed && (
-                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
-                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--color-text-primary)', letterSpacing: 2 }}>DAM</div>
-                        <div style={{ fontSize: 8, color: 'var(--color-text-muted)', letterSpacing: 3, textTransform: 'uppercase', marginTop: -2 }}>design · allocate · maintain</div>
+            <div className="px-4 py-5 flex items-center justify-center" style={{ borderBottom: '1px solid var(--color-border)', minHeight: 77 }}>
+                {collapsed ? (
+                    <img 
+                        src={logo} 
+                        alt="Logo" 
+                        style={{ width: 32, height: 32, objectFit: 'contain', filter: 'brightness(1.1)' }} 
+                    />
+                ) : (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center">
+                        <img 
+                            src={logo} 
+                            alt="DAM Lighting" 
+                            style={{ height: 48, objectFit: 'contain' }} 
+                        />
                     </motion.div>
                 )}
             </div>

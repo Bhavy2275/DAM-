@@ -183,21 +183,32 @@ async function start() {
     console.log('✅ [STARTUP] Database connection successful');
   } catch (err) {
     console.error('❌ [STARTUP] FATAL: Database connection failed:', err);
-    // Don't exit(1) yet, allow express to start to provide health check info if possible
   }
 
-  // 2. Start Express immediately to avoid Railway start timeouts (502/Bad Gateway)
-  app.listen(PORT, () => {
-    console.log(`[STARTUP] DAM Lighting API v3.1.2 running on port ${PORT}`);
-  });
-
-  // 3. Background bootstrap (Admin setup)
+  // 2. Background bootstrap (Admin setup)
   try {
     await runInit();
     console.log('✅ [STARTUP] Admin/bootstrap initialisation complete');
   } catch (e) {
     console.error('❌ [STARTUP] Admin/bootstrap initialisation failed:', e);
   }
+
+  // 3. Start Express last and await the handle to keep the process alive
+  await new Promise((resolve, reject) => {
+    try {
+      const server = app.listen(PORT, () => {
+        console.log(`[STARTUP] DAM Lighting API v3.1.2 running on port ${PORT}`);
+        console.log('🚀 [READY] Server is active and listening for requests.');
+        resolve(server);
+      });
+      server.on('error', (err) => {
+        console.error('❌ [STARTUP] Server error:', err);
+        reject(err);
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 start();

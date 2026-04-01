@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { fadeUp } from '../lib/animations';
+import logo from '../assets/logo.png';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -39,20 +40,15 @@ export default function Login() {
             <div className="w-full max-w-md relative">
                 {/* Logo */}
                 <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={0} className="text-center mb-10">
-                    <div
-                        className="mx-auto mb-6 flex items-center justify-center"
+                    <img
+                        src={logo}
+                        alt="DAM Lighting"
                         style={{
-                            width: 72, height: 72, borderRadius: 'var(--radius-lg)',
-                            background: 'var(--color-accent-glow)',
-                            border: '1px solid rgba(245,166,35,0.2)',
-                            backdropFilter: 'blur(10px)',
-                            boxShadow: '0 8px 32px rgba(245,166,35,0.15)'
+                            height: 100, // Adjusted height since tagline is part of image
+                            margin: '0 auto 0 auto',
+                            filter: 'drop-shadow(0 0 20px rgba(245,166,35,0.1))'
                         }}
-                    >
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 700, color: 'var(--color-accent)' }}>D</span>
-                    </div>
-                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.8rem', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: 4 }}>DAM</h1>
-                    <p style={{ color: 'var(--color-accent-dim)', fontSize: 12, letterSpacing: 5, textTransform: 'uppercase', marginTop: 4 }}>design · allocate · maintain</p>
+                    />
                 </motion.div>
 
                 {/* Card */}
@@ -83,7 +79,7 @@ export default function Login() {
                                     name="email"
                                     type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                                     className="input-dark" style={{ paddingLeft: 38 }}
-                                    placeholder="admin@damlighting.com" required
+                                    placeholder="Email address" required
                                     autoComplete="email"
                                 />
                             </div>
