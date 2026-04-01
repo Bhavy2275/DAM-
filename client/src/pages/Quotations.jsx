@@ -32,7 +32,7 @@ export default function Quotations() {
     const debouncedSearch = useDebounce(search, 300);
 
     useEffect(() => {
-        api.get('/quotations/recalculate-all').catch(() => {});
+        api.post('/quotations/recalculate-all').catch(() => {});
     }, []);
 
     useEffect(() => {
@@ -79,11 +79,14 @@ export default function Quotations() {
         try {
             const response = await api.get(`/quotations/${id}/pdf?mode=final`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `${quoteNumber}.pdf`);
-            document.body.appendChild(link); link.click(); link.remove();
-            window.URL.revokeObjectURL(url);
+            try {
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `${quoteNumber}.pdf`);
+                document.body.appendChild(link); link.click(); link.remove();
+            } finally {
+                window.URL.revokeObjectURL(url);
+            }
             toast.success('PDF downloaded successfully');
         } catch (err) { toast.error('PDF generation failed'); console.error(err); }
         finally { setDownloadingId(null); }

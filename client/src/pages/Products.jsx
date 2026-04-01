@@ -438,7 +438,7 @@ export default function Products() {
                                                 style={{ width: '42%', fontSize: 10, padding: '0 4px', height: 36, fontWeight: 600 }}
                                             >
                                                 <option value="LP">Listing price (NET)</option>
-                                                <option value="LP_GST">Listing price+18% (INC)</option>
+                                                <option value="LP_GST">LISTING PRICE + 18% (INC)</option>
                                             </select>
                                             <EditableField style={{ height: 36, flex: 1 }}>
                                                 <input 

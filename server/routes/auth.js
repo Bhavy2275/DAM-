@@ -29,14 +29,14 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role, name: user.name },
             process.env.JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '1d' }
         );
 
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            maxAge: 24 * 60 * 60 * 1000 // 1 day
         });
 
         res.json({
@@ -44,7 +44,7 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
         });
     } catch (error) {
         console.error('Login FATAL error:', error);
-        res.status(500).json({ error: 'Login completely failed', detail: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Login failed' });
     }
 });
 

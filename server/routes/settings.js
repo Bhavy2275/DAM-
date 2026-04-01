@@ -29,7 +29,7 @@ router.use(authenticate);
 
 const logoStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
-    filename: (req, file, cb) => cb(null, 'logo' + path.extname(file.originalname).toLowerCase())
+    filename: (req, file, cb) => cb(null, 'logo-' + Date.now() + path.extname(file.originalname).toLowerCase())
 });
 const uploadLogo = multer({ 
     storage: logoStorage,
@@ -109,6 +109,7 @@ router.post('/logo', requireRole('ADMIN'), uploadLogo.single('logo'), async (req
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
         const settings = await prisma.companySettings.findFirst();
+        if (!settings) return res.status(404).json({ error: 'Settings not found' });
         const updated = await prisma.companySettings.update({
             where: { id: settings.id },
             data: { logoUrl: `/uploads/${req.file.filename}` }

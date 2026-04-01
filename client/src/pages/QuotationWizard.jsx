@@ -1,8 +1,16 @@
 import { useState, useEffect, useRef, memo } from 'react';
+
+const safeUUID = () =>
+  (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Plus, Trash2, X, Save, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Trash2, X, Save, ChevronDown, Eye, EyeOff, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { formatINR } from '../lib/formatCurrency';
@@ -51,7 +59,7 @@ function getTagStyle(val) {
 
 function formatTagLabel(val) {
     if (!val) return '';
-    return val.replace('DEG', '°').replace('_', ' ');
+    return val.replace(/DEG/g, '°').replace(/_/g, ' ');
 }
 
 export function getCustomLabel(customLabels, key, defaultLabel) {
@@ -404,7 +412,7 @@ const Step3QuoteInfo = memo(function Step3QuoteInfo({ form, setForm, clients, cu
         <motion.div variants={fadeUp} className="card-surface" style={{ padding: 32, cursor: 'default' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <h2 className="font-display" style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--color-accent)' }}>Quotation Details</h2>
-                <button type="button" onClick={() => setExtraFields(prev => [...prev, { id: `ef_${crypto.randomUUID()}`, label: 'Custom Field', value: '' }])} className="btn-ghost" style={{ padding: '6px 12px', fontSize: 11, height: 28, borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}>
+                <button type="button" onClick={() => setExtraFields(prev => [...prev, { id: `ef_${safeUUID()}`, label: 'Custom Field', value: '' }])} className="btn-ghost" style={{ padding: '6px 12px', fontSize: 11, height: 28, borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}>
                     <Plus size={14} /> Add Field
                 </button>
             </div>
@@ -501,7 +509,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
         { key: 'brandName', label: 'Brand', type: 'text' },
         { key: 'productCode', label: 'Prod Code', type: 'text' },
         { key: 'listPrice', label: 'Listing price', type: 'number' },
-        { key: 'listPriceWithGst', label: 'Listing price+18%', readOnly: true },
+        { key: 'listPriceWithGst', label: 'LISTING PRICE + 18%', readOnly: true },
         { key: 'discountPercent', label: 'Disc %', type: 'number' },
         { key: 'rate', label: 'Rate (₹)', readOnly: true },
         { key: 'quantity', label: 'Qty', type: 'number' },
@@ -519,7 +527,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
                         {headerLabel}
                     </div>
                 </div>
-                {editableFields.filter(f => !hiddenCols[f.label]).map(f => (
+                {editableFields.filter(f => f.key === 'discountPercent' || !hiddenCols[f.label]).map(f => (
                     <div key={f.key} style={{ marginBottom: 5 }}>
                         <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginBottom: 2, letterSpacing: 0.3 }}>
                             {getCustomLabel(customLabels, `rec_${itemId}_${label}_${f.key}`, f.label)}
@@ -546,6 +554,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
                                     onChange={e => handleChange(f.key, e.target.value)}
                                     onFocus={() => { if (f.key === 'productCode') setOpenSearch(true); }}
                                     onBlur={() => { if (f.key === 'productCode') setTimeout(() => setOpenSearch(false), 200); }}
+                                    onWheel={(e) => e.target.blur()}
                                     placeholder={getPlaceholder(customLabels, `rec_${itemId}_${label}_${f.key}`, '')}
                                     style={{ ...inputStyle, fontSize: 11, padding: '0 6px', width: '100%' }}
                                 />
@@ -651,7 +660,7 @@ const BEAM_MAP_MODAL = {
 const CRI_MAP_MODAL = { '>70': '#f59e0b', '>80': '#10b981', '>90': '#06b6d4' };
 
 function fmtAttr(v) {
-    return v.replace('DEG', '°').replace(/_/g, ' ').replace('TUNABLE', '🌡 Tunable');
+    return v.replace(/DEG/g, '°').replace(/_/g, ' ').replace('TUNABLE', '🌡 Tunable');
 }
 
 // ─── Product Attribute Editor Modal ─────────────────────────────────────────
@@ -805,7 +814,7 @@ function ProductAttributeModal({ product, initialAttrs, editingItem, onConfirm, 
                                                             setCustomVal('');
                                                             setAddingKey(null);
                                                         }
-                                                    }} style={{ background: 'var(--color-accent)', color: '#000', border: 'none', borderRadius: 6, px: 12, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Add</button>
+                                                    }} style={{ background: 'var(--color-accent)', color: '#000', border: 'none', borderRadius: 6, padding: '2px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Add</button>
                                                 </div>
                                             ) : (
                                                 <button type="button" onClick={() => setAddingKey(key)}
@@ -906,7 +915,7 @@ const Step4Recommendations = memo(function Step4Recommendations({ items, setItem
         } else if (pendingProduct) {
             // Add new row using the user's chosen attribute subset
             const newItem = {
-                _tempId: crypto.randomUUID(),
+                _tempId: safeUUID(),
                 productId: pendingProduct.id,
                 productCode: pendingProduct.productCode,
                 layoutCode: pendingProduct.layoutCode || '',
@@ -936,7 +945,7 @@ const Step4Recommendations = memo(function Step4Recommendations({ items, setItem
 
     const addCustomRow = () => {
         setItems(prev => [...prev, {
-            _tempId: crypto.randomUUID(),
+            _tempId: safeUUID(),
             productId: null, productCode: 'CUSTOM', layoutCode: '',
             description: 'Custom product',
             bodyColours: [], reflectorColours: [], colourTemps: [], beamAngles: [], cri: [],
@@ -1001,7 +1010,7 @@ const Step4Recommendations = memo(function Step4Recommendations({ items, setItem
                                 </th>
                             ))}
                             <th style={{ padding: '10px 8px', textAlign: 'center' }}>
-                                <button type="button" onClick={() => setCustomCols(prev => [...prev, { id: `cc_${crypto.randomUUID()}`, label: 'New Col', type: 'text', options: [] }])} className="btn-ghost" style={{ padding: '4px 8px', fontSize: 10, height: 24, border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <button type="button" onClick={() => setCustomCols(prev => [...prev, { id: `cc_${safeUUID()}`, label: 'New Col', type: 'text', options: [] }])} className="btn-ghost" style={{ padding: '4px 8px', fontSize: 10, height: 24, border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                     <Plus size={12} /> Add Col
                                 </button>
                             </th>
@@ -1278,7 +1287,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
     const addRow = () => {
         const newIdx = items.length;
         setItems(prev => [...prev, {
-            _tempId: crypto.randomUUID(),
+            _tempId: safeUUID(),
             productId: null, productCode: 'CUSTOM', layoutCode: '',
             description: '', bodyColours: [], reflectorColours: [],
             colourTemps: [], beamAngles: [], cri: [],
@@ -1362,7 +1371,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                     {[
                         { key: 'Polar Diagram', label: '📐 Polar', tip: 'in PDF' },
                         { key: 'Product Image', label: '🖼 Photo', tip: 'in PDF' },
-                        { key: 'LP+18%', label: '📄 Listing price+18%', tip: 'Globally' },
+                        { key: 'LP+18%', label: '📄 LISTING PRICE + 18%', tip: 'Globally' },
                     ].map(({ key, label, tip }) => {
                         const hidden = hiddenCols[key];
                         return (
@@ -1416,7 +1425,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                     </th>
                                 ))}
                                 <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)', width: 36 }}>
-                                    <button type="button" onClick={() => setCustomCols(prev => [...prev, { id: `cc_${crypto.randomUUID()}`, label: 'New Col', type: 'text', options: [] }])} className="btn-ghost" style={{ padding: '4px 8px', fontSize: 10, height: 24, border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                                    <button type="button" onClick={() => setCustomCols(prev => [...prev, { id: `cc_${safeUUID()}`, label: 'New Col', type: 'text', options: [] }])} className="btn-ghost" style={{ padding: '4px 8px', fontSize: 10, height: 24, border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                                         <Plus size={12} /> Add Col
                                     </button>
                                 </th>
@@ -1575,7 +1584,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                                             style={{ ...selectStyle, fontSize: 9, padding: '0 4px', border: 'none' }}
                                                         >
                                                             <option value="LP">Listing price</option>
-                                                            <option value="LP_INC">Listing price + 18% (INC)</option>
+                                                            <option value="LP_INC">LISTING PRICE + 18% (INC)</option>
                                                         </select>
                                                     </FilterField>
                                                     <EditableField style={{ height: 28, flex: 1, borderRadius: '0 6px 6px 0' }}>
@@ -1592,6 +1601,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                                                 const netPrice = item.finalPriceType === 'LP' ? val : (parseFloat(val || 0) / 1.18).toFixed(2);
                                                                 updateFinal(idx, 'finalListPrice', netPrice);
                                                             }}
+                                                            onWheel={(e) => e.target.blur()}
                                                             placeholder="0.00"
                                                             style={{ ...inputStyle, fontSize: 11, padding: '0 6px', borderLeft: 'none' }}
                                                         />
@@ -1616,6 +1626,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                                     aria-label="Discount %"
                                                     value={item.finalDiscount != null ? item.finalDiscount : ''}
                                                     onChange={e => updateFinal(idx, 'finalDiscount', e.target.value)}
+                                                    onWheel={(e) => e.target.blur()}
                                                     placeholder={getPlaceholder(customLabels, 'colDisc', '0')}
                                                     style={{ ...inputStyle, fontSize: 11, padding: '0 6px', fontVariantNumeric: 'tabular-nums' }}
                                                 />
@@ -1649,6 +1660,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                                     aria-label="Quantity"
                                                     value={item.finalQuantity != null ? item.finalQuantity : ''}
                                                     onChange={e => updateFinal(idx, 'finalQuantity', e.target.value)}
+                                                    onWheel={(e) => e.target.blur()}
                                                     placeholder={getPlaceholder(customLabels, 'colQty', '0')}
                                                     style={{ ...inputStyle, fontSize: 11, padding: '0 6px' }}
                                                 />
@@ -1796,6 +1808,8 @@ export default function QuotationWizard() {
     const [customCols, setCustomCols] = useState([]);
     const [hiddenCols, setHiddenCols] = useState({});
     const [searches, setSearches] = useState({});
+    const [lastAutoSavedState, setLastAutoSavedState] = useState(null);
+    const [autoSaving, setAutoSaving] = useState(false);
 
     const setCustomLabel = (key, value) => setCustomLabels(prev => ({ ...prev, [key]: value }));
 
@@ -1806,7 +1820,27 @@ export default function QuotationWizard() {
         if (id && id !== 'new' && id !== 'undefined') {
             loadExisting();
         }
-    }, []);
+    }, [id]);
+
+    // ─── Debounced Auto-save ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (!quotationId || id === 'new') return;
+        
+        const currentData = JSON.stringify({ form, items, notes, extraFields, customLabels, customCols, hiddenCols });
+        if (lastAutoSavedState === currentData) return;
+
+        const timer = setTimeout(async () => {
+            setAutoSaving(true);
+            try {
+                const ok = await saveFinalDraft();
+                if (ok) setLastAutoSavedState(currentData);
+            } finally {
+                setAutoSaving(false);
+            }
+        }, 3000); // 3 seconds debounce
+
+        return () => clearTimeout(timer);
+    }, [form, items, notes, extraFields, customLabels, customCols, hiddenCols, quotationId, id]);
 
     const loadClients = async () => { try { const { data } = await api.get('/clients'); setClients(data); } catch { } };
     const loadProducts = async () => { try { const { data } = await api.get('/products'); setProducts(data); } catch { } };
@@ -1834,13 +1868,11 @@ export default function QuotationWizard() {
             setNotes(data.notes || '');
             try {
                 const parsed = JSON.parse(data.customLabels || '{}');
-                setExtraFields(parsed.__extraFields || []);
-                setCustomCols(parsed.__customCols || []);
-                setHiddenCols(parsed.__hiddenCols || {});
-                delete parsed.__extraFields;
-                delete parsed.__customCols;
-                delete parsed.__hiddenCols;
-                setCustomLabels(parsed);
+                const { __extraFields, __customCols, __hiddenCols, ...cleanLabels } = parsed;
+                setExtraFields(__extraFields || []);
+                setCustomCols(__customCols || []);
+                setHiddenCols(__hiddenCols || {});
+                setCustomLabels(cleanLabels);
             } catch {
                 setCustomLabels({});
                 setExtraFields([]);
@@ -1920,38 +1952,47 @@ export default function QuotationWizard() {
 
     const saveRecommendations = async () => {
         if (!quotationId) return items;
+        
+        // Find items that don't have a server-side ID yet
+        const missingIds = items.filter(it => !it.id);
+        if (missingIds.length === 0) return items;
+
         setSaving(true);
-        let currentItems = [...items];
         try {
-            // 1. First ensure all items have server-side IDs (sequential creation to preserve S.No order)
-            for (let i = 0; i < currentItems.length; i++) {
-                if (!currentItems[i].id) {
-                    const { data: createdItem } = await api.post(`/quotations/${quotationId}/items`, {
-                        productId: currentItems[i].productId,
-                        productCode: currentItems[i].productCode,
-                        layoutCode: currentItems[i].layoutCode,
-                        description: currentItems[i].description,
-                        polarDiagramUrl: currentItems[i].polarDiagramUrl || null,
-                        productImageUrl: currentItems[i].productImageUrl || null,
-                        bodyColours: currentItems[i].bodyColours,
-                        reflectorColours: currentItems[i].reflectorColours,
-                        colourTemps: currentItems[i].colourTemps,
-                        beamAngles: currentItems[i].beamAngles,
-                        cri: currentItems[i].cri,
-                        unit: currentItems[i].unit,
-                        customFields: currentItems[i].customFields,
-                        finalPriceType: currentItems[i].finalPriceType || 'LP',
-                    });
-                    currentItems[i] = { ...currentItems[i], id: createdItem.id };
-                    // Sync the state locally immediately so UI shows IDs
-                    setItems(prev => prev.map(it => it._tempId === currentItems[i]._tempId ? { ...it, id: createdItem.id } : it));
-                }
+            const idMapping = {};
+            for (const itToSave of missingIds) {
+                const { data: createdItem } = await api.post(`/quotations/${quotationId}/items`, {
+                    productId: itToSave.productId,
+                    productCode: itToSave.productCode,
+                    layoutCode: itToSave.layoutCode,
+                    description: itToSave.description,
+                    polarDiagramUrl: itToSave.polarDiagramUrl || null,
+                    productImageUrl: itToSave.productImageUrl || null,
+                    bodyColours: itToSave.bodyColours,
+                    reflectorColours: itToSave.reflectorColours,
+                    colourTemps: itToSave.colourTemps,
+                    beamAngles: itToSave.beamAngles,
+                    cri: itToSave.cri,
+                    unit: itToSave.unit,
+                    customFields: itToSave.customFields,
+                    finalPriceType: itToSave.finalPriceType || 'LP',
+                });
+                idMapping[itToSave._tempId] = createdItem.id;
             }
+
+            // Single update at the end to minimize re-renders
+            let finalItems;
+            setItems(prev => {
+                finalItems = prev.map(it => idMapping[it._tempId] ? { ...it, id: idMapping[it._tempId] } : it);
+                return finalItems;
+            });
+            
             // NOTE: Batch recommendation updates are now handled in saveFinalDraft/saveFinal via /batch endpoint
-            return currentItems;
+            // Return currentItems with mapped IDs so caller can proceed
+            return items.map(it => idMapping[it._tempId] ? { ...it, id: idMapping[it._tempId] } : it);
         } catch (err) {
-            console.error(err);
-            toast.error('Failed to prepare items');
+            console.error('saveRecommendations failed:', err);
+            toast.error('Failed to prepare items on server');
             return false;
         } finally { setSaving(false); }
     };
@@ -1964,8 +2005,9 @@ export default function QuotationWizard() {
         setSaving(true);
         try {
             const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
-            const itemsToBatch = updatedItems.filter(it => it.id).map(it => ({
-                id: it.id,
+            const itemsToBatch = updatedItems.map((it, idx) => ({
+                id: it.id || it._tempId, // Send temporary ID for new items
+                sno: idx + 1,
                 productId: it.productId,
                 productCode: it.productCode,
                 description: it.description,
@@ -1990,7 +2032,8 @@ export default function QuotationWizard() {
                 cri: it.cri || [],
                 recommendations: activeLabels.map(label => {
                     const rec = it.recommendations[label];
-                    return rec && rec.brandName ? { ...rec, label } : null;
+                    const hasData = rec && (rec.brandName || (parseFloat(rec.quantity) || 0) > 0 || (parseFloat(rec.rate) || 0) > 0);
+                    return hasData ? { ...rec, label, quantity: parseFloat(rec.quantity) || 0, rate: parseFloat(rec.rate) || 0, amount: parseFloat(rec.amount) || 0 } : null;
                 }).filter(Boolean)
             }));
 
@@ -2013,8 +2056,9 @@ export default function QuotationWizard() {
         setSaving(true);
         try {
             const labelsJson = JSON.stringify({ ...customLabels, __extraFields: extraFields, __customCols: customCols, __hiddenCols: hiddenCols });
-            const itemsToBatch = updatedItems.filter(it => it.id).map(it => ({
-                id: it.id,
+            const itemsToBatch = updatedItems.map((it, idx) => ({
+                id: it.id || it._tempId, // Send temporary ID for new items
+                sno: idx + 1,
                 productId: it.productId,
                 productCode: it.productCode,
                 description: it.description,
@@ -2039,7 +2083,8 @@ export default function QuotationWizard() {
                 cri: it.cri || [],
                 recommendations: activeLabels.map(label => {
                     const rec = it.recommendations[label];
-                    return rec && rec.brandName ? { ...rec, label } : null;
+                    const hasData = rec && (rec.brandName || (parseFloat(rec.quantity) || 0) > 0 || (parseFloat(rec.rate) || 0) > 0);
+                    return hasData ? { ...rec, label, quantity: parseFloat(rec.quantity) || 0, rate: parseFloat(rec.rate) || 0, amount: parseFloat(rec.amount) || 0 } : null;
                 }).filter(Boolean)
             }));
 
@@ -2054,6 +2099,26 @@ export default function QuotationWizard() {
         } catch (err) {
             console.error('Batch save final error:', err);
             toast.error('Failed to save final quotation');
+        } finally { setSaving(false); }
+    };
+
+    const downloadRecPDF = async () => {
+        setSaving(true);
+        try {
+            await saveFinalDraft();
+            const response = await api.get(`/quotations/${quotationId}/pdf?mode=all_recs`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Rec-PDF-${quotationId}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Recommendation PDF downloaded');
+        } catch (err) {
+            console.error('PDF error:', err);
+            toast.error('Failed to generate PDF');
         } finally { setSaving(false); }
     };
 
@@ -2077,7 +2142,12 @@ export default function QuotationWizard() {
                     <h1 className="font-display" style={{ fontSize: '2.2rem', fontWeight: 700 }}>
                         {id && id !== 'new' ? 'Edit Quotation' : 'New Quotation'}
                     </h1>
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4 }}>Step {step + 1} of {STEPS.length}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                        <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, margin: 0 }}>Step {step + 1} of {STEPS.length}</p>
+                        {autoSaving && <span style={{ fontSize: 11, color: 'var(--color-accent)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div className="pulse" style={{ width: 6, height: 6, background: 'var(--color-accent)', borderRadius: '50%' }} /> Auto-saving...
+                        </span>}
+                    </div>
                 </div>
                 <button onClick={() => navigate('/quotations')} className="btn-ghost"><ArrowLeft size={16} /> Back</button>
             </motion.div>
@@ -2144,9 +2214,14 @@ export default function QuotationWizard() {
                         {saving ? 'Saving...' : 'Next'} <ArrowRight size={16} />
                     </button>
                 ) : (
-                    <button onClick={saveFinal} disabled={saving} className="btn-primary" style={{ padding: '10px 32px' }}>
-                        <Save size={16} /> {saving ? 'Saving...' : 'Save & Finish'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                        <button onClick={downloadRecPDF} disabled={saving} className="btn-ghost" style={{ padding: '10px 24px', borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}>
+                            <Download size={16} /> {saving ? 'Wait...' : 'Rec PDF'}
+                        </button>
+                        <button onClick={saveFinal} disabled={saving} className="btn-primary" style={{ padding: '10px 32px' }}>
+                            <Save size={16} /> {saving ? 'Saving...' : 'Save & Finish'}
+                        </button>
+                    </div>
                 )}
             </div>
         </motion.div>

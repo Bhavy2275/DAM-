@@ -23,6 +23,7 @@ const settingsRoutes = require('./routes/settings');
 const userRoutes = require('./routes/users');
 const productRoutes = require('./routes/products');
 const { authenticate } = require('./middleware/auth');
+const { requireRole } = require('./middleware/role');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -83,12 +84,12 @@ const apiLimiter = rateLimit({
 
 
 // Routes
-// app.use('/api/auth', loginLimiter);   // 10 attempts / 15 min on ALL auth routes
-// app.use('/api', apiLimiter);          // 300 req/min on all other API routes
+app.use('/api/auth', loginLimiter);
+app.use('/api', apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/quotations', quotationRoutes);
-// app.use('/api/payments', paymentRoutes); // Disabled until table exists
+app.use('/api/payments', paymentRoutes);
 
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
@@ -124,20 +125,36 @@ app.get('/api/health', async (req, res) => {
   res.json(responseBody);
 });
 
-app.get('/api/debug-db', authenticate, async (req, res) => {
-  const prisma = require('./lib/prisma');
-  try {
-    const userCount = await prisma.user.count();
-    res.json({ success: true, userCount, message: "Database is REACHABLE" });
-  } catch (e) {
-    res.status(500).json({ success: false, error: 'Database unavailable' });
-  }
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/debug-db', authenticate, requireRole('ADMIN'), async (req, res) => {
+    const prisma = require('./lib/prisma');
+    try {
+      const userCount = await prisma.user.count();
+      res.json({ success: true, userCount, message: "Database is REACHABLE" });
+    } catch (e) {
+      res.status(500).json({ success: false, error: 'Database unavailable' });
+    }
+  });
+}
 
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal server error' });
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  const prisma = require('./lib/prisma');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  const prisma = require('./lib/prisma');
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
 async function start() {

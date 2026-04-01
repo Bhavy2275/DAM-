@@ -53,6 +53,7 @@ export function useCountUp(target, duration = 1200) {
 
   useEffect(() => {
     if (!target) { setCount(0); return; }
+    let rafId;
     const start = Date.now();
     const startVal = 0;
     const endVal = parseFloat(target) || 0;
@@ -60,13 +61,13 @@ export function useCountUp(target, duration = 1200) {
     const tick = () => {
       const elapsed = Date.now() - start;
       const progress = Math.min(elapsed / duration, 1);
-      // easeOutCubic
       const ease = 1 - Math.pow(1 - progress, 3);
       setCount(Math.round(startVal + (endVal - startVal) * ease));
-      if (progress < 1) requestAnimationFrame(tick);
+      if (progress < 1) rafId = requestAnimationFrame(tick);
     };
 
-    requestAnimationFrame(tick);
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [target, duration]);
 
   return count;
@@ -76,10 +77,12 @@ export function useCountUp(target, duration = 1200) {
 const AVATAR_COLORS = ['#F5A623', '#10B981', '#6c63ff', '#f43f5e', '#06b6d4', '#8b5cf6', '#ec4899'];
 
 export function getAvatarColor(name = '') {
+  if (!name) return AVATAR_COLORS[0];
   return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 }
 
 export function getInitials(name = '') {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  if (!name) return '';
+  return name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 

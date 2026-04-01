@@ -21,6 +21,7 @@ const COL = {
     // per-recommendation sub-columns
     brand: 90,
     qty:   60,
+    disc:  60,
     rate:  90,
     amt:   95,
     mac:   80,
@@ -50,16 +51,18 @@ export default function QuotationDetail() {
     const handleDownloadPDF = async (mode) => {
         setPdfLoading(mode);
         try {
-            // Explicitly using the abstract 'api' instance to ensure no hardcoding
             const response = await api.get(`/quotations/${id}/pdf?mode=${mode}`, { 
                 responseType: 'blob' 
             });
             const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `${quotation.quoteNumber}-${mode}.pdf`);
-            document.body.appendChild(link); link.click(); link.remove();
-            window.URL.revokeObjectURL(url);
+            try {
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `${quotation.quoteNumber}-${mode}.pdf`);
+                document.body.appendChild(link); link.click(); link.remove();
+            } finally {
+                window.URL.revokeObjectURL(url);
+            }
             toast.success('PDF downloaded');
             setShowPdfModal(false);
         } catch (err) { 
@@ -124,12 +127,12 @@ export default function QuotationDetail() {
 
     // ── How many sub-cols per recommendation ──────────────────────────────
     // We show: Brand | Qty | Rate | Amount | Macadam  → 5 sub-cols
-    const SUB_COLS   = 5;
-    const subHeaders = ['Brand', 'Qty', 'Rate', 'Amount', 'Macadam'];
+    const SUB_COLS   = 6;
+    const subHeaders = ['Brand', 'Qty', 'Disc%', 'Rate', 'Amount', 'Macadam'];
 
     // Total table width for the recommendation table
     const fixedCols  = COL.sno + COL.code + COL.desc + COL.unit;
-    const recColW    = [COL.brand, COL.qty, COL.rate, COL.amt, COL.mac];
+    const recColW    = [COL.brand, COL.qty, COL.disc, COL.rate, COL.amt, COL.mac];
     const recGroupW  = recColW.reduce((s, w) => s + w, 0);
     const recTableW  = fixedCols + (customCols.length * 85) + recGroupW * usedLabels.length;
 
@@ -323,6 +326,7 @@ export default function QuotationDetail() {
                                             return [
                                                 <td key={`${label}-brand`} style={tdStyle({ fontSize: 11, borderRight: '1px solid var(--color-border)' })}>{rec?.brandName || '—'}</td>,
                                                 <td key={`${label}-qty`} style={tdStyle({ textAlign: 'center', borderRight: '1px solid var(--color-border)' })}>{rec?.quantity ?? '—'}</td>,
+                                                <td key={`${label}-disc`} style={tdStyle({ textAlign: 'center', borderRight: '1px solid var(--color-border)', fontSize: 11 })}>{rec?.discountPercent != null ? `${rec.discountPercent}%` : '—'}</td>,
                                                 <td key={`${label}-rate`} style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>{rec?.rate != null ? formatINR(rec.rate) : '—'}</td>,
                                                 <td key={`${label}-amt`} style={tdStyle({ textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>{rec?.amount != null ? formatINR(rec.amount) : '—'}</td>,
                                                 <td key={`${label}-mac`} style={tdStyle({ borderRight: '2px solid var(--color-border)' })}>
@@ -413,9 +417,9 @@ export default function QuotationDetail() {
                             </colgroup>
                             <thead>
                                 <tr style={{ background: 'var(--color-base)' }}>
-                                    {['S.No','Code','Description','Brand','Listing Price', !hiddenCols['LP+18%'] ? 'Listing price+18%' : null,'Disc%','Rate','Unit','Qty','Amount','Macadam'].filter(Boolean).map((h, i) => (
+                                    {['S.No','Code','Description','Brand','Listing Price', !hiddenCols['LP+18%'] ? 'LISTING PRICE + 18%' : null,'Disc%','Rate','Unit','Qty','Amount','Macadam'].filter(Boolean).map((h, i) => (
                                         <th key={h} rowSpan={customCols.length ? 2 : 1} style={thStyle({
-                                            textAlign: ['Amount', 'Rate', 'Listing Price', 'Listing price+18%'].includes(h) ? 'right' : ['S.No', 'Disc%', 'Unit', 'Qty', 'Macadam'].includes(h) ? 'center' : 'left',
+                                            textAlign: ['Amount', 'Rate', 'Listing Price', 'LISTING PRICE + 18%'].includes(h) ? 'right' : ['S.No', 'Disc%', 'Unit', 'Qty', 'Macadam'].includes(h) ? 'center' : 'left',
                                             borderRight: '1px solid var(--color-border)',
                                         })}>
                                             {h}

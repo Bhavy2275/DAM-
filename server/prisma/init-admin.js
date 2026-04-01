@@ -6,12 +6,16 @@ const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 
 async function main() {
-    const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
-    const passwordHash = await bcrypt.hash(defaultPassword, 10);
+    const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+    if (!defaultPassword) {
+        console.error('FATAL: ADMIN_DEFAULT_PASSWORD environment variable is not set. Server cannot start.');
+        process.exit(1);
+    }
+    const passwordHash = await bcrypt.hash(defaultPassword, 12);
 
     const admin = await prisma.user.upsert({
         where: { email: 'admin@damlighting.com' },
-        update: { passwordHash }, // Update password if already exists
+        update: {}, // Don't reset password on every restart
         create: {
             name: 'Admin',
             email: 'admin@damlighting.com',
@@ -21,9 +25,6 @@ async function main() {
     });
 
     console.log('✅ Admin user ready:', admin.email);
-    if (!process.env.ADMIN_DEFAULT_PASSWORD) {
-        console.warn('⚠️  Using default admin password. Set ADMIN_DEFAULT_PASSWORD env var for production.');
-    }
 
     // Bootstrap company settings only if missing
     const existing = await prisma.companySettings.findFirst();

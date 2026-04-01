@@ -39,6 +39,9 @@ export default function Settings() {
     };
 
     const handleInvite = async () => {
+        if (!inviteForm.name?.trim()) { toast.error('Name is required'); return; }
+        if (!inviteForm.email?.trim()) { toast.error('Email is required'); return; }
+        if (!inviteForm.password || inviteForm.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
         try { await api.post('/users/invite', inviteForm); toast.success('User created'); setShowInviteModal(false); setInviteForm({ name: '', email: '', password: '', role: 'STAFF' }); loadUsers(); }
         catch (err) { toast.error(err.response?.data?.error || 'Failed to create user'); }
     };
@@ -58,12 +61,16 @@ export default function Settings() {
         try {
             const response = await api.get('/settings/backup', { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `DAM-backup-${new Date().toISOString().split('T')[0]}.json`);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode.removeChild(link);
+            try {
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `DAM-backup-${new Date().toISOString().split('T')[0]}.json`);
+                document.body.appendChild(link);
+                link.click();
+                link.parentNode.removeChild(link);
+            } finally {
+                window.URL.revokeObjectURL(url);
+            }
             toast.success('Backup downloaded');
         } catch (err) {
             toast.error('Failed to download backup');
@@ -193,7 +200,7 @@ export default function Settings() {
                                                     <select value={u.role} onChange={e => handleRoleChange(u.id, e.target.value)} disabled={u.id === user?.id}
                                                         className="input-dark" style={{ padding: '4px 8px', fontSize: 12, width: 100 }}>
                                                         <option value="ADMIN">Admin</option>
-                                                        <option value="MEMBER">Member</option>
+                                                        <option value="STAFF">Staff</option>
                                                     </select>
                                                 </td>
                                                 <td>
@@ -219,6 +226,7 @@ export default function Settings() {
             <AnimatePresence>
                 {showInviteModal && (
                     <motion.div variants={modalOverlay} initial="hidden" animate="visible" exit="exit"
+                        onClick={() => setShowInviteModal(false)}
                         style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                         <motion.div variants={modalContent} initial="hidden" animate="visible" exit="exit" onClick={e => e.stopPropagation()}

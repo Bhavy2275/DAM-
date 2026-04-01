@@ -44,7 +44,7 @@ router.post('/invite', requireRole('ADMIN'), validateBody(inviteSchema), async (
         if (existing) return res.status(400).json({ error: 'Email already exists' });
 
         const validRole = ['ADMIN', 'STAFF'].includes(role) ? role : 'STAFF';
-        const passwordHash = await bcrypt.hash(password, 10);
+        const passwordHash = await bcrypt.hash(password, 12);
         const user = await prisma.user.create({
             data: { name: name || '', email, passwordHash, role: validRole },
             select: { id: true, name: true, email: true, role: true }
@@ -77,6 +77,12 @@ router.delete('/:id', async (req, res) => {
     try {
         if (req.params.id === req.user.id) {
             return res.status(400).json({ error: 'Cannot delete yourself' });
+        }
+        const userToDelete = await prisma.user.findUnique({ where: { id: req.params.id } });
+        if (!userToDelete) return res.status(404).json({ error: 'User not found' });
+        if (userToDelete.role === 'ADMIN') {
+            const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+            if (adminCount <= 1) return res.status(400).json({ error: 'Cannot delete the last admin user' });
         }
         await prisma.user.delete({ where: { id: req.params.id } });
         res.json({ message: 'User deleted' });

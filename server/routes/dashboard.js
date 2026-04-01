@@ -40,7 +40,7 @@ router.get('/stats', async (req, res) => {
                     const d = new Date(q.createdAt);
                     return d >= monthStart && d <= monthEnd;
                 })
-                .reduce((s, q) => s + (q.total || 0), 0);
+                .reduce((s, q) => s + (q.grandTotal || 0), 0);
 
             monthlyQuotedValue.push({
                 month: monthStart.toLocaleString('default', { month: 'short', year: 'numeric' }),

@@ -9,8 +9,8 @@ import { EditableField } from '../components/FieldArrow';
 import { useAuth } from '../hooks/useAuth';
 import { inputStyle } from '../lib/styles';
 
-function getInitials(name = '') { return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2); }
-function getAvatarColor(name = '') { const colors = ['#F5A623','#10B981','#6c63ff','#f43f5e','#06b6d4','#8b5cf6']; return colors[name.charCodeAt(0) % colors.length]; }
+function getInitials(name = '') { if (!name) return ''; return name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2); }
+function getAvatarColor(name = '') { const colors = ['#F5A623','#10B981','#6c63ff','#f43f5e','#06b6d4','#8b5cf6']; if (!name) return colors[0]; return colors[name.charCodeAt(0) % colors.length]; }
 
 export default function Clients() {
     const { user } = useAuth();
@@ -30,6 +30,7 @@ export default function Clients() {
     };
 
     const handleSave = async () => {
+        if (!form.fullName?.trim()) { toast.error('Full name is required'); return; }
         try {
             if (editingClient) {
                 await api.put(`/clients/${editingClient.id}`, form);
@@ -192,6 +193,7 @@ export default function Clients() {
             <AnimatePresence>
                 {showModal && (
                     <motion.div variants={modalOverlay} initial="hidden" animate="visible" exit="exit"
+                        onClick={() => setShowModal(false)}
                         style={{ position: 'fixed', inset: 0, background: 'rgba(7,12,24,0.85)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                         <motion.div variants={modalContent} initial="hidden" animate="visible" exit="exit"

@@ -12,7 +12,7 @@ const validateBody = (schema) => (req, res, next) => {
                 details: error.errors ? error.errors.map(e => `${e.path.join('.')}: ${e.message}`) : error.message 
             });
         }
-        return res.status(500).json({ error: 'Internal validation process failed', detail: error.message });
+        return res.status(500).json({ error: 'Internal validation error' });
     }
 };
 

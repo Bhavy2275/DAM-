@@ -120,25 +120,16 @@ router.put('/:id', validateBody(clientSchema.partial()), async (req, res) => {
 router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
     try {
         const { id } = req.params;
-        // 1. Manually delete all items in order to stay within foreign key constraints
-        // Delete all payments by this client
-        await prisma.payment.deleteMany({ where: { clientId: id } });
-
-        // Delete all quotation items related to this client's quotations
-        await prisma.quotationItem.deleteMany({
-            where: { quotation: { clientId: id } }
+        await prisma.$transaction(async (tx) => {
+            await tx.payment.deleteMany({ where: { clientId: id } });
+            await tx.quotationItem.deleteMany({ where: { quotation: { clientId: id } } });
+            await tx.quotation.deleteMany({ where: { clientId: id } });
+            await tx.client.delete({ where: { id } });
         });
-
-        // Delete all quotations related to this client
-        await prisma.quotation.deleteMany({ where: { clientId: id } });
-
-        // 4. Finally delete the client
-        await prisma.client.delete({ where: { id: id } });
-
         res.json({ message: 'Client and all associated records deleted successfully' });
     } catch (error) {
-        console.error('Delete client FATAL error:', error);
-        res.status(500).json({ error: 'Failed to delete client', detail: error.message });
+        console.error('Delete client error:', error);
+        res.status(500).json({ error: 'Failed to delete client' });
     }
 });
 

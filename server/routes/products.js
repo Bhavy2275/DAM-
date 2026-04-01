@@ -163,6 +163,8 @@ router.put('/:id', requireRole('ADMIN', 'STAFF'), runUpload, validateBody(produc
 // DELETE /api/products/:id
 router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
     try {
+        const refs = await prisma.quotationItem.count({ where: { productId: req.params.id } });
+        if (refs > 0) return res.status(409).json({ error: 'Cannot delete product: it is used in quotations' });
         await prisma.product.delete({ where: { id: req.params.id } });
         res.json({ message: 'Product deleted' });
     } catch (error) {

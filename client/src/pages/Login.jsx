@@ -111,7 +111,7 @@ export default function Login() {
                     </form>
 
                     <p style={{ marginTop: 24, textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted)' }}>
-                        {import.meta.env.DEV ? 'Demo: admin@damlighting.com / admin123' : 'Contact admin for access'}
+                        Contact admin for access
                     </p>
                 </motion.div>
             </div>

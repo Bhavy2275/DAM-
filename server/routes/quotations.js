@@ -13,7 +13,7 @@ const quoteHeaderSchema = z.object({
     projectName: z.string().max(255).optional(),
     city: z.string().max(100).optional(),
     state: z.string().max(100).optional(),
-    status: z.string().max(50).optional(),
+    status: z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'REJECTED', 'INVOICED']).optional(),
     validDays: z.number().int().optional(),
     gstRate: z.number().optional(),
     notes: z.string().max(5000).optional(),
@@ -159,12 +159,12 @@ router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
                         const { id: itemId, recommendations, _tempId, ...rest } = itemData;
 
                         const VALID_ITEM_FIELDS = [
-                            'productId', 'productCode', 'layoutCode', 'description', 
+                            'sno', 'productId', 'productCode', 'layoutCode', 'description', 
                             'productImageUrl', 'polarDiagramUrl', 'bodyColours', 'reflectorColours', 
                             'colourTemps', 'beamAngles', 'cri', 'unit',
                             'finalBrandName', 'finalProductCode', 'finalListPrice', 'finalDiscount',
                             'finalRate', 'finalQuantity', 'finalAmount', 'finalMacadamStep', 'finalUnit',
-                            'finalPriceType', 'customFields'
+                            'finalPriceType', 'customFields', 'currentCustomFields'
                         ];
 
                         const dataToSave = {};
@@ -188,10 +188,18 @@ router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
                                 : JSON.stringify(dataToSave.customFields || {});
                         }
 
+                        // Map currentCustomFields to customFields
+                        if (dataToSave.currentCustomFields !== undefined) {
+                            dataToSave.customFields = typeof dataToSave.currentCustomFields === 'string'
+                                ? dataToSave.currentCustomFields
+                                : JSON.stringify(dataToSave.currentCustomFields || {});
+                            delete dataToSave.currentCustomFields;
+                        }
+
                         // Ensure numeric types are floats
                         ['finalListPrice', 'finalDiscount', 'finalRate', 'finalQuantity', 'finalAmount'].forEach(key => {
                             if (dataToSave[key] !== undefined) {
-                                dataToSave[key] = parseFloat(dataToSave[key]) || null;
+                                dataToSave[key] = dataToSave[key] != null ? parseFloat(dataToSave[key]) : null;
                             }
                         });
 
@@ -202,8 +210,9 @@ router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
                         let finalItemId;
                         if (isExisting) {
                             // Verify item belongs to this quotation
+                            // NOTE: cannot call res.status() inside a prisma $transaction — throw instead
                             if (!existingIds.has(itemId)) {
-                                return res.status(403).json({ error: 'Item does not belong to this quotation' });
+                                throw Object.assign(new Error('Item does not belong to this quotation'), { statusCode: 403 });
                             }
                             // Update existing
                             await tx.quotationItem.update({
@@ -253,7 +262,7 @@ router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
 
                 // 4. Recalculate Totals inside the transaction
                 await recalculateQuotationTotal(id, tx);
-        });
+        }, { maxWait: 10000, timeout: 30000 });
 
         // Fetch fresh state to return
         const quotation = await prisma.quotation.findUnique({
@@ -266,18 +275,18 @@ router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
         });
         res.json({ ...quotation, lineItems: quotation.lineItems.map(serializeItem) });
     } catch (error) {
+        const statusCode = error.statusCode || 500;
+        if (statusCode !== 500) {
+            // Known, expected errors (e.g. 403 ownership check thrown from inside tx)
+            return res.status(statusCode).json({ error: error.message });
+        }
         console.error('BATCH SAVE FATAL ERROR:', {
             message: error.message,
             stack: error.stack,
-            body: JSON.stringify(req.body).substring(0, 1000) // Log part of the body for context
+            body: JSON.stringify(req.body).substring(0, 1000)
         });
         res.status(500).json({ 
-            error: 'Failed to perform batch save', 
-            ...(process.env.NODE_ENV !== 'production' && {
-                detail: error.message,
-                code: error.code,
-                meta: error.meta
-            })
+            error: 'Failed to perform batch save'
         });
     }
 });
@@ -314,8 +323,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/quotations/recalculate-all
-router.get('/recalculate-all', requireRole('ADMIN'), async (req, res) => {
+// POST /api/quotations/recalculate-all
+router.post('/recalculate-all', requireRole('ADMIN'), async (req, res) => {
     try {
         const quotations = await prisma.quotation.findMany({
             include: { lineItems: { include: { recommendations: true } } }
@@ -437,7 +446,7 @@ router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
 });
 
 // POST /api/quotations/:id/duplicate
-router.post('/:id/duplicate', async (req, res) => {
+router.post('/:id/duplicate', requireRole('ADMIN', 'STAFF'), async (req, res) => {
     try {
         const original = await prisma.quotation.findUnique({
             where: { id: req.params.id },
@@ -509,7 +518,7 @@ router.post('/:id/duplicate', async (req, res) => {
 router.post('/:id/items', validateBody(quoteItemSchema), async (req, res) => {
     try {
         const { productId, productCode, layoutCode, description, polarDiagramUrl, productImageUrl,
-            bodyColours, reflectorColours, colourTemps, beamAngles, cri, unit, customFields } = req.body;
+            bodyColours, reflectorColours, colourTemps, beamAngles, cri, unit, customFields, finalPriceType } = req.body;
 
         // Get current max sno
         const count = await prisma.quotationItem.count({ where: { quotationId: req.params.id } });
@@ -531,7 +540,7 @@ router.post('/:id/items', validateBody(quoteItemSchema), async (req, res) => {
                 cri: JSON.stringify(cri || []),
                 unit: unit || 'NUMBERS',
                 customFields: JSON.stringify(customFields || {}),
-                // finalPriceType is excluded until DB migration is successful
+                finalPriceType: finalPriceType || 'LP',
             },
             include: { recommendations: true }
         });
@@ -552,20 +561,20 @@ router.put('/:id/items/:itemId', validateBody(quoteItemSchema), async (req, res)
         const {
             unit, sno, productCode, layoutCode, description, currentCustomFields,
             finalBrandName, finalProductCode, finalListPrice, finalDiscount,
-            finalRate, finalUnit, finalQuantity, finalAmount, finalMacadamStep
+            finalRate, finalUnit, finalQuantity, finalAmount, finalMacadamStep, finalPriceType
         } = req.body;
         const dataToUpdate = {
             unit, sno, productCode, layoutCode, description,
             ...(finalBrandName !== undefined && { finalBrandName: finalBrandName || null }),
             ...(finalProductCode !== undefined && { finalProductCode: finalProductCode || null }),
-            ...(finalListPrice !== undefined && { finalListPrice: parseFloat(finalListPrice) || null }),
-            ...(finalDiscount !== undefined && { finalDiscount: parseFloat(finalDiscount) || null }),
-            ...(finalRate !== undefined && { finalRate: parseFloat(finalRate) || null }),
+            ...(finalListPrice !== undefined && { finalListPrice: finalListPrice != null ? parseFloat(finalListPrice) : null }),
+            ...(finalDiscount !== undefined && { finalDiscount: finalDiscount != null ? parseFloat(finalDiscount) : null }),
+            ...(finalRate !== undefined && { finalRate: finalRate != null ? parseFloat(finalRate) : null }),
             ...(finalUnit !== undefined && { finalUnit: finalUnit || null }),
-            ...(finalQuantity !== undefined && { finalQuantity: parseFloat(finalQuantity) || null }),
-            ...(finalAmount !== undefined && { finalAmount: parseFloat(finalAmount) || null }),
+            ...(finalQuantity !== undefined && { finalQuantity: finalQuantity != null ? parseFloat(finalQuantity) : null }),
+            ...(finalAmount !== undefined && { finalAmount: finalAmount != null ? parseFloat(finalAmount) : null }),
             ...(finalMacadamStep !== undefined && { finalMacadamStep: finalMacadamStep || null }),
-            // finalPriceType is excluded until DB migration is successful
+            ...(finalPriceType !== undefined && { finalPriceType: finalPriceType || 'LP' }),
         };
         if (currentCustomFields !== undefined) {
             dataToUpdate.customFields = typeof currentCustomFields === 'string' ? currentCustomFields : JSON.stringify(currentCustomFields);
@@ -606,7 +615,7 @@ router.delete('/:id/items/:itemId', async (req, res) => {
 });
 
 // PUT /api/quotations/:id/items/:itemId/recommendations  — save all A-F recs for one item
-router.put('/:id/items/:itemId/recommendations', async (req, res) => {
+router.put('/:id/items/:itemId/recommendations', requireRole('ADMIN', 'STAFF'), async (req, res) => {
     try {
         const itemCheck = await prisma.quotationItem.findUnique({ where: { id: req.params.itemId }, select: { quotationId: true } });
         if (!itemCheck || itemCheck.quotationId !== req.params.id) return res.status(403).json({ error: 'Item does not belong to this quotation' });
@@ -650,12 +659,12 @@ router.put('/:id/items/:itemId/recommendations', async (req, res) => {
         res.json(serializeItem(item));
     } catch (error) {
         console.error('Save recommendations error:', error?.message, error?.code, error?.meta);
-        res.status(500).json({ error: 'Failed to save recommendations', detail: error?.message });
+        res.status(500).json({ error: 'Failed to save recommendations' });
     }
 });
 
 // PUT /api/quotations/:id/final  — save final working quotation for all items
-router.put('/:id/final', async (req, res) => {
+router.put('/:id/final', requireRole('ADMIN', 'STAFF'), async (req, res) => {
     try {
         const { items, notes } = req.body; // items: array of { id, finalBrandName, finalProductCode, ... }
 
@@ -681,15 +690,15 @@ router.put('/:id/final', async (req, res) => {
 
                 if (item.finalBrandName   !== undefined) data.finalBrandName   = item.finalBrandName   || null;
                 if (item.finalProductCode !== undefined) data.finalProductCode = item.finalProductCode || null;
-                if (item.finalListPrice   !== undefined) data.finalListPrice   = parseFloat(item.finalListPrice)  || null;
-                if (item.finalDiscount    !== undefined) data.finalDiscount    = parseFloat(item.finalDiscount)   || null;
-                if (item.finalRate        !== undefined) data.finalRate        = parseFloat(item.finalRate)       || null;
-                if (item.finalQuantity    !== undefined) data.finalQuantity    = parseFloat(item.finalQuantity)   || null;
-                if (item.finalAmount      !== undefined) data.finalAmount      = parseFloat(item.finalAmount)     || null;
+                if (item.finalListPrice   !== undefined) data.finalListPrice   = item.finalListPrice != null ? parseFloat(item.finalListPrice)  : null;
+                if (item.finalDiscount    !== undefined) data.finalDiscount    = item.finalDiscount != null ? parseFloat(item.finalDiscount)   : null;
+                if (item.finalRate        !== undefined) data.finalRate        = item.finalRate != null ? parseFloat(item.finalRate)       : null;
+                if (item.finalQuantity    !== undefined) data.finalQuantity    = item.finalQuantity != null ? parseFloat(item.finalQuantity)   : null;
+                if (item.finalAmount      !== undefined) data.finalAmount      = item.finalAmount != null ? parseFloat(item.finalAmount)     : null;
                 if (item.finalMacadamStep !== undefined) data.finalMacadamStep = item.finalMacadamStep || null;
                 if (item.finalUnit        !== undefined) data.finalUnit        = item.finalUnit        || null;
-                // finalPriceType is excluded until DB migration is successful
-                
+                if (item.finalPriceType   !== undefined) data.finalPriceType   = item.finalPriceType   || 'LP';
+
                 if (item.customFields     !== undefined) {
                     data.customFields = typeof item.customFields === 'string' ? item.customFields : JSON.stringify(item.customFields);
                 }
@@ -719,7 +728,7 @@ router.put('/:id/final', async (req, res) => {
 });
 
 // POST /api/quotations/:id/import-recommendation  — copy rec into final fields for all items
-router.post('/:id/import-recommendation', async (req, res) => {
+router.post('/:id/import-recommendation', requireRole('ADMIN', 'STAFF'), async (req, res) => {
     try {
         const { label } = req.body;
         const VALID_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -771,7 +780,7 @@ router.post('/:id/import-recommendation', async (req, res) => {
 });
 
 // POST /api/quotations/:id/items/reorder
-router.post('/:id/items/reorder', async (req, res) => {
+router.post('/:id/items/reorder', requireRole('ADMIN', 'STAFF'), async (req, res) => {
     try {
         const { itemIds } = req.body; // ordered array of item IDs
 
@@ -790,7 +799,7 @@ router.post('/:id/items/reorder', async (req, res) => {
 });
 
 // GET /api/quotations/:id/pdf?mode=all_recs|final
-router.get('/:id/pdf', async (req, res) => {
+router.get('/:id/pdf', requireRole('ADMIN', 'STAFF'), async (req, res) => {
     try {
         const { generatePDF } = require('../utils/pdfGenerator');
         const mode = req.query.mode || 'final';
@@ -825,7 +834,7 @@ router.get('/:id/pdf', async (req, res) => {
 });
 
 // POST /api/quotations/:id/send-email
-router.post('/:id/send-email', async (req, res) => {
+router.post('/:id/send-email', requireRole('ADMIN', 'STAFF'), async (req, res) => {
     try {
         await prisma.quotation.update({ where: { id: req.params.id }, data: { status: 'SENT' } });
         res.json({ message: 'Email sent (mark as SENT)' });

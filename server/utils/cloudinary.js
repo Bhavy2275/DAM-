@@ -16,7 +16,7 @@ const uploadProductFiles = multer({
             const isPolar = file.fieldname === 'polarDiagram';
             return {
                 folder:          isPolar ? 'dam-lighting/polar-diagrams' : 'dam-lighting/product-images',
-                allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'svg', 'pdf'],
+                allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
                 transformation:  [{ quality: 'auto', fetch_format: 'auto' }],
                 // Unique filename to avoid collisions
                 public_id: `${file.fieldname}-${Date.now()}-${Math.random().toString(36).slice(2)}`,

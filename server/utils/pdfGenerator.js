@@ -47,11 +47,33 @@ function macadamCell(step) {
     + `<div style="font-size:6.5px;color:#555;text-align:center;margin-top:1px">(${pct})</div>`;
 }
 
+const ALLOWED_IMAGE_HOSTS = ['res.cloudinary.com', 'damlighting.com', 'www.damlighting.com'];
+
+function isAllowedUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    // Block localhost and private IPs
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return false;
+    if (hostname.startsWith('10.') || hostname.startsWith('192.168.') || hostname.startsWith('169.254.')) return false;
+    if (hostname.startsWith('172.')) {
+      const second = parseInt(hostname.split('.')[1], 10);
+      if (second >= 16 && second <= 31) return false;
+    }
+    // Only allow known hosts
+    return ALLOWED_IMAGE_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h));
+  } catch { return false; }
+}
+
 function toBase64(imageUrl) {
   if (!imageUrl) return Promise.resolve(null);
   
   // Handle HTTP/HTTPS URLs
   if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+    if (!isAllowedUrl(imageUrl)) {
+      console.warn('Blocked disallowed image URL:', imageUrl);
+      return Promise.resolve(null);
+    }
     return new Promise((resolve) => {
       let resolved = false;
       const timer = setTimeout(() => {
@@ -396,7 +418,7 @@ async function finalTableHTML(quotation) {
   const sPolar = !hCols['Polar Diagram'];
   const sProdImg = !hCols['Product Image'];
 
-  const sLp = !hCols['LP (₹)'];
+  const sLp = !hCols['Listing Price'];
   const sLp18 = !hCols['LP+18%'];
   const sDisc = !hCols['Disc %'];
   const sRate = !hCols['Rate (₹)'];
@@ -408,31 +430,31 @@ async function finalTableHTML(quotation) {
   const banner = esc(quotation.projectName || "") + " \u2014 " + esc(quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
   const specHeaders = [];
-  if (sSno) specHeaders.push(`<th rowspan="2" style="${TH}">S.NO</th>`);
-  if (sLayout) specHeaders.push(`<th rowspan="2" style="${TH}">LAYOUT<br>CODE</th>`);
-  if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
+  if (sSno) specHeaders.push(`<th style="${TH}">S.NO</th>`);
+  if (sLayout) specHeaders.push(`<th style="${TH}">LAYOUT<br>CODE</th>`);
+  if (sCode) specHeaders.push(`<th style="${TH}">PRODUCT<br>CODE</th>`);
   if (sDesc) {
-    specHeaders.push(`<th rowspan="2" style="${TH}width:140px">PRODUCT DESCRIPTION</th>`);
+    specHeaders.push(`<th style="${TH}width:140px">PRODUCT DESCRIPTION</th>`);
   }
-  if (sPolar) specHeaders.push(`<th rowspan="2" style="${TH}">POLAR<br>DIAGRAM</th>`);
-  if (sProdImg) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
+  if (sPolar) specHeaders.push(`<th style="${TH}">POLAR<br>DIAGRAM</th>`);
+  if (sProdImg) specHeaders.push(`<th style="${TH}">PRODUCT<br>IMAGE</th>`);
   if (sDesc) {
-    specHeaders.push(`<th rowspan="2" style="${TH}">BODY<br>COLOUR</th>`);
-    specHeaders.push(`<th rowspan="2" style="${TH}">REFLECTOR<br>COLOUR</th>`);
-    specHeaders.push(`<th rowspan="2" style="${TH}">COLOUR<br>TEMPERATURE</th>`);
-    specHeaders.push(`<th rowspan="2" style="${TH}">BEAM<br>ANGLE</th>`);
-    specHeaders.push(`<th rowspan="2" style="${TH}">CRI</th>`);
+    specHeaders.push(`<th style="${TH}">BODY<br>COLOUR</th>`);
+    specHeaders.push(`<th style="${TH}">REFLECTOR<br>COLOUR</th>`);
+    specHeaders.push(`<th style="${TH}">COLOUR<br>TEMPERATURE</th>`);
+    specHeaders.push(`<th style="${TH}">BEAM<br>ANGLE</th>`);
+    specHeaders.push(`<th style="${TH}">CRI</th>`);
   }
   const specColCount = specHeaders.length;
 
   const brandHeaders2 = [];
   if (sCode) brandHeaders2.push(`<th style="${TH}">PRODUCT<br>CODE</th>`);
+  if (sQty) brandHeaders2.push(`<th style="${TH}">QTY</th>`);
+  if (sUnit) brandHeaders2.push(`<th style="${TH}">UNIT</th>`);
   if (sLp) brandHeaders2.push(`<th style="${TH}">LIST<br>PRICE</th>`);
   if (sLp18) brandHeaders2.push(`<th style="${TH}">LISTING PRICE<br>+18%</th>`);
   if (sDisc) brandHeaders2.push(`<th style="${TH}">DISC<br>%</th>`);
   if (sRate) brandHeaders2.push(`<th style="${TH}">RATE</th>`);
-  if (sUnit) brandHeaders2.push(`<th style="${TH}">UNIT</th>`);
-  if (sQty) brandHeaders2.push(`<th style="${TH}">QTY</th>`);
   if (sMac) brandHeaders2.push(`<th style="${TH}">MACADAM<br>STEP</th>`);
   if (sAmt) brandHeaders2.push(`<th style="${TH}">AMOUNT</th>`);
   const brandColCount = brandHeaders2.length;
@@ -441,22 +463,14 @@ async function finalTableHTML(quotation) {
 <thead>
   <tr>
     ${specHeaders.join("")}
-    ${brandColCount > 0 ? `<th colspan="${brandColCount}" style="${TH_BRAND}">BRAND</th>` : ""}
+    ${brandHeaders2.join("")}
   </tr>
-  ${brandColCount > 0 ? `<tr>${brandHeaders2.join("")}</tr>` : ""}
 </thead>`;
 
   let rowsHTML = "";
   let globalIdx = 0;
 
   for (const group of groups) {
-    rowsHTML += `
-<tr>
-  <td colspan="${specColCount}" style="${TD}"></td>
-  <td colspan="${brandColCount}" style="${TD};color:#111;text-align:center;font-weight:700;font-size:8px;letter-spacing:0.8px">
-    ${group.brand || "BRAND"}
-  </td>
-</tr>`;
 
     for (const item of group.items) {
       const idx = items.indexOf(item);
@@ -470,9 +484,16 @@ async function finalTableHTML(quotation) {
         ? `<img src="${productB64s[idx]}" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto"/>`
         : "—";
 
-      const lp = item.finalListPrice != null ? fmt(item.finalListPrice) : "—";
       const gstMult = 1 + (Number(quotation.gstRate) || 18) / 100;
-      const lp18 = item.finalListPrice != null ? fmt(Number(item.finalListPrice) * gstMult) : "—";
+      const priceType = item.finalPriceType || 'LP';
+      // finalListPrice is always stored as NET (LP excl. GST).
+      // When user selected LP_INC, they typed the inclusive price; the net was back-calculated.
+      // In the PDF: LP column = net price (LP mode) OR the original inclusive price (LP_INC mode).
+      // LP+18% column always shows net × 1.18 (which equals what was originally typed in LP_INC mode).
+      const lpNet    = item.finalListPrice != null ? Number(item.finalListPrice) : null;
+      const lpIncVal = lpNet != null ? lpNet * gstMult : null;
+      const lp       = lpNet != null ? fmt(priceType === 'LP_INC' ? lpIncVal : lpNet) : "—";
+      const lp18     = lpNet != null ? fmt(lpIncVal)                                  : "—";
       const disc = item.finalDiscount != null ? item.finalDiscount + "%" : "—";
       const rate = item.finalRate != null ? fmt(item.finalRate) : "—";
       const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
@@ -497,12 +518,12 @@ async function finalTableHTML(quotation) {
           rowHtml += `<td style="${TD}text-align:center">${tagLines(item.cri)}</td>`;
       }
       if (sCode) rowHtml += `<td style="${TD}text-align:center;font-size:7px">${item.finalProductCode || "—"}</td>`;
+      if (sQty) rowHtml += `<td style="${TD}text-align:center;font-weight:700">${qty}</td>`;
+      if (sUnit) rowHtml += `<td style="${TD}text-align:center">${unit}</td>`;
       if (sLp) rowHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${lp}</td>`;
       if (sLp18) rowHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums;color:#555">${lp18}</td>`;
       if (sDisc) rowHtml += `<td style="${TD}text-align:center">${disc}</td>`;
       if (sRate) rowHtml += `<td style="${TD}text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${rate}</td>`;
-      if (sUnit) rowHtml += `<td style="${TD}text-align:center">${unit}</td>`;
-      if (sQty) rowHtml += `<td style="${TD}text-align:center;font-weight:700">${qty}</td>`;
       if (sMac) rowHtml += `<td style="${TD}text-align:center">${mac}</td>`;
       if (sAmt) rowHtml += `<td style="${TD}text-align:right;font-weight:700;color:#0D1E40;font-variant-numeric:tabular-nums">${amt}</td>`;
       rowHtml += `</tr>`;
@@ -641,9 +662,6 @@ async function allRecsTableHTML(quotation) {
     if (cl && cl.__hiddenCols) hCols = cl.__hiddenCols;
   } catch (e) {
     console.error("allRecsTableHTML customLabels parse error:", e.message);
-    if (typeof require !== 'undefined') {
-        require('fs').writeFileSync('temp_q_failed.json', JSON.stringify(quotation, null, 2));
-    }
   }
 
   try {
@@ -662,12 +680,14 @@ async function allRecsTableHTML(quotation) {
        console.warn("allRecsTableHTML: items exist but no activeLabels found (recommendations might be missing)");
     }
 
-    // ── thead — each rec: Macadam Step | Rate | Amount | Space Match % ──
+    // ── thead — each rec: QTY | Macadam Step | Space Match % | Rate | Amount ──
     const recHeaders = [];
+    if (sQty) recHeaders.push(`<th style="${TH}">QTY</th>`);
+    recHeaders.push(`<th style="${TH}">Disc %</th>`);
     if (sMac) recHeaders.push(`<th style="${TH}">Macadam<br>Step</th>`);
+    recHeaders.push(`<th style="${TH}">Space<br>Match (%)</th>`);
     if (sRate) recHeaders.push(`<th style="${TH}">RATE</th>`);
     if (sAmt) recHeaders.push(`<th style="${TH}">AMOUNT</th>`);
-    recHeaders.push(`<th style="${TH}">Space<br>Match (%)</th>`);
     const recColCount = recHeaders.length;
 
     const recTh1 = brandNames.map(b =>
@@ -679,12 +699,11 @@ async function allRecsTableHTML(quotation) {
     if (sSno) specHeaders.push(`<th rowspan="2" style="${TH}">S.NO</th>`);
     if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
     if (sDesc) {
-        specHeaders.push(`<th rowspan="2" style="${TH}">DESCRIPTION</th>`);
+        specHeaders.push(`<th rowspan="2" style="${TH};width:160px;white-space:normal">DESCRIPTION</th>`);
     }
     if (sPolar) specHeaders.push(`<th rowspan="2" style="${TH}">POLAR</th>`);
     if (sProdImg) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
     if (sUnit) specHeaders.push(`<th rowspan="2" style="${TH}">UNIT</th>`);
-    if (sQty) specHeaders.push(`<th rowspan="2" style="${TH}">QTY<br>(Approx)</th>`);
 
     const theadHTML = `
 <thead>
@@ -692,7 +711,9 @@ async function allRecsTableHTML(quotation) {
     ${specHeaders.join("")}
     ${recTh1}
   </tr>
-  <tr>${recTh2}</tr>
+  <tr>
+    ${recTh2}
+  </tr>
 </thead>`;
 
     const baseColCount = specHeaders.length;
@@ -709,25 +730,30 @@ async function allRecsTableHTML(quotation) {
       ? `<img src="${productB64s[idx]}" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto"/>`
       : "—";
     const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
-    const qty = item.finalQuantity != null ? item.finalQuantity : "—";
+    const qRec = (item.recommendations || []).find(r => (r.quantity || 0) > 0);
+    const qty = (qRec && qRec.quantity > 0) ? qRec.quantity : (item.finalQuantity != null && item.finalQuantity > 0 ? item.finalQuantity : "—");
 
     const recCells = activeLabels.map(label => {
       const r = (item.recommendations || []).find(r => r.label === label);
       if (!r || !r.brandName) {
         let emptyHtml = "";
+        if (sQty) emptyHtml += `<td style="${TD}text-align:center">—</td>`;
+        emptyHtml += `<td style="${TD}text-align:center">—</td>`;
         if (sMac) emptyHtml += `<td style="${TD}text-align:center">—</td>`;
+        emptyHtml += `<td style="${TD}text-align:center">—</td>`;
         if (sRate) emptyHtml += `<td style="${TD}text-align:right">—</td>`;
         if (sAmt) emptyHtml += `<td style="${TD}text-align:right">—</td>`;
-        emptyHtml += `<td style="${TD}text-align:center">—</td>`;
         return emptyHtml;
       }
       const mac = macadamCell(r.macadamStep);
       const space = r.macadamStep ? (MACADAM_MAP[r.macadamStep] || "—") : "—";
       let cellHtml = "";
+      if (sQty) cellHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40">${r.quantity || 0}</td>`;
+      cellHtml += `<td style="${TD}text-align:center;font-weight:600;color:#0D1E40">${r.discountPercent != null ? r.discountPercent + '%' : '0%'}</td>`;
       if (sMac) cellHtml += `<td style="${TD}text-align:center">${mac}</td>`;
+      cellHtml += `<td style="${TD}text-align:center;font-size:7.5px;font-weight:600;color:#0D1E40">${space}</td>`;
       if (sRate) cellHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${fmt(r.rate)}</td>`;
       if (sAmt) cellHtml += `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${fmt(r.amount)}</td>`;
-      cellHtml += `<td style="${TD}text-align:center;font-size:7.5px;font-weight:600;color:#0D1E40">${space}</td>`;
       return cellHtml;
     }).join("");
 
@@ -740,7 +766,6 @@ async function allRecsTableHTML(quotation) {
     if (sPolar) rowHtml += `<td style="${TD}text-align:center;padding:3px">${polar}</td>`;
     if (sProdImg) rowHtml += `<td style="${TD}text-align:center;padding:3px">${prodImg}</td>`;
     if (sUnit) rowHtml += `<td style="${TD}text-align:center;">${unit}</td>`;
-    if (sQty) rowHtml += `<td style="${TD}text-align:center;font-weight:700;">${qty}</td>`;
     rowHtml += recCells;
     rowHtml += `</tr>`;
     rowsHTML += rowHtml;
@@ -757,10 +782,12 @@ async function allRecsTableHTML(quotation) {
     const recAmtCells = activeLabels.map(label => {
       const t = recTotals.find(r => r.label === label);
       let cells = "";
+      if (sQty) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
+      cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`; // Discount % empty
       if (sMac) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
+      cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`; // Space Match empty
       if (sRate) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
       if (sAmt) cells += `<td style="${TD}text-align:right;font-weight:700;background:${def.bg};color:${def.color};font-variant-numeric:tabular-nums">${fmt(t[def.key])}</td>`;
-      cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
       return cells;
     }).join("");
     tfootHTML += `
@@ -793,14 +820,13 @@ async function allRecsTableHTML(quotation) {
     const item = items[idx];
     const bg = idx % 2 === 0 ? "#ffffff" : "#f7f9fc";
     const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
-    const qty = item.finalQuantity != null ? item.finalQuantity : "—";
+    const qRecSummary = (item.recommendations || []).find(r => (r.quantity || 0) > 0);
+    const qty = (qRecSummary && qRecSummary.quantity > 0) ? qRecSummary.quantity : (item.finalQuantity != null && item.finalQuantity > 0 ? item.finalQuantity : "—");
 
     const recSumCells = activeLabels.map(label => {
       const r = (item.recommendations || []).find(r => r.label === label);
-      const brand = r && r.brandName ? r.brandName : "—";
       const amt = r && r.amount ? fmt(r.amount) : "—";
-      return `<td style="${TD}font-size:7px;text-align:center">${brand}</td>
-              <td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${amt}</td>`;
+      return `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${amt}</td>`;
     }).join("");
 
     summaryRows += `
@@ -814,10 +840,7 @@ async function allRecsTableHTML(quotation) {
   }
 
   const summaryRecTh = activeLabels.map((l, i) =>
-    `<th colspan="2" style="${TH_BRAND}">RECOMMENDATION ${["A", "B", "C", "D", "E", "F"][i]}</th>`
-  ).join("");
-  const summaryRecSubTh = activeLabels.map(() =>
-    `<th style="${TH}">BRAND</th><th style="${TH}">AMOUNT</th>`
+    `<th style="${TH}">AMOUNT (${["A", "B", "C", "D", "E", "F"][i]})</th>`
   ).join("");
 
   const summaryTotalRows = [
@@ -827,8 +850,7 @@ async function allRecsTableHTML(quotation) {
   ].map(def => {
     const cells = activeLabels.map(label => {
       const t = recTotals.find(r => r.label === label);
-      return `<td style="${TD}background:${def.bg};color:${def.color}"></td>
-              <td style="${TD}text-align:right;font-weight:700;background:${def.bg};color:${def.color};font-variant-numeric:tabular-nums">${fmt(t[def.key])}</td>`;
+      return `<td style="${TD}text-align:right;font-weight:700;background: ${def.bg};color:${def.color};font-variant-numeric:tabular-nums">${fmt(t[def.key])}</td>`;
     }).join("");
     return `<tr>
       <td colspan="4" style="${TD}text-align:right;font-weight:700;background:${def.bg};color:${def.color};font-size:8.5px">${def.label}</td>
@@ -846,10 +868,6 @@ async function allRecsTableHTML(quotation) {
         <th style="${TH}">Unit</th>
         <th style="${TH}">Product<br>Code</th>
         ${summaryRecTh}
-      </tr>
-      <tr>
-        <th colspan="4" style="${TH}"></th>
-        ${summaryRecSubTh}
       </tr>
     </thead>
     <tbody>${summaryRows}</tbody>
@@ -898,11 +916,6 @@ async function allRecsTableHTML(quotation) {
     return mainTable + summaryTable + addOnsTable;
   } catch (err) {
     console.error("allRecsTableHTML ERROR:", err.message);
-    try {
-        const logFile = path.join(process.cwd(), "pdf_error_trace.log");
-        const logMsg = `[${new Date().toISOString()}] ERROR: ${err.stack}\nQUOTATION ID: ${quotation.id}\n---\n`;
-        fs.appendFileSync(logFile, logMsg);
-    } catch(e) {}
     throw err;
   }
 }

@@ -173,7 +173,7 @@ export default function CreateQuotation() {
                                 {f.type === 'select' ? (
                                     <select value={form.clientId} onChange={e => updateField('clientId', e.target.value)} className="input-dark">
                                         <option value="">Select Client</option>
-                                        {clients.map(c => <option key={c.id} value={c.id}>{c.name} — {c.company}</option>)}
+                                        {clients.map(c => <option key={c.id} value={c.id}>{c.fullName} — {c.companyName}</option>)}
                                     </select>
                                 ) : (
                                     <input type={f.type || 'text'} value={form[f.key]} onChange={e => updateField(f.key, f.type === 'number' ? parseFloat(e.target.value) : e.target.value)}
