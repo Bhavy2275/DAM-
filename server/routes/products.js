@@ -134,7 +134,7 @@ function runUpload(req, res, next) {
 }
 
 // POST /api/products — accepts multipart/form-data with optional Cloudinary uploads
-router.post('/', requireRole('ADMIN', 'STAFF'), runUpload, validateBody(productSchema), async (req, res) => {
+router.post('/', requireRole('ADMIN'), runUpload, validateBody(productSchema), async (req, res) => {
     try {
         const product = await prisma.product.create({ data: buildData(req.body, req.files) });
         res.status(201).json(serializeProduct(product));
@@ -148,9 +148,18 @@ router.post('/', requireRole('ADMIN', 'STAFF'), runUpload, validateBody(productS
 // PUT /api/products/:id — accepts multipart/form-data with optional Cloudinary uploads
 router.put('/:id', requireRole('ADMIN', 'STAFF'), runUpload, validateBody(productSchema.partial()), async (req, res) => {
     try {
+        const data = buildData(req.body, req.files);
+        
+        // 🔒 Only ADMIN can change Product Code and Base Price
+        if (req.user.role !== 'ADMIN') {
+            delete data.productCode;
+            delete data.basePrice;
+            delete data.listPrice; // Also synced to basePrice
+        }
+
         const product = await prisma.product.update({
             where: { id: req.params.id },
-            data: buildData(req.body, req.files),
+            data,
         });
         res.json(serializeProduct(product));
     } catch (error) {

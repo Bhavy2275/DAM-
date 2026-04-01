@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Eye, Edit, Download, Copy, Trash2, Loader2, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 import { formatINR } from '../lib/formatCurrency';
 import { fadeUp, staggerContainer } from '../lib/animations';
 import StatusBadge from '../components/StatusBadge';
@@ -20,6 +21,7 @@ function useDebounce(value, delay) {
 }
 
 export default function Quotations() {
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [quotations, setQuotations] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -215,12 +217,14 @@ export default function Quotations() {
                                         <Copy size={16} />
                                     </button>
                                     {/* Delete */}
-                                    <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(q); }}
-                                        title="Delete" style={{ padding: 8, borderRadius: 8, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
-                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-danger)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
-                                        <Trash2 size={16} />
-                                    </button>
+                                    {user?.role === 'ADMIN' && (
+                                        <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(q); }}
+                                            title="Delete" style={{ padding: 8, borderRadius: 8, color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: 'all 0.15s' }}
+                                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-danger)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.transform = 'scale(1)'; }}>
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

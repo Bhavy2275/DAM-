@@ -141,7 +141,13 @@ export default function Settings() {
                                         </div>
                                     ))}
                                 </div>
-                                <button onClick={handleSave} className="btn-primary" style={{ marginTop: 24 }}><Save size={16} /> Save Changes</button>
+                                {user?.role === 'ADMIN' ? (
+                                    <button onClick={handleSave} className="btn-primary" style={{ marginTop: 24 }}><Save size={16} /> Save Changes</button>
+                                ) : (
+                                    <div style={{ marginTop: 24, padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(245,166,35,0.05)', border: '1px solid rgba(245,166,35,0.1)', color: 'var(--color-accent)', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                        <X size={14} /> Admin access required to change
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -162,7 +168,13 @@ export default function Settings() {
                                         </div>
                                     ))}
                                 </div>
-                                <button onClick={handleSave} className="btn-primary" style={{ marginTop: 24 }}><Save size={16} /> Save Changes</button>
+                                {user?.role === 'ADMIN' ? (
+                                    <button onClick={handleSave} className="btn-primary" style={{ marginTop: 24 }}><Save size={16} /> Save Changes</button>
+                                ) : (
+                                    <div style={{ marginTop: 24, padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(245,166,35,0.05)', border: '1px solid rgba(245,166,35,0.1)', color: 'var(--color-accent)', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                        <X size={14} /> Admin access required to change
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -179,7 +191,13 @@ export default function Settings() {
                                         <textarea id="settings-defaultTerms" name="defaultTerms" value={settings.defaultTerms || ''} onChange={e => setSettings({ ...settings, defaultTerms: e.target.value })} className="input-dark" style={{ height: 260, resize: 'none' }} />
                                     </div>
                                 </div>
-                                <button onClick={handleSave} className="btn-primary" style={{ marginTop: 24 }}><Save size={16} /> Save Changes</button>
+                                {user?.role === 'ADMIN' ? (
+                                    <button onClick={handleSave} className="btn-primary" style={{ marginTop: 24 }}><Save size={16} /> Save Changes</button>
+                                ) : (
+                                    <div style={{ marginTop: 24, padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(245,166,35,0.05)', border: '1px solid rgba(245,166,35,0.1)', color: 'var(--color-accent)', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                        <X size={14} /> Admin access required to change
+                                    </div>
+                                )}
                             </div>
                         )}
 

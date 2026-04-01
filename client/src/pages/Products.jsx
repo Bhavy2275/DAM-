@@ -244,9 +244,11 @@ export default function Products() {
                         {filtered.length} product{filtered.length !== 1 ? 's' : ''} · Add once, reuse across all quotations
                     </p>
                 </div>
-                <button onClick={openAdd} className="btn-primary">
-                    <Plus size={16} /> Add Product
-                </button>
+                {user?.role === 'ADMIN' && (
+                    <button onClick={openAdd} className="btn-primary">
+                        <Plus size={16} /> Add Product
+                    </button>
+                )}
             </motion.div>
 
             {/* Search + Filter Bar */}
@@ -408,9 +410,13 @@ export default function Products() {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
                                     <div>
                                         <label htmlFor="prod-productCode" className="label">Product Code *</label>
-                                        <EditableField style={{ height: 36 }}>
-                                            <input id="prod-productCode" name="productCode" type="text" value={form.productCode} onChange={e => updateField('productCode', e.target.value)}
-                                                style={{ ...inputStyle }} placeholder="e.g. C1, PF1" />
+                                        <EditableField style={{ height: 36, opacity: user?.role !== 'ADMIN' ? 0.6 : 1 }}>
+                                            <input id="prod-productCode" name="productCode" type="text" value={form.productCode} 
+                                                onChange={e => updateField('productCode', e.target.value)}
+                                                disabled={user?.role !== 'ADMIN'}
+                                                style={{ ...inputStyle, cursor: user?.role !== 'ADMIN' ? 'not-allowed' : 'text' }} 
+                                                placeholder="e.g. C1, PF1" 
+                                            />
                                         </EditableField>
                                     </div>
                                     <div>
@@ -440,11 +446,12 @@ export default function Products() {
                                                 <option value="LP">Listing price (NET)</option>
                                                 <option value="LP_GST">LISTING PRICE + 18% (INC)</option>
                                             </select>
-                                            <EditableField style={{ height: 36, flex: 1 }}>
+                                            <EditableField style={{ height: 36, flex: 1, opacity: user?.role !== 'ADMIN' ? 0.6 : 1 }}>
                                                 <input 
                                                     id="prod-price-val"
                                                     type="number" min="0" step="0.01" 
                                                     value={priceValue} 
+                                                    disabled={user?.role !== 'ADMIN'}
                                                     onChange={e => {
                                                         const val = e.target.value;
                                                         setPriceValue(val);
@@ -456,7 +463,7 @@ export default function Products() {
                                                             updateField('basePrice', (num / 1.18).toFixed(2));
                                                         }
                                                     }}
-                                                    style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }} 
+                                                    style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums', cursor: user?.role !== 'ADMIN' ? 'not-allowed' : 'text' }} 
                                                     placeholder="0.00" 
                                                 />
                                             </EditableField>

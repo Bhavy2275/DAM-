@@ -28,6 +28,9 @@ const { requireRole } = require('./middleware/role');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Essential for rate limiting behind a proxy (Railway, Vercel, etc.)
+app.set('trust proxy', 1);
+
 // Custom CORS middleware for production reliability
 const ALLOWED_ORIGINS = [
   'https://www.damlightings.com',
