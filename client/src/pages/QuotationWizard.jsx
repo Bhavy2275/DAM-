@@ -1383,7 +1383,9 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                 const disc = parseFloat(key === 'finalDiscount' ? val : item.finalDiscount) || 0;
                 const qty = parseFloat(key === 'finalQuantity' ? val : item.finalQuantity) || 0;
                 updated.finalRate = calcRate(lp, disc);
+                updated.finalRateInc = parseFloat((updated.finalRate * 1.18).toFixed(2));
                 updated.finalAmount = calcAmount(updated.finalRate, qty);
+                updated.finalAmountInc = parseFloat((updated.finalAmount * 1.18).toFixed(2));
             }
             
             // Auto-sync to Rec A
@@ -1391,6 +1393,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                 finalBrandName: 'brandName', finalProductCode: 'productCode',
                 finalListPrice: 'listPrice', finalDiscount: 'discountPercent',
                 finalUnit: 'unit', finalQuantity: 'quantity', finalMacadamStep: 'macadamStep',
+                finalPriceType: 'priceType',
             };
             const rKey = recKeyMap[key];
             if (rKey) {
@@ -1399,12 +1402,13 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                     A: recalcRec({
                         ...updated.recommendations['A'],
                         [rKey]: val,
-                        ...(key === 'finalListPrice' || key === 'finalDiscount' || key === 'finalQuantity' ? {
+                        ...(key === 'finalListPrice' || key === 'finalDiscount' || key === 'finalQuantity' || key === 'finalPriceType' ? {
                             rate: updated.finalRate,
                             amount: updated.finalAmount,
                             listPrice: updated.finalListPrice || 0,
                             discountPercent: updated.finalDiscount || 0,
-                            quantity: updated.finalQuantity || 0
+                            quantity: updated.finalQuantity || 0,
+                            priceType: updated.finalPriceType || 'LP'
                         } : {})
                     })
                 };
@@ -1418,8 +1422,16 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
         setItems(prev => prev.map((it, i) => i !== idx ? it : { ...it, ...updatedItem }));
     };
 
-    const subtotal = items.reduce((acc, it) => acc + (parseFloat(it.finalAmount) || 0), 0);
-    const gstAmt = subtotal * (gstRate / 100);
+    const subtotal = items.reduce((acc, it) => {
+        const amt = parseFloat(it.finalAmount) || 0;
+        const isInc = it.finalPriceType === 'LP_INC';
+        return acc + (isInc ? amt * 1.18 : amt);
+    }, 0);
+    const gstAmt = items.reduce((acc, it) => {
+        const amt = parseFloat(it.finalAmount) || 0;
+        const isInc = it.finalPriceType === 'LP_INC';
+        return acc + (isInc ? 0 : amt * (gstRate / 100));
+    }, 0);
     const grandTotal = subtotal + gstAmt;
 
     return (
@@ -1707,7 +1719,19 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                             </EditableField>
                                         </td>
                                         <td style={{ padding: '8px 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
-                                            {item.finalRate ? formatINR(parseFloat(item.finalRate)) : '—'}
+                                            {(() => {
+                                                const isInc = item.finalPriceType === 'LP_INC';
+                                                const rate = parseFloat(item.finalRate) || 0;
+                                                const rateInc = parseFloat(item.finalRateInc) || (rate * 1.18).toFixed(2);
+                                                return (
+                                                    <div>
+                                                        <div>{formatINR(parseFloat(isInc ? rateInc : rate))}</div>
+                                                        <div style={{ fontSize: 8, fontWeight: 400, color: 'var(--color-text-muted)', marginTop: 1, textTransform: 'uppercase' }}>
+                                                            {isInc ? 'NET: ' : 'INC: '}{formatINR(parseFloat(isInc ? rate : rateInc))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         <td style={{ padding: '8px 6px', verticalAlign: 'middle' }}>
                                             <FilterField style={{ height: 28 }}>
@@ -1741,7 +1765,19 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                             </EditableField>
                                         </td>
                                         <td style={{ padding: '8px 6px', fontWeight: 700, color: 'var(--color-accent)', fontSize: 12, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
-                                            {item.finalAmount ? formatINR(parseFloat(item.finalAmount)) : '—'}
+                                            {(() => {
+                                                const isInc = item.finalPriceType === 'LP_INC';
+                                                const amt = parseFloat(item.finalAmount) || 0;
+                                                const amtInc = parseFloat(item.finalAmountInc) || (amt * 1.18).toFixed(2);
+                                                return (
+                                                    <div>
+                                                        <div>{formatINR(parseFloat(isInc ? amtInc : amt))}</div>
+                                                        <div style={{ fontSize: 8, fontWeight: 400, color: 'var(--color-text-muted)', marginTop: 1, textTransform: 'uppercase' }}>
+                                                            {isInc ? 'NET: ' : 'INC: '}{formatINR(parseFloat(isInc ? amt : amtInc))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         {customCols?.map(col => {
                                             const cfVal = (item.customFields || {})[col.id];

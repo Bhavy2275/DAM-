@@ -96,12 +96,24 @@ export default function QuotationDetail() {
 
     // Totals per recommendation label
     const recTotals = usedLabels.map(label => {
-        const sum = quotation.lineItems.reduce((acc, item) => {
-            const rec = (item.recommendations || []).find(r => r.label === label);
-            return acc + (rec?.amount || 0);
-        }, 0);
-        const gst = sum * (quotation.gstRate / 100);
-        return { label, sum, gst, total: sum + gst };
+        let displaySum = 0;
+        let residualGst = 0;
+        quotation.lineItems.forEach(item => {
+            const r = (item.recommendations || []).find(r => r.label === label);
+            if (r) {
+                const amt = parseFloat(r.amount) || 0;
+                const isInc = r.priceType === 'LP_INC';
+                const gstMult = (quotation.gstRate || 18) / 100;
+                
+                if (isInc) {
+                    displaySum += amt * (1 + gstMult);
+                } else {
+                    displaySum += amt;
+                    residualGst += amt * gstMult;
+                }
+            }
+        });
+        return { label, sum: displaySum, gst: residualGst, total: displaySum + residualGst };
     });
 
     const customCols = (() => {
@@ -120,8 +132,22 @@ export default function QuotationDetail() {
 
 
     // Final quote totals
-    const finalSubtotal = quotation.lineItems.reduce((acc, i) => acc + (i.finalAmount || 0), 0);
-    const finalGst      = finalSubtotal * (quotation.gstRate / 100);
+    let finalSubtotal = 0;
+    let finalGst      = 0;
+    quotation.lineItems.forEach(item => {
+        if (item.finalAmount) {
+            const isInc = item.finalPriceType === 'LP_INC';
+            const amt = parseFloat(item.finalAmount);
+            const gstMult = (quotation.gstRate || 18) / 100;
+
+            if (isInc) {
+                finalSubtotal += amt * (1 + gstMult);
+            } else {
+                finalSubtotal += amt;
+                finalGst      += amt * gstMult;
+            }
+        }
+    });
     const finalGrandTotal = finalSubtotal + finalGst;
 
     const grandTotal = finalGrandTotal || recTotals[0]?.total || 0;
@@ -328,8 +354,38 @@ export default function QuotationDetail() {
                                                 <td key={`${label}-brand`} style={tdStyle({ fontSize: 11, borderRight: '1px solid var(--color-border)' })}>{rec?.brandName || '—'}</td>,
                                                 <td key={`${label}-qty`} style={tdStyle({ textAlign: 'center', borderRight: '1px solid var(--color-border)' })}>{rec?.quantity ?? '—'}</td>,
                                                 <td key={`${label}-disc`} style={tdStyle({ textAlign: 'center', borderRight: '1px solid var(--color-border)', fontSize: 11 })}>{rec?.discountPercent != null ? `${rec.discountPercent}%` : '—'}</td>,
-                                                <td key={`${label}-rate`} style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>{rec?.rate != null ? formatINR(rec.rate) : '—'}</td>,
-                                                <td key={`${label}-amt`} style={tdStyle({ textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>{rec?.amount != null ? formatINR(rec.amount) : '—'}</td>,
+                                                <td key={`${label}-rate`} style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>
+                                                    {(() => {
+                                                        if (!rec?.rate) return '—';
+                                                        const isInc = rec.priceType === 'LP_INC';
+                                                        const rate = parseFloat(rec.rate);
+                                                        const rateInc = rate * 1.18;
+                                                        return (
+                                                            <div>
+                                                                <div style={{ fontWeight: 600 }}>{formatINR(isInc ? rateInc : rate)}</div>
+                                                                <div style={{ fontSize: 9, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                                                    {isInc ? 'NET: ' : 'INC: '}{formatINR(isInc ? rate : rateInc)}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </td>,
+                                                <td key={`${label}-amt`} style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>
+                                                    {(() => {
+                                                        if (!rec?.amount) return '—';
+                                                        const isInc = rec.priceType === 'LP_INC';
+                                                        const amt = parseFloat(rec.amount);
+                                                        const amtInc = amt * 1.18;
+                                                        return (
+                                                            <div>
+                                                                <div style={{ fontWeight: 700 }}>{formatINR(isInc ? amtInc : amt)}</div>
+                                                                <div style={{ fontSize: 9, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                                                    {isInc ? 'NET: ' : 'INC: '}{formatINR(isInc ? amt : amtInc)}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </td>,
                                                 <td key={`${label}-mac`} style={tdStyle({ borderRight: '2px solid var(--color-border)' })}>
                                                     {rec?.macadamStep
                                                         ? <MacadamBadge step={rec.macadamStep} showSpace />
@@ -403,16 +459,16 @@ export default function QuotationDetail() {
                         }}>
                             <colgroup>
                                 <col style={{ width: 44 }} />
+                                <col style={{ width: 110 }} />
+                                <col style={{ width: 200 }} />
                                 <col style={{ width: 100 }} />
-                                <col style={{ width: 175 }} />
-                                <col style={{ width: 90 }} />
-                                <col style={{ width: 85 }} />
                                 <col style={{ width: 95 }} />
+                                {!hiddenCols['LP+18%'] && <col style={{ width: 140 }} />}
+                                <col style={{ width: 80 }} />
+                                <col style={{ width: 105 }} />
                                 <col style={{ width: 65 }} />
-                                <col style={{ width: 95 }} />
                                 <col style={{ width: 65 }} />
-                                <col style={{ width: 65 }} />
-                                <col style={{ width: 100 }} />
+                                <col style={{ width: 110 }} />
                                 <col style={{ width: 105 }} />
                                 {customCols.map(c => <col key={c.id} style={{ width: 85 }} />)}
                             </colgroup>
@@ -460,10 +516,40 @@ export default function QuotationDetail() {
                                         <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalListPrice != null ? formatINR(item.finalListPrice) : '—'}</td>
                                         {!hiddenCols['LP+18%'] && <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalListPrice != null ? formatINR(item.finalListPrice * (1 + (quotation.gstRate || 18) / 100)) : '—'}</td>}
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalDiscount != null ? `${item.finalDiscount}%` : '—'}</td>
-                                        <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>{item.finalRate != null ? formatINR(item.finalRate) : '—'}</td>
+                                        <td style={tdStyle({ textAlign: 'right', fontVariantNumeric: 'tabular-nums' })}>
+                                            {(() => {
+                                                if (item.finalRate == null) return '—';
+                                                const isInc = item.finalPriceType === 'LP_INC';
+                                                const rate = parseFloat(item.finalRate);
+                                                const rateInc = rate * (1 + (quotation.gstRate || 18) / 100);
+                                                return (
+                                                    <div>
+                                                        <div style={{ fontWeight: 600 }}>{formatINR(isInc ? rateInc : rate)}</div>
+                                                        <div style={{ fontSize: 9, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                                            {isInc ? 'NET: ' : 'INC: '}{formatINR(isInc ? rate : rateInc)}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalUnit === 'METERS' ? 'Mtr.' : 'Nos.'}</td>
                                         <td style={tdStyle({ textAlign: 'center' })}>{item.finalQuantity != null ? item.finalQuantity : '—'}</td>
-                                        <td style={tdStyle({ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>{item.finalAmount != null ? formatINR(item.finalAmount) : '—'}</td>
+                                        <td style={tdStyle({ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' })}>
+                                            {(() => {
+                                                if (item.finalAmount == null) return '—';
+                                                const isInc = item.finalPriceType === 'LP_INC';
+                                                const amt = parseFloat(item.finalAmount);
+                                                const amtInc = amt * (1 + (quotation.gstRate || 18) / 100);
+                                                return (
+                                                    <div>
+                                                        <div style={{ fontWeight: 700 }}>{formatINR(isInc ? amtInc : amt)}</div>
+                                                        <div style={{ fontSize: 9, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                                            {isInc ? 'NET: ' : 'INC: '}{formatINR(isInc ? amt : amtInc)}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
                                         <td style={tdStyle({ textAlign: 'center', borderRight: customCols.length ? '1px solid var(--color-border)' : 'none' })}><MacadamBadge step={item.finalMacadamStep} showSpace /></td>
                                         {customCols.map((c, i) => {
                                             const cf = (() => {

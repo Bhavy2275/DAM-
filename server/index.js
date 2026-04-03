@@ -80,27 +80,27 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(path.join(__dirname, 'uploads')));
 
-// Rate limiting
+// Relaxed rate limiting for development to prevent 429 errors during hot reloads
+const isDev = process.env.NODE_ENV !== 'production';
+
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  windowMs: isDev ? 1 * 60 * 1000 : 15 * 60 * 1000, 
+  max: isDev ? 100 : 10,
   message: { error: 'Too many login attempts, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 300,
+  windowMs: 60 * 1000,
+  max: isDev ? 1000 : 300,
   message: { error: 'Too many requests, please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-
-
-
 // Routes
-app.use('/api/auth', loginLimiter);
+// Note: Apply strict limiter ONLY to the login route, not the whole auth prefix
+app.post('/api/auth/login', loginLimiter);
 app.use('/api', apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);

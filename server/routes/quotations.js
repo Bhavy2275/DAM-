@@ -40,8 +40,10 @@ const quoteItemSchema = z.object({
     finalListPrice: z.union([z.number(), z.string()]).optional().nullable(),
     finalDiscount: z.union([z.number(), z.string()]).optional().nullable(),
     finalRate: z.union([z.number(), z.string()]).optional().nullable(),
+    finalRateInc: z.union([z.number(), z.string()]).optional().nullable(),
     finalQuantity: z.union([z.number(), z.string()]).optional().nullable(),
     finalAmount: z.union([z.number(), z.string()]).optional().nullable(),
+    finalAmountInc: z.union([z.number(), z.string()]).optional().nullable(),
     finalMacadamStep: z.string().max(20).optional().nullable(),
     finalUnit: z.string().max(50).optional().nullable(),
     finalPriceType: z.string().max(20).optional().nullable(),
@@ -253,6 +255,7 @@ router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
                                         quantity: parseFloat(r.quantity) || 0,
                                         amount: parseFloat(r.amount) || 0,
                                         macadamStep: r.macadamStep || '',
+                                        priceType: r.priceType || 'LP'
                                     }))
                                 });
                             }

@@ -367,8 +367,8 @@ async function finalTableHTML(quotation, logoB64) {
   const hasCustomCols = customCols.length > 0;
 
   // Fallback to Rec A if no final amounts
-  let subtotal = items.reduce((s, i) => s + (Number(i.finalAmount) || 0), 0);
-  if (subtotal === 0) {
+  const initialSum = items.reduce((s, i) => s + (Number(i.finalAmount) || 0), 0);
+  if (initialSum === 0) {
     items = items.map(item => {
       const recA = (item.recommendations || []).find(r => r.label === "A");
       if (recA) return Object.assign({}, item, {
@@ -384,12 +384,27 @@ async function finalTableHTML(quotation, logoB64) {
       });
       return item;
     });
-    subtotal = items.reduce((s, i) => s + (Number(i.finalAmount) || 0), 0);
   }
 
+  let finalSub  = 0;
+  let finalGst  = 0;
   const gstRate = quotation.gstRate || 18;
-  const gstAmt = subtotal * (gstRate / 100);
-  const grand = subtotal + gstAmt;
+  const gstMult = gstRate / 100;
+
+  items.forEach(i => {
+    const amt = parseFloat(i.finalAmount) || 0;
+    const isInc = i.finalPriceType === 'LP_INC';
+    if (isInc) {
+      finalSub += amt * (1 + gstMult);
+    } else {
+      finalSub += amt;
+      finalGst += amt * gstMult;
+    }
+  });
+
+  const subtotal = finalSub;
+  const gstAmt   = finalGst;
+  const grand    = subtotal + gstAmt;
 
   const [polarB64s, productB64s] = await Promise.all([
     Promise.all(items.map(i => toBase64(i.polarDiagramUrl))),
@@ -495,11 +510,20 @@ async function finalTableHTML(quotation, logoB64) {
       const lp = lpNet != null ? fmt(priceType === 'LP_INC' ? lpIncVal : lpNet) : "—";
       const lp18 = lpNet != null ? fmt(lpIncVal) : "—";
       const disc = item.finalDiscount != null ? item.finalDiscount + "%" : "—";
-      const rate = item.finalRate != null ? fmt(item.finalRate) : "—";
+      
+      const isInc = priceType === 'LP_INC';
+      const rawRate = parseFloat(item.finalRate) || 0;
+      const rawAmt = parseFloat(item.finalAmount) || 0;
+      
+      const rateVal = item.finalRate != null ? (isInc ? rawRate * gstMult : rawRate) : null;
+      const amtVal = item.finalAmount != null ? (isInc ? rawAmt * gstMult : rawAmt) : null;
+
+      const rate = rateVal != null ? fmt(rateVal) + (isInc ? " (INC)" : "") : "—";
+      const amt = amtVal != null ? fmt(amtVal) + (isInc ? " (INC)" : "") : "—";
+
       const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
       const qty = item.finalQuantity != null ? item.finalQuantity : "—";
       const mac = macadamCell(item.finalMacadamStep);
-      const amt = item.finalAmount != null ? fmt(item.finalAmount) : "—";
 
       let rowHtml = `<tr style="background:${bg}">`;
       if (sSno) rowHtml += `<td style="${TD}text-align:center;">${item.sno || globalIdx}</td>`;
@@ -661,6 +685,8 @@ async function allRecsTableHTML(quotation) {
   const customCols = getCustomCols(quotation);
   const hasCustomCols = customCols.length > 0;
   const gstRate = quotation.gstRate || 18;
+  const gstMultAdd = gstRate / 100;      // 0.18
+  const gstMultTotal = 1 + gstMultAdd;   // 1.18
 
   const labels = ["A", "B", "C", "D", "E", "F"];
   const activeLabels = labels.filter(label =>
@@ -669,12 +695,22 @@ async function allRecsTableHTML(quotation) {
 
   // Per-rec totals
   const recTotals = activeLabels.map(label => {
-    const sum = items.reduce((acc, item) => {
+    let displaySum = 0;
+    let residualGst = 0;
+    items.forEach(item => {
       const r = (item.recommendations || []).find(r => r.label === label);
-      return acc + (r ? Number(r.amount) || 0 : 0);
-    }, 0);
-    const gst = sum * (gstRate / 100);
-    return { label, sum, gst, total: sum + gst };
+      if (r) {
+        const amt = parseFloat(r.amount) || 0;
+        const isInc = r.priceType === 'LP_INC';
+        if (isInc) {
+          displaySum += amt * gstMultTotal;
+        } else {
+          displaySum += amt;
+          residualGst += amt * gstMultAdd;
+        }
+      }
+    });
+    return { label, sum: displaySum, gst: residualGst, total: displaySum + residualGst };
   });
 
   const polarB64s = await Promise.all(items.map(i => toBase64(i.polarDiagramUrl)));
@@ -770,7 +806,6 @@ async function allRecsTableHTML(quotation) {
         ? `<img src="${productB64s[idx]}" style="width:44px;height:44px;object-fit:contain;display:block;margin:auto"/>`
         : "—";
       const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
-
       const recCells = activeLabels.map(label => {
         const r = (item.recommendations || []).find(r => r.label === label);
         if (!r || !r.brandName) {
@@ -785,13 +820,22 @@ async function allRecsTableHTML(quotation) {
         }
         const mac = macadamCell(r.macadamStep);
         const space = r.macadamStep ? (MACADAM_MAP[r.macadamStep] || "—") : "—";
+        const isInc = r.priceType === 'LP_INC';
+        const rawRate = parseFloat(r.rate) || 0;
+        const rawAmt = parseFloat(r.amount) || 0;
+        
+        const rateVal = r.rate != null ? (isInc ? rawRate * gstMultTotal : rawRate) : null;
+        const amtVal = r.amount != null ? (isInc ? rawAmt * gstMultTotal : rawAmt) : null;
+        const rateTxt = rateVal != null ? fmt(rateVal) + (isInc ? " (INC)" : "") : "—";
+        const amtTxt = amtVal != null ? fmt(amtVal) + (isInc ? " (INC)" : "") : "—";
+
         let cellHtml = "";
         if (sQty) cellHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40">${r.quantity || 0}</td>`;
         cellHtml += `<td style="${TD}text-align:center;font-weight:600;color:#0D1E40">${r.discountPercent != null ? r.discountPercent + '%' : '0%'}</td>`;
         if (sMac) cellHtml += `<td style="${TD}text-align:center">${mac}</td>`;
         cellHtml += `<td style="${TD}text-align:center;font-size:7.5px;font-weight:600;color:#0D1E40">${space}</td>`;
-        if (sRate) cellHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${fmt(r.rate)}</td>`;
-        if (sAmt) cellHtml += `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${fmt(r.amount)}</td>`;
+        if (sRate) cellHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${rateTxt}</td>`;
+        if (sAmt) cellHtml += `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${amtTxt}</td>`;
         return cellHtml;
       }).join("");
 
@@ -863,8 +907,13 @@ async function allRecsTableHTML(quotation) {
 
       const recSumCells = activeLabels.map(label => {
         const r = (item.recommendations || []).find(r => r.label === label);
-        const amt = r && r.amount ? fmt(r.amount) : "—";
-        return `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${amt}</td>`;
+        if (!r || !r.amount) return `<td style="${TD}text-align:right">—</td>`;
+        
+        const isInc = r.priceType === 'LP_INC';
+        const amtVal = isInc ? Number(r.amount) * gstMultTotal : Number(r.amount);
+        const amtTxt = fmt(amtVal) + (isInc ? " (INC)" : "");
+        
+        return `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${amtTxt}</td>`;
       }).join("");
 
       summaryRows += `
