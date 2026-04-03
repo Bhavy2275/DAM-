@@ -740,13 +740,9 @@ async function allRecsTableHTML(quotation) {
     if (sProdImg) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>IMAGE</th>`);
     if (sUnit) specHeaders.push(`<th rowspan="2" style="${TH}">UNIT</th>`);
 
+    const baseColCount = specHeaders.length;
     const theadHTML = `
 <thead>
-  <tr>
-    <th colspan="${baseColCount + (activeLabels.length * recColCount)}" style="background:#002061;color:#fff;padding:8px 15px;text-align:center;font-size:10px;letter-spacing:2px;border:none;">
-      ${banner.toUpperCase()}
-    </th>
-  </tr>
   <tr>
     <th colspan="${baseColCount + (activeLabels.length * recColCount)}" style="background:#002061;color:#fff;padding:8px 15px;text-align:center;font-size:10px;letter-spacing:2px;border:none;">
       ${banner.toUpperCase()}
@@ -761,8 +757,6 @@ async function allRecsTableHTML(quotation) {
     ${recTh2}
   </tr>
 </thead>`;
-
-    const baseColCount = specHeaders.length;
 
     // Data rows
     let rowsHTML = "";
