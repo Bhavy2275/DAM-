@@ -148,6 +148,7 @@ model ItemRecommendation {
   quantity        Float
   amount          Float
   macadamStep     String        @default("")
+  priceType       String?       @default("LP")
 }
 
 // ─── PAYMENTS ─────────────────────────────────────────────────────────────

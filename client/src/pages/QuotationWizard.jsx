@@ -508,16 +508,20 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
     const editableFields = [
         { key: 'brandName', label: 'Brand', type: 'text' },
         { key: 'productCode', label: 'Prod Code', type: 'text' },
-        { key: 'listPrice', label: 'Listing price', type: 'number' },
-        { key: 'listPriceWithGst', label: 'LISTING PRICE + 18%', readOnly: true },
+        // listPrice and listPriceWithGst will be handled specially
         { key: 'discountPercent', label: 'Disc %', type: 'number' },
         { key: 'rate', label: 'Rate (₹)', readOnly: true },
         { key: 'quantity', label: 'Qty', type: 'number' },
         { key: 'amount', label: 'Amount', readOnly: true },
     ];
 
+    const [priceInput, setPriceInput] = useState(null);
+
     const defaultHeader = (rec.brandName || `REC ${label}`).toUpperCase();
     const headerLabel = getCustomLabel(customLabels, `rec_${itemId}_${label}_header`, defaultHeader);
+
+    const currentPriceType = rec.priceType || 'LP';
+    const displayPrice = priceInput !== null ? priceInput : (currentPriceType === 'LP' ? (rec.listPrice || '') : (rec.listPriceWithGst || ''));
 
     return (
         <td style={{ verticalAlign: 'top', padding: '0 4px', minWidth: 140 }}>
@@ -527,6 +531,59 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
                         {headerLabel}
                     </div>
                 </div>
+
+                {/* Combined Price Field */}
+                <div style={{ marginBottom: 5 }}>
+                    <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginBottom: 2, letterSpacing: 0.3 }}>
+                        {getCustomLabel(customLabels, `rec_${itemId}_${label}_price`, 'listing price')}
+                    </div>
+                    <div style={{ display: 'flex', gap: 0 }}>
+                        <FilterField style={{ height: 28, width: 105, borderRadius: '6px 0 0 6px', borderRight: 'none' }}>
+                            <select
+                                value={currentPriceType}
+                                onChange={e => {
+                                    const newType = e.target.value;
+                                    const currentVal = displayPrice;
+                                    let newVal;
+                                    if (newType === 'LP') {
+                                        newVal = (parseFloat(currentVal || 0) / 1.18).toFixed(2);
+                                    } else {
+                                        newVal = (parseFloat(currentVal || 0) * 1.18).toFixed(2);
+                                    }
+                                    setPriceInput(newVal);
+                                    const updated = { ...rec, priceType: newType, listPrice: newType === 'LP' ? newVal : (parseFloat(newVal) / 1.18).toFixed(2) };
+                                    onChange(recalcRec(updated));
+                                }}
+                                style={{ ...selectStyle, fontSize: 8, padding: '0 2px', border: 'none' }}
+                            >
+                                <option value="LP">List price</option>
+                                <option value="LP_INC">List price + 18%</option>
+                            </select>
+                        </FilterField>
+                        <EditableField style={{ height: 28, flex: 1, borderRadius: '0 6px 6px 0' }}>
+                            <input
+                                type="number"
+                                value={displayPrice}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setPriceInput(val);
+                                    const updated = { ...rec, listPrice: currentPriceType === 'LP' ? val : (parseFloat(val || 0) / 1.18).toFixed(2) };
+                                    onChange(recalcRec(updated));
+                                }}
+                                onBlur={() => setPriceInput(null)}
+                                style={{ ...inputStyle, fontSize: 11, padding: '0 6px', borderLeft: 'none', width: '100%' }}
+                                placeholder="0.00"
+                            />
+                        </EditableField>
+                    </div>
+                    <div style={{ fontSize: 8, color: 'var(--color-text-muted)', textAlign: 'right', marginTop: 2, paddingRight: 2 }}>
+                        {currentPriceType === 'LP' 
+                            ? `INC: ₹${(parseFloat(rec.listPrice || 0) * 1.18).toFixed(2)}`
+                            : `NET: ₹${(parseFloat(rec.listPrice || 0)).toFixed(2)}`
+                        }
+                    </div>
+                </div>
+
                 {editableFields.filter(f => f.key === 'discountPercent' || !hiddenCols[f.label]).map(f => (
                     <div key={f.key} style={{ marginBottom: 5 }}>
                         <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginBottom: 2, letterSpacing: 0.3 }}>

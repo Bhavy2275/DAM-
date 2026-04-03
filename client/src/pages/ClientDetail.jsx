@@ -38,7 +38,14 @@ export default function ClientDetail() {
     if (loading) return <div style={{ padding: 32 }}><div className="skeleton" style={{ height: 200 }} /></div>;
     if (!client) return <div style={{ padding: 32, color: 'var(--color-text-muted)' }}>Client not found</div>;
 
-    const summary = client.summary || { totalQuoted: 0, totalQuotations: 0 };
+    const totalQuoted = (client.quotations || [])
+        .filter(q => q.status !== 'REJECTED')
+        .reduce((sum, q) => sum + (Number(q.grandTotal) || 0), 0);
+    
+    const summary = {
+        totalQuoted,
+        totalQuotations: client.quotations?.length || 0
+    };
 
     return (
         <motion.div variants={staggerContainer} initial="hidden" animate="visible" style={{ padding: 32, maxWidth: 1200, margin: '0 auto' }}>

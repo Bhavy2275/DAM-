@@ -1,52 +1,58 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 const { generatePDF } = require('./utils/pdfGenerator');
+const fs = require('fs');
+const path = require('path');
 
-async function reproduce() {
-    const quoteId = 'c66dae02-0b4a-4875-a567-89863e25a83b';
-    try {
-        console.log(`Attempting to generate PDF for ID: ${quoteId}`);
-        const quotation = await prisma.quotation.findUnique({
-            where: { id: quoteId },
-            include: {
-                client: true,
-                lineItems: {
-                    include: { recommendations: { orderBy: { label: 'asc' } } },
-                    orderBy: { sno: 'asc' }
-                }
-            }
-        });
-
-        if (!quotation) {
-            console.error('Quotation not found');
-            return;
+const mockQuotation = {
+  quoteNumber: 'Q-TEST-001',
+  projectName: 'Test Project',
+  city: 'Test City',
+  state: 'Test State',
+  gstRate: 18,
+  notes: 'Test Notes',
+  customLabels: JSON.stringify({ __hiddenCols: {} }),
+  client: { companyName: 'Test Client', fullName: 'John Doe' },
+  lineItems: [
+    {
+      sno: 1,
+      productCode: 'PROD-001',
+      description: 'Test Product Description',
+      unit: 'NUMBERS',
+      finalQuantity: 10,
+      finalAmount: 1000,
+      recommendations: [
+        {
+          label: 'A',
+          brandName: 'Brand A',
+          productCode: 'REC-A-001',
+          quantity: 10,
+          amount: 1000,
+          rate: 100,
+          macadamStep: '3A'
         }
-
-        const settings = await prisma.companySettings.findFirst() || {};
-        
-        // Mock serializeItem logic (from quotations.js)
-        const serialized = {
-            ...quotation,
-            lineItems: (quotation.lineItems || []).map(item => ({
-                ...item,
-                bodyColours: item.bodyColours || '[]',
-                reflectorColours: item.reflectorColours || '[]',
-                colourTemps: item.colourTemps || '[]',
-                beamAngles: item.beamAngles || '[]',
-                cri: item.cri || '[]',
-                recommendations: item.recommendations || []
-            }))
-        };
-
-        const buffer = await generatePDF(serialized, settings, 'all_recs');
-        console.log('Successfully generated PDF! Buffer size:', buffer.length);
-    } catch (error) {
-        console.error('REPRODUCTION FAILED:');
-        console.error(error);
-        if (error.stack) console.error(error.stack);
-    } finally {
-        await prisma.$disconnect();
+      ]
     }
+  ]
+};
+
+const mockSettings = {
+  companyName: 'Test Company',
+  address: 'Test Address',
+  phone: '1234567890',
+  email: 'test@example.com',
+  website: 'www.example.com'
+};
+
+async function runTest() {
+  try {
+    console.log('Starting PDF generation test (all_recs)...');
+    const pdfBuffer = await generatePDF(mockQuotation, mockSettings, 'all_recs');
+    fs.writeFileSync(path.join(__dirname, 'test-all-recs.pdf'), pdfBuffer);
+    console.log('✅ PDF generated successfully: test-all-recs.pdf');
+  } catch (err) {
+    console.error('❌ PDF generation failed:');
+    console.error(err);
+    process.exit(1);
+  }
 }
 
-reproduce();
+runTest();

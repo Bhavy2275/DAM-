@@ -39,6 +39,7 @@ export function emptyRecommendation(label) {
     productCode: '',
     listPrice: '',
     listPriceWithGst: '',
+    priceType: 'LP',
     discountPercent: '',
     rate: '',
     unit: 'NUMBERS',
@@ -52,8 +53,15 @@ export function recalcRec(rec) {
   const lp = parseFloat(rec.listPrice) || 0;
   const disc = parseFloat(rec.discountPercent) || 0;
   const qty = parseFloat(rec.quantity) || 0;
+
   const lpGst = calcLPWithGst(lp);
   const rate = calcRate(lp, disc);
   const amount = calcAmount(rate, qty);
-  return { ...rec, listPriceWithGst: lpGst || '', rate: rate || '', amount: amount || '' };
+
+  return {
+    ...rec,
+    listPriceWithGst: lpGst || '',
+    rate: rate || '',
+    amount: amount || ''
+  };
 }

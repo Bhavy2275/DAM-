@@ -645,6 +645,7 @@ router.put('/:id/items/:itemId/recommendations', requireRole('ADMIN', 'STAFF'), 
                     quantity: parseFloat(r.quantity) || 0,
                     amount: parseFloat(r.amount) || 0,
                     macadamStep: r.macadamStep || '',
+                    priceType: r.priceType || 'LP',
                 }))
             });
         }
