@@ -591,8 +591,25 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
                         </div>
                         {f.readOnly ? (
                             <div style={{ padding: '3px 6px', fontSize: 11, fontWeight: 600, color: f.key === 'amount' ? color : 'var(--color-text-secondary)', background: 'var(--color-elevated)', borderRadius: 4 }}>
-                                {f.key === 'listPriceWithGst' || f.key === 'rate' || f.key === 'amount'
-                                    ? formatINR(parseFloat(rec[f.key]) || 0) : rec[f.key] || '—'}
+                                {(() => {
+                                    if (f.key === 'rate' || f.key === 'amount') {
+                                        const isIncMode = currentPriceType === 'LP_INC';
+                                        const mainKey = isIncMode ? `${f.key}Inc` : f.key;
+                                        const subKey = isIncMode ? f.key : `${f.key}Inc`;
+                                        const mainVal = parseFloat(rec[mainKey]) || 0;
+                                        const subVal = parseFloat(rec[subKey]) || 0;
+                                        
+                                        return (
+                                            <>
+                                                <div>{formatINR(mainVal)}</div>
+                                                <div style={{ fontSize: 8, fontWeight: 400, color: 'var(--color-text-muted)', marginTop: 1, textTransform: 'uppercase' }}>
+                                                    {isIncMode ? 'NET: ' : 'INC: '}{formatINR(subVal)}
+                                                </div>
+                                            </>
+                                        );
+                                    }
+                                    return f.key === 'listPriceWithGst' ? formatINR(parseFloat(rec[f.key]) || 0) : (rec[f.key] || '—');
+                                })()}
                             </div>
                         ) : (
                             <EditableField

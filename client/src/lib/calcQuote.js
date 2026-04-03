@@ -42,9 +42,11 @@ export function emptyRecommendation(label) {
     priceType: 'LP',
     discountPercent: '',
     rate: '',
+    rateInc: '',
     unit: 'NUMBERS',
     quantity: '',
     amount: '',
+    amountInc: '',
     macadamStep: '',
   };
 }
@@ -62,6 +64,8 @@ export function recalcRec(rec) {
     ...rec,
     listPriceWithGst: lpGst || '',
     rate: rate || '',
-    amount: amount || ''
+    rateInc: parseFloat((rate * 1.18).toFixed(2)) || '',
+    amount: amount || '',
+    amountInc: parseFloat((amount * 1.18).toFixed(2)) || ''
   };
 }
