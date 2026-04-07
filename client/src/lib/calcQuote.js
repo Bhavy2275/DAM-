@@ -3,14 +3,11 @@
 export const calcLPWithGst = (lp) => parseFloat((lp * 1.18).toFixed(2));
 
 /**
- * NEW LOGIC: Calculate discount on Inclusive Price (Basic + 18% GST)
- * and then back-calculate the Net Rate for the table.
- * This ensures the final Grand Total matches [Inclusive Price - Discount %].
+ * Calculate rate based on discount percentage.
  */
 export const calcRate = (lp, discountPct) => {
-  const lpInc = parseFloat((lp * 1.18).toFixed(2));
-  const rateInc = lpInc * (1 - (parseFloat(discountPct) || 0) / 100);
-  const netRate = rateInc / 1.18;
+  const d = (parseFloat(discountPct) || 0) / 100;
+  const netRate = lp * (1 - d);
   return parseFloat(netRate.toFixed(2));
 };
 

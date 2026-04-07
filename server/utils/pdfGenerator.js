@@ -395,7 +395,11 @@ async function finalTableHTML(quotation, logoB64) {
     const amt = parseFloat(i.finalAmount) || 0;
     const isInc = i.finalPriceType === 'LP_INC';
     if (isInc) {
-      finalSub += amt * (1 + gstMult);
+      // amt is the NET (excl. GST) stored value; display gross = amt * gstMultTotal
+      const gross = amt * (1 + gstMult);
+      const net   = amt;
+      finalSub += net;
+      finalGst += gross - net;
     } else {
       finalSub += amt;
       finalGst += amt * gstMult;
@@ -433,14 +437,14 @@ async function finalTableHTML(quotation, logoB64) {
   const sPolar = !hCols['Polar Diagram'];
   const sProdImg = !hCols['Product Image'];
 
-  const sLp = !hCols['Listing Price'] && !hCols['LP (₹)'];
+  const sLp = !hCols['Listing Price'];
   const sLp18 = !hCols['LP+18%'];
   const sDisc = !hCols['Disc %'];
-  const sRate = !hCols['Rate (₹)'];
+  const sRate = !hCols['Rate'];
   const sUnit = !hCols['Unit'];
   const sQty = !hCols['Qty'];
   const sAmt = !hCols['Amount'];
-  const sMac = false; // Always false for final quote table per user request
+  const sMac = !hCols['Macadam'];
 
   const banner = esc(quotation.projectName || "") + " \u2014 " + esc(quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
@@ -518,8 +522,8 @@ async function finalTableHTML(quotation, logoB64) {
       const rateVal = item.finalRate != null ? (isInc ? rawRate * gstMult : rawRate) : null;
       const amtVal = item.finalAmount != null ? (isInc ? rawAmt * gstMult : rawAmt) : null;
 
-      const rate = rateVal != null ? fmt(rateVal) + (isInc ? " (INC)" : "") : "—";
-      const amt = amtVal != null ? fmt(amtVal) + (isInc ? " (INC)" : "") : "—";
+      const rate = rateVal != null ? fmt(rateVal) : "—";
+      const amt = amtVal != null ? fmt(amtVal) : "—";
 
       const unit = item.finalUnit === "METERS" ? "Mtr." : "Nos.";
       const qty = item.finalQuantity != null ? item.finalQuantity : "—";
@@ -743,7 +747,9 @@ async function allRecsTableHTML(quotation) {
     const sUnit = !hCols['Unit'];
     const sQty = !hCols['Qty'];
     const sMac = !hCols['Macadam'];
-    const sRate = !hCols['Rate (₹)'];
+    const sDisc = !hCols['Disc %'];
+    const sSpace = !hCols['Space Match (%)'];
+    const sRate = !hCols['Rate'];
     const sAmt = !hCols['Amount'];
     const sProdImg = !hCols['Product Image'];
 
@@ -754,9 +760,9 @@ async function allRecsTableHTML(quotation) {
     // ── thead — each rec: QTY | Macadam Step | Space Match % | Rate | Amount ──
     const recHeaders = [];
     if (sQty) recHeaders.push(`<th style="${TH}">QTY</th>`);
-    recHeaders.push(`<th style="${TH}">Disc %</th>`);
+    if (sDisc) recHeaders.push(`<th style="${TH}">Disc %</th>`);
     if (sMac) recHeaders.push(`<th style="${TH}">Macadam<br>Step</th>`);
-    recHeaders.push(`<th style="${TH}">Space<br>Match (%)</th>`);
+    if (sSpace) recHeaders.push(`<th style="${TH}">Space<br>Match (%)</th>`);
     if (sRate) recHeaders.push(`<th style="${TH}">RATE</th>`);
     if (sAmt) recHeaders.push(`<th style="${TH}">AMOUNT</th>`);
     const recColCount = recHeaders.length;
@@ -826,14 +832,14 @@ async function allRecsTableHTML(quotation) {
         
         const rateVal = r.rate != null ? (isInc ? rawRate * gstMultTotal : rawRate) : null;
         const amtVal = r.amount != null ? (isInc ? rawAmt * gstMultTotal : rawAmt) : null;
-        const rateTxt = rateVal != null ? fmt(rateVal) + (isInc ? " (INC)" : "") : "—";
-        const amtTxt = amtVal != null ? fmt(amtVal) + (isInc ? " (INC)" : "") : "—";
+        const rateTxt = rateVal != null ? fmt(rateVal) : "—";
+        const amtTxt = amtVal != null ? fmt(amtVal) : "—";
 
         let cellHtml = "";
         if (sQty) cellHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40">${r.quantity || 0}</td>`;
-        cellHtml += `<td style="${TD}text-align:center;font-weight:600;color:#0D1E40">${r.discountPercent != null ? r.discountPercent + '%' : '0%'}</td>`;
+        if (sDisc) cellHtml += `<td style="${TD}text-align:center;font-weight:600;color:#0D1E40">${r.discountPercent != null ? r.discountPercent + '%' : '0%'}</td>`;
         if (sMac) cellHtml += `<td style="${TD}text-align:center">${mac}</td>`;
-        cellHtml += `<td style="${TD}text-align:center;font-size:7.5px;font-weight:600;color:#0D1E40">${space}</td>`;
+        if (sSpace) cellHtml += `<td style="${TD}text-align:center;font-size:7.5px;font-weight:600;color:#0D1E40">${space}</td>`;
         if (sRate) cellHtml += `<td style="${TD}text-align:right;font-variant-numeric:tabular-nums">${rateTxt}</td>`;
         if (sAmt) cellHtml += `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${amtTxt}</td>`;
         return cellHtml;
@@ -865,9 +871,9 @@ async function allRecsTableHTML(quotation) {
         const t = recTotals.find(r => r.label === label);
         let cells = "";
         if (sQty) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
-        cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`; // Discount % empty
+        if (sDisc) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`; // Discount % empty
         if (sMac) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
-        cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`; // Space Match empty
+        if (sSpace) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`; // Space Match empty
         if (sRate) cells += `<td style="${TD}background:${def.bg};color:${def.color}"></td>`;
         if (sAmt) cells += `<td style="${TD}text-align:right;font-weight:700;background:${def.bg};color:${def.color};font-variant-numeric:tabular-nums">${fmt(t[def.key])}</td>`;
         return cells;
@@ -911,7 +917,7 @@ async function allRecsTableHTML(quotation) {
         
         const isInc = r.priceType === 'LP_INC';
         const amtVal = isInc ? Number(r.amount) * gstMultTotal : Number(r.amount);
-        const amtTxt = fmt(amtVal) + (isInc ? " (INC)" : "");
+        const amtTxt = fmt(amtVal);
         
         return `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${amtTxt}</td>`;
       }).join("");
