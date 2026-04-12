@@ -1706,7 +1706,7 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
                                                 />
                                             </EditableField>
                                         </td>
-                                        <td style={{ padding: '8px 4px', minWidth: 160, verticalAlign: 'middle' }}>
+                                        <td style={{ padding: '8px 4px', minWidth: 220, verticalAlign: 'middle' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                                 <div style={{ display: 'flex' }}>
                                                     <FilterField style={{ height: 28, width: 90, borderRadius: '6px 0 0 6px', borderRight: 'none' }}>
