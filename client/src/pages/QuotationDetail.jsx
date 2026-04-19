@@ -611,7 +611,7 @@ export default function QuotationDetail() {
                                 {[
                                     { mode: 'all_recs', icon: <FileText size={20} />, color: 'var(--color-accent)', title: 'All Recommendations (A–F)', sub: 'Wide comparison table — all brand options side-by-side', btnLabel: 'Export All Recs PDF' },
                                     { mode: 'final', icon: <CheckCircle size={20} />, color: '#10B981', title: 'Final Working Quotation Only', sub: 'Clean single-brand version — ready to send to client', btnLabel: 'Export Final PDF' },
-                                    { mode: 'final_lights_gallery', icon: <CheckCircle size={20} />, color: '#10B981', title: 'Final PDF (Lights Gallery)', sub: 'Clean single-brand version using Lights Gallery logo', btnLabel: 'Export Final PDF' },
+                                    { mode: 'final_lights_gallery', icon: <CheckCircle size={20} />, color: '#10B981', title: 'Final PDF (Lights Gallery)', sub: 'Clean single-brand version using Lights Gallery logo', btnLabel: 'Export Lights Gallery PDF' },
                                 ].map(({ mode, icon, color, title, sub, btnLabel }) => (
                                     <button key={mode} onClick={() => handleDownloadPDF(mode)} disabled={pdfLoading !== null}
                                         style={{ padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', background: 'var(--color-surface)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
@@ -625,7 +625,7 @@ export default function QuotationDetail() {
                                             </div>
                                         </div>
                                         <div style={{ marginTop: 12, textAlign: 'right' }}>
-                                            <span style={{ background: color, color: mode === 'final' ? '#fff' : 'var(--color-base)', padding: '4px 14px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+                                            <span style={{ background: color, color: (mode === 'final' || mode === 'final_lights_gallery') ? '#fff' : 'var(--color-base)', padding: '4px 14px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
                                                 {pdfLoading === mode ? 'Generating...' : btnLabel}
                                             </span>
                                         </div>

@@ -713,7 +713,6 @@ async function allRecsTableHTML(quotation) {
 
   const polarB64s = await Promise.all(items.map(i => toBase64(i.polarDiagramUrl)));
   const productB64s = await Promise.all(items.map(i => toBase64(i.productImageUrl)));
-  const logoB64 = await getBrandLogoB64("logo.png"); 
   const banner = esc(quotation.projectName || "") + " \u2014 " + esc(quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
   // Brand names for header row
