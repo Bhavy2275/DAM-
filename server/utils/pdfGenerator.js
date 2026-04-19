@@ -641,28 +641,31 @@ let cachedLogoB64 = {};
 async function getBrandLogoB64(logoFileName = "pdf_logo.png") {
   if (cachedLogoB64[logoFileName]) return cachedLogoB64[logoFileName];
 
-  // Try multiple locations in order
+  // Try multiple locations in order — server/assets first (works on Railway),
+  // then client/src/assets (works in local monorepo dev)
   const candidates = [
-    path.join(__dirname, "..", "..", "client", "src", "assets", logoFileName),
-    path.join(__dirname, logoFileName),
-    path.join(__dirname, "..", "assets", logoFileName),
+    path.join(__dirname, "..", "assets", logoFileName),              // server/assets/ — primary (Railway)
+    path.join(__dirname, "..", "..", "client", "src", "assets", logoFileName), // local dev monorepo
+    path.join(__dirname, logoFileName),                               // same dir fallback
   ];
-  let logoPath = candidates.find(p => fs.existsSync(p));
+  let logoPath = candidates.find(p => fs.existsSync(p)) || null;
 
-  try {
-    if (fs.existsSync(logoPath)) {
-      const buf = fs.readFileSync(logoPath);
-      const ext = path.extname(logoPath).toLowerCase();
-      const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
-      cachedLogoB64[logoFileName] = `data:${mimeType};base64,` + buf.toString("base64");
-      console.log(`✅ [PDF] Brand logo matched at: ${logoPath}`);
-      return cachedLogoB64[logoFileName];
-    }
-  } catch (e) {
-    console.error(`❌ [PDF] Error reading logo at ${logoPath}:`, e.message);
+  if (!logoPath) {
+    console.warn(`⚠️ [PDF] Logo not found: ${logoFileName}. Tried: ${candidates.join(', ')}`);
+    return null;
   }
 
-  return null;
+  try {
+    const buf = fs.readFileSync(logoPath);
+    const ext = path.extname(logoPath).toLowerCase();
+    const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+    cachedLogoB64[logoFileName] = `data:${mimeType};base64,` + buf.toString("base64");
+    console.log(`✅ [PDF] Brand logo loaded from: ${logoPath}`);
+    return cachedLogoB64[logoFileName];
+  } catch (e) {
+    console.error(`❌ [PDF] Error reading logo at ${logoPath}:`, e.message);
+    return null;
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
