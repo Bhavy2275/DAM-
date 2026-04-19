@@ -219,7 +219,7 @@ const TH_GREY = [
 // ════════════════════════════════════════════════════════════════════════════
 // COVER PAGE — A3 landscape, all pages landscape
 // ════════════════════════════════════════════════════════════════════════════
-function coverHTML(quotation, settings, logoB64) {
+function coverHTML(quotation, settings, logoB64, logoHeight = 160) {
   const client = quotation.client || {};
   const s = settings || {};
 
@@ -298,7 +298,7 @@ function coverHTML(quotation, settings, logoB64) {
 
     <!-- Brand logo -->
     <div style="display:flex;align-items:center;justify-content:flex-end;flex:1;padding-left:40px">
-      ${logoB64 ? `<img src="${logoB64}" style="height:380px; width:auto; max-width:700px; object-fit:contain;"/>` : `
+      ${logoB64 ? `<img src="${logoB64}" style="height:${logoHeight}px; width:auto; max-width:700px; object-fit:contain;"/>` : `
       <div>
         <div style="font-family:'Arial Black',Arial,sans-serif;font-size:68px;font-weight:900;
                     color:#ffffff;letter-spacing:-3px;line-height:1">DAM</div>
@@ -1020,9 +1020,10 @@ async function generatePDF(quotation, settings, mode) {
 
   const isLightsGallery = mode === "final_lights_gallery";
   const logoFileName = isLightsGallery ? "logo2.png" : "logo.png";
+  const logoHeight = isLightsGallery ? 380 : 160;
   const logoB64 = await getBrandLogoB64(logoFileName);
-  
-  const cover = coverHTML(quotation, settings, logoB64);
+
+  const cover = coverHTML(quotation, settings, logoB64, logoHeight);
   const terms = termsAndBankHTML(quotation, settings);
   const tableHTML = mode === "all_recs"
     ? await allRecsTableHTML(quotation)
