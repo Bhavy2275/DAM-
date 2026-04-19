@@ -286,9 +286,9 @@ function coverHTML(quotation, settings, logoB64) {
   </div>
 
   <!-- BOTTOM NAVY SECTION (55%) -->
-  <div style="position:absolute;bottom:0;left:0;right:0;height:50%;background:#002061;
+  <div style="position:absolute;bottom:0;left:0;right:0;height:55%;background:#002061;
               display:flex;align-items:center;justify-content:space-between;
-              padding:0 80px;box-sizing:border-box">
+              padding:0 80px;box-sizing:border-box;overflow:visible">
 
     <!-- Light Quotation serif text -->
     <div style="font-family:'Times New Roman',Times,serif;font-size:84px;font-weight:700;
@@ -296,14 +296,16 @@ function coverHTML(quotation, settings, logoB64) {
       Light<br>Quotation
     </div>
 
-    <!-- DAM logo -->
-    <div style="text-align:right">
-      ${logoB64 ? `<img src="${logoB64}" style="max-height:140px; max-width:400px; height:auto; width:auto; object-fit:contain; margin-left:auto;"/>` : `
-      <div style="font-family:'Arial Black',Arial,sans-serif;font-size:68px;font-weight:900;
-                  color:#ffffff;letter-spacing:-3px;line-height:1">DAM</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:2px;
-                  margin-top:8px;font-family:Arial,sans-serif">
-        design. allocate. maintain.
+    <!-- Brand logo -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;flex:1;padding-left:40px">
+      ${logoB64 ? `<img src="${logoB64}" style="height:380px; width:auto; max-width:700px; object-fit:contain;"/>` : `
+      <div>
+        <div style="font-family:'Arial Black',Arial,sans-serif;font-size:68px;font-weight:900;
+                    color:#ffffff;letter-spacing:-3px;line-height:1">DAM</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:2px;
+                    margin-top:8px;font-family:Arial,sans-serif">
+          design. allocate. maintain.
+        </div>
       </div>`}
     </div>
 
@@ -639,12 +641,13 @@ let cachedLogoB64 = {};
 async function getBrandLogoB64(logoFileName = "pdf_logo.png") {
   if (cachedLogoB64[logoFileName]) return cachedLogoB64[logoFileName];
 
-  let logoPath;
-  if (logoFileName === "logo2.png") {
-    logoPath = path.join(__dirname, "..", "..", "client", "src", "assets", "logo2.png");
-  } else {
-    logoPath = path.join(__dirname, logoFileName);
-  }
+  // Try multiple locations in order
+  const candidates = [
+    path.join(__dirname, "..", "..", "client", "src", "assets", logoFileName),
+    path.join(__dirname, logoFileName),
+    path.join(__dirname, "..", "assets", logoFileName),
+  ];
+  let logoPath = candidates.find(p => fs.existsSync(p));
 
   try {
     if (fs.existsSync(logoPath)) {
