@@ -223,7 +223,7 @@ function coverHTML(quotation, settings, logoB64) {
   const client = quotation.client || {};
   const s = settings || {};
 
-  const companyName = esc(s.companyName) || "Dam Lighting Solution LLP";
+  const companyName = esc(s.companyName) || "Lighting Gallery";
   const companyPhone = s.phone || "";
   const companyEmail = s.email || "";
   const companyWebsite = s.website || "";
@@ -298,7 +298,7 @@ function coverHTML(quotation, settings, logoB64) {
 
     <!-- DAM logo -->
     <div style="text-align:right">
-      ${logoB64 ? `<img src="${logoB64}" style="width:240px;object-fit:contain;margin-left:auto;"/>` : `
+      ${logoB64 ? `<img src="${logoB64}" style="max-height:140px; max-width:400px; height:auto; width:auto; object-fit:contain; margin-left:auto;"/>` : `
       <div style="font-family:'Arial Black',Arial,sans-serif;font-size:68px;font-weight:900;
                   color:#ffffff;letter-spacing:-3px;line-height:1">DAM</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:2px;
@@ -386,8 +386,8 @@ async function finalTableHTML(quotation, logoB64) {
     });
   }
 
-  let finalSub  = 0;
-  let finalGst  = 0;
+  let finalSub = 0;
+  let finalGst = 0;
   const gstRate = quotation.gstRate || 18;
   const gstMult = gstRate / 100;
 
@@ -397,7 +397,7 @@ async function finalTableHTML(quotation, logoB64) {
     if (isInc) {
       // amt is the NET (excl. GST) stored value; display gross = amt * gstMultTotal
       const gross = amt * (1 + gstMult);
-      const net   = amt;
+      const net = amt;
       finalSub += net;
       finalGst += gross - net;
     } else {
@@ -407,8 +407,8 @@ async function finalTableHTML(quotation, logoB64) {
   });
 
   const subtotal = finalSub;
-  const gstAmt   = finalGst;
-  const grand    = subtotal + gstAmt;
+  const gstAmt = finalGst;
+  const grand = subtotal + gstAmt;
 
   const [polarB64s, productB64s] = await Promise.all([
     Promise.all(items.map(i => toBase64(i.polarDiagramUrl))),
@@ -514,11 +514,11 @@ async function finalTableHTML(quotation, logoB64) {
       const lp = lpNet != null ? fmt(priceType === 'LP_INC' ? lpIncVal : lpNet) : "—";
       const lp18 = lpNet != null ? fmt(lpIncVal) : "—";
       const disc = item.finalDiscount != null ? item.finalDiscount + "%" : "—";
-      
+
       const isInc = priceType === 'LP_INC';
       const rawRate = parseFloat(item.finalRate) || 0;
       const rawAmt = parseFloat(item.finalAmount) || 0;
-      
+
       const rateVal = item.finalRate != null ? (isInc ? rawRate * gstMult : rawRate) : null;
       const amtVal = item.finalAmount != null ? (isInc ? rawAmt * gstMult : rawAmt) : null;
 
@@ -635,34 +635,28 @@ async function finalTableHTML(quotation, logoB64) {
 }
 
 // Helper to get brand logo as Base64 with absolute local resolution
-let cachedLogoB64 = null;
-async function getBrandLogoB64() {
-  if (cachedLogoB64) return cachedLogoB64;
+let cachedLogoB64 = {};
+async function getBrandLogoB64(logoFileName = "pdf_logo.png") {
+  if (cachedLogoB64[logoFileName]) return cachedLogoB64[logoFileName];
 
-  const logoPath = path.join(__dirname, "logo.png"); // Local asset in the same folder
+  let logoPath;
+  if (logoFileName === "logo2.png") {
+    logoPath = path.join(__dirname, "..", "..", "client", "src", "assets", "logo2.png");
+  } else {
+    logoPath = path.join(__dirname, logoFileName);
+  }
+
   try {
     if (fs.existsSync(logoPath)) {
       const buf = fs.readFileSync(logoPath);
-      cachedLogoB64 = "data:image/png;base64," + buf.toString("base64");
+      const ext = path.extname(logoPath).toLowerCase();
+      const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+      cachedLogoB64[logoFileName] = `data:${mimeType};base64,` + buf.toString("base64");
       console.log(`✅ [PDF] Brand logo matched at: ${logoPath}`);
-      return cachedLogoB64;
+      return cachedLogoB64[logoFileName];
     }
   } catch (e) {
     console.error(`❌ [PDF] Error reading logo at ${logoPath}:`, e.message);
-  }
-
-  // Backup search
-  const alternativePaths = [
-    path.join(__dirname, "..", "assets", "logo.png"),
-    path.join(process.cwd(), "server", "assets", "logo.png"),
-  ];
-
-  for (const p of alternativePaths) {
-    if (fs.existsSync(p)) {
-      const buf = fs.readFileSync(p);
-      cachedLogoB64 = "data:image/png;base64," + buf.toString("base64");
-      return cachedLogoB64;
-    }
   }
 
   return null;
@@ -719,7 +713,7 @@ async function allRecsTableHTML(quotation) {
 
   const polarB64s = await Promise.all(items.map(i => toBase64(i.polarDiagramUrl)));
   const productB64s = await Promise.all(items.map(i => toBase64(i.productImageUrl)));
-  const logoB64 = await getBrandLogoB64();
+  const logoB64 = await getBrandLogoB64("logo.png"); 
   const banner = esc(quotation.projectName || "") + " \u2014 " + esc(quotation.city || "") + " \u2014 LIGHTING QUOTATION";
 
   // Brand names for header row
@@ -829,7 +823,7 @@ async function allRecsTableHTML(quotation) {
         const isInc = r.priceType === 'LP_INC';
         const rawRate = parseFloat(r.rate) || 0;
         const rawAmt = parseFloat(r.amount) || 0;
-        
+
         const rateVal = r.rate != null ? (isInc ? rawRate * gstMultTotal : rawRate) : null;
         const amtVal = r.amount != null ? (isInc ? rawAmt * gstMultTotal : rawAmt) : null;
         const rateTxt = rateVal != null ? fmt(rateVal) : "—";
@@ -914,11 +908,11 @@ async function allRecsTableHTML(quotation) {
       const recSumCells = activeLabels.map(label => {
         const r = (item.recommendations || []).find(r => r.label === label);
         if (!r || !r.amount) return `<td style="${TD}text-align:right">—</td>`;
-        
+
         const isInc = r.priceType === 'LP_INC';
         const amtVal = isInc ? Number(r.amount) * gstMultTotal : Number(r.amount);
         const amtTxt = fmt(amtVal);
-        
+
         return `<td style="${TD}text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${amtTxt}</td>`;
       }).join("");
 
@@ -1019,7 +1013,10 @@ async function allRecsTableHTML(quotation) {
 async function generatePDF(quotation, settings, mode) {
   mode = mode || "final";
 
-  const logoB64 = await getBrandLogoB64();
+  const isLightsGallery = mode === "final_lights_gallery";
+  const logoFileName = isLightsGallery ? "logo2.png" : "logo.png";
+  const logoB64 = await getBrandLogoB64(logoFileName);
+  
   const cover = coverHTML(quotation, settings, logoB64);
   const terms = termsAndBankHTML(quotation, settings);
   const tableHTML = mode === "all_recs"
