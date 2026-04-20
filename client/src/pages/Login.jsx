@@ -31,11 +31,12 @@ export default function Login() {
     return (
         <div
             className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-            style={{ background: 'radial-gradient(ellipse at 30% 20%, #0E1629 0%, #070C18 70%)' }}
+            style={{ background: 'var(--color-base)' }}
         >
-            {/* Ambient glow orbs */}
-            <div style={{ position: 'absolute', top: 80, left: 80, width: 400, height: 400, background: 'radial-gradient(circle, rgba(245,166,35,0.06) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)' }} />
-            <div style={{ position: 'absolute', bottom: 80, right: 80, width: 300, height: 300, background: 'radial-gradient(circle, rgba(245,166,35,0.04) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)' }} />
+            {/* Subtle background accents */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'var(--color-accent)' }} />
+            <div style={{ position: 'absolute', top: 80, left: 80, width: 400, height: 400, background: 'radial-gradient(circle, rgba(224,155,16,0.06) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)' }} />
+            <div style={{ position: 'absolute', bottom: 80, right: 80, width: 300, height: 300, background: 'radial-gradient(circle, rgba(28,35,51,0.05) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)' }} />
 
             <div className="w-full max-w-md relative">
                 {/* Logo */}
@@ -44,9 +45,9 @@ export default function Login() {
                         src={logo}
                         alt="DAM Lighting"
                         style={{
-                            height: 100, // Adjusted height since tagline is part of image
+                            height: 100,
                             margin: '0 auto 0 auto',
-                            filter: 'drop-shadow(0 0 20px rgba(245,166,35,0.1))'
+                            filter: 'brightness(0) saturate(100%)'
                         }}
                     />
                 </motion.div>
@@ -55,16 +56,16 @@ export default function Login() {
                 <motion.div
                     variants={fadeUp} initial="hidden" animate="visible" custom={1}
                     style={{
-                        background: 'rgba(14,22,41,0.8)', backdropFilter: 'blur(20px)',
-                        border: '1px solid var(--color-border)', borderTop: '2px solid var(--color-accent)',
+                        background: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)', borderTop: '3px solid var(--color-accent)',
                         borderRadius: 'var(--radius-lg)', padding: 32,
-                        boxShadow: '0 20px 80px rgba(0,0,0,0.4)'
+                        boxShadow: '0 4px 24px rgba(0,0,0,0.08)'
                     }}
                 >
                     <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 24 }}>Welcome back</h2>
 
                     {error && (
-                        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', fontSize: 13 }}>
+                        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#B91C1C', fontSize: 13 }}>
                             {error}
                         </div>
                     )}
