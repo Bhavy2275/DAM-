@@ -929,7 +929,7 @@ async function allRecsTableHTML(quotation) {
   <td style="${TD}text-align:center">${item.sno || idx + 1}</td>
   <td style="${TD}text-align:center;font-weight:700">${qty}</td>
   <td style="${TD}text-align:center">${unit}</td>
-  <td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px">${item.productCode || "—"}</td>
+  ${sCode ? `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px">${item.productCode || '\u2014'}</td>` : ''}
   ${recSumCells}
 </tr>`;
     }
@@ -953,6 +953,7 @@ async function allRecsTableHTML(quotation) {
     </tr>`;
     }).join("");
 
+    const summaryColspan = sCode ? 4 : 3;
     const summaryTable = `
 <div style="padding:16px 10px 0;font-family:Arial,sans-serif">
   <table style="${TABLE_STYLE}">
@@ -961,12 +962,12 @@ async function allRecsTableHTML(quotation) {
         <th style="${TH}">S.No</th>
         <th style="${TH}">Quantity</th>
         <th style="${TH}">Unit</th>
-        <th style="${TH}">Product<br>Code</th>
+        ${sCode ? `<th style="${TH}">Product<br>Code</th>` : ''}
         ${summaryRecTh}
       </tr>
     </thead>
     <tbody>${summaryRows}</tbody>
-    <tfoot>${summaryTotalRows}</tfoot>
+    <tfoot>${summaryTotalRows.replace(/colspan="4"/g, `colspan="${summaryColspan}"`)}</tfoot>
   </table>
 </div>`;
 

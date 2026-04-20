@@ -642,7 +642,7 @@ function RecCell({ label, rec, onChange, customLabels = {}, onRenameLabel, itemI
                                     onBlur={() => { if (f.key === 'productCode') setTimeout(() => setOpenSearch(false), 200); }}
                                     onWheel={(e) => e.target.blur()}
                                     placeholder={getPlaceholder(customLabels, `rec_${itemId}_${label}_${f.key}`, '')}
-                                    style={{ ...inputStyle, fontSize: 11, padding: '0 6px', width: '100%' }}
+                                    style={{ ...inputStyle, fontSize: 11, padding: '0 6px', width: '100%', ...(f.key === 'brandName' ? { background: '#002061', color: '#fff', fontWeight: 700 } : {}) }}
                                 />
                                 {f.key === 'productCode' && openSearch && (
                                     (() => {
