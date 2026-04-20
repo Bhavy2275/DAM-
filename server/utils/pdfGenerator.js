@@ -239,9 +239,12 @@ function coverHTML(quotation, settings, logoB64, logoHeight = 160) {
   const clientCityLine = cityParts.join(", ");
   const clientPinLine = client.pinCode ? "Pincode - " + client.pinCode : "";
 
-  const addrLines = companyAddress
-    ? companyAddress.split(",").map(s => s.trim()).filter(Boolean).join(",<br>")
-    : "";
+  // If addrHtml is pre-formatted (e.g. for Light Gallery), use it directly
+  const addrLines = s.addrHtml
+    ? s.addrHtml
+    : companyAddress
+      ? companyAddress.split(",").map(s => s.trim()).filter(Boolean).join(",<br>")
+      : "";
 
   return `
 <div style="position:relative;width:100%;height:100%;background:#fff;font-family:Arial,'Helvetica Neue',sans-serif">
@@ -1023,12 +1026,30 @@ async function generatePDF(quotation, settings, mode) {
   const logoHeight = isLightsGallery ? 380 : 160;
   const logoB64 = await getBrandLogoB64(logoFileName);
 
+  // ── Light Gallery: all details are permanently hardcoded, not editable ──
+  const LIGHTS_GALLERY = {
+    companyName: "Lights Gallery",
+    phone: "8935081100",
+    email: "lightsgallerydhruv@gmail.com",
+    website: "https://lightsgallery.in/",
+    // Pre-formatted HTML address (two offices) — bypasses comma-split logic
+    addrHtml:
+      "<b>H.O.:</b> 120/500-8A, Lajpat Nagar, Kanpur (UP) 208005<br>" +
+      "<b>Branch:</b> 1, Station Road, Vidhan Sabha Marg, Hussainganj Crossing, Lucknow (UP) 226001",
+    // Bank details — permanently hardcoded
+    accountName: "Lights Gallery",
+    bankName: "State Bank of India, Naveen Market Kanpur",
+    accountNumber: "31993317042",
+    ifscCode: "SBIN0005307",
+    address: "120/500-8A, Lajpat Nagar, Kanpur (UP) 208005",
+  };
+
   const effectiveSettings = isLightsGallery
-    ? { ...settings, companyName: "Light Gallery" }
+    ? { ...settings, ...LIGHTS_GALLERY }
     : settings;
 
   const cover = coverHTML(quotation, effectiveSettings, logoB64, logoHeight);
-  const terms = termsAndBankHTML(quotation, settings);
+  const terms = termsAndBankHTML(quotation, effectiveSettings);
   const tableHTML = mode === "all_recs"
     ? await allRecsTableHTML(quotation)
     : await finalTableHTML(quotation, logoB64);
