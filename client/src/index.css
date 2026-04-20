@@ -2,39 +2,45 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════
-   DAM LIGHTING SOLUTION — "Luxury Dark Atelier" Design System
+   DAM LIGHTING SOLUTION — "Clean Light" Design System
    ═══════════════════════════════════════════════════════════ */
 
 
 /* ── TailwindCSS v4 Theme ── */
 @theme {
-  --color-base: #070C18;
-  --color-surface: #0E1629;
-  --color-elevated: #152035;
-  --color-border: #1E2D47;
+  /* Main content area */
+  --color-base: #F0F2F5;
+  --color-surface: #FFFFFF;
+  --color-elevated: #E6E9F0;
+  --color-border: #D1D8E6;
 
-  --color-accent: #F5A623;
-  --color-accent-glow: rgba(245, 166, 35, 0.15);
-  --color-accent-dim: #8C6016;
-  --color-accent-bright: #FFB940;
+  /* Sidebar - kept dark so white logo is visible */
+  --color-sidebar: #1C2333;
+  --color-sidebar-hover: #263048;
+  --color-sidebar-border: #2E3D58;
 
-  --color-text-primary: #EDF2FF;
-  --color-text-secondary: #7B91B0;
-  --color-text-muted: #3D5476;
+  --color-accent: #E09B10;
+  --color-accent-glow: rgba(224, 155, 16, 0.15);
+  --color-accent-dim: #B87D0C;
+  --color-accent-bright: #F5A623;
 
-  --color-status-draft: #4A5568;
-  --color-status-sent: #3B82F6;
-  --color-status-accepted: #10B981;
-  --color-status-rejected: #EF4444;
-  --color-status-invoiced: #8B5CF6;
-  --color-status-pending: #F59E0B;
-  --color-status-paid: #10B981;
-  --color-status-partial: #F97316;
+  --color-text-primary: #111827;
+  --color-text-secondary: #374151;
+  --color-text-muted: #6B7280;
 
-  --color-danger: #EF4444;
-  --color-success: #10B981;
-  --color-info: #3B82F6;
-  --color-warning: #F59E0B;
+  --color-status-draft: #6B7280;
+  --color-status-sent: #2563EB;
+  --color-status-accepted: #059669;
+  --color-status-rejected: #DC2626;
+  --color-status-invoiced: #7C3AED;
+  --color-status-pending: #D97706;
+  --color-status-paid: #059669;
+  --color-status-partial: #EA580C;
+
+  --color-danger: #DC2626;
+  --color-success: #059669;
+  --color-info: #2563EB;
+  --color-warning: #D97706;
 
   --font-display: 'Cormorant Garamond', serif;
   --font-body: 'Outfit', sans-serif;
@@ -70,7 +76,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-base);
+  background: var(--color-elevated);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -106,40 +112,40 @@ body {
 }
 
 .badge-draft {
-  background: rgba(74, 85, 104, 0.15);
-  color: #94a3b8;
+  background: rgba(107, 114, 128, 0.12);
+  color: #4B5563;
 }
 
 .badge-sent {
-  background: rgba(59, 130, 246, 0.12);
-  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.10);
+  color: #1D4ED8;
 }
 
 .badge-accepted,
 .badge-completed,
 .badge-paid {
-  background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
+  background: rgba(5, 150, 105, 0.10);
+  color: #047857;
 }
 
 .badge-rejected {
-  background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
+  background: rgba(220, 38, 38, 0.10);
+  color: #B91C1C;
 }
 
 .badge-invoiced {
-  background: rgba(139, 92, 246, 0.12);
-  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.10);
+  color: #6D28D9;
 }
 
 .badge-pending {
-  background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
+  background: rgba(217, 119, 6, 0.12);
+  color: #B45309;
 }
 
 .badge-partial {
-  background: rgba(249, 115, 22, 0.12);
-  color: #fb923c;
+  background: rgba(234, 88, 12, 0.10);
+  color: #C2410C;
 }
 
 /* ── Pulse dot for SENT status ── */
@@ -250,7 +256,7 @@ option {
   gap: 8px;
   padding: 10px 20px;
   background: var(--color-accent);
-  color: var(--color-base);
+  color: #FFFFFF;
   font-weight: 600;
   font-size: 13px;
   border-radius: var(--radius-md);

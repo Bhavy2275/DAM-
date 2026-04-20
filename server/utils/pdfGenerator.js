@@ -1023,7 +1023,11 @@ async function generatePDF(quotation, settings, mode) {
   const logoHeight = isLightsGallery ? 380 : 160;
   const logoB64 = await getBrandLogoB64(logoFileName);
 
-  const cover = coverHTML(quotation, settings, logoB64, logoHeight);
+  const effectiveSettings = isLightsGallery
+    ? { ...settings, companyName: "Light Gallery" }
+    : settings;
+
+  const cover = coverHTML(quotation, effectiveSettings, logoB64, logoHeight);
   const terms = termsAndBankHTML(quotation, settings);
   const tableHTML = mode === "all_recs"
     ? await allRecsTableHTML(quotation)

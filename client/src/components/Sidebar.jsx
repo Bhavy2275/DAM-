@@ -29,10 +29,10 @@ export default function Sidebar() {
             animate={{ x: 0, opacity: 1, width: w }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
             className="sticky left-0 top-0 h-screen flex-shrink-0 flex flex-col z-50"
-            style={{ background: 'var(--color-base)', borderRight: '1px solid var(--color-border)' }}
+            style={{ background: 'var(--color-sidebar)', borderRight: '1px solid var(--color-sidebar-border)' }}
         >
             {/* Logo */}
-            <div className="px-4 py-5 flex items-center justify-center" style={{ borderBottom: '1px solid var(--color-border)', minHeight: 77 }}>
+            <div className="px-4 py-5 flex items-center justify-center" style={{ borderBottom: '1px solid var(--color-sidebar-border)', minHeight: 77 }}>
                 {collapsed ? (
                     <img 
                         src={logo} 
@@ -67,8 +67,8 @@ export default function Sidebar() {
                                 to={item.path}
                                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg relative group"
                                 style={{
-                                    color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                                    background: isActive ? 'var(--color-accent-glow)' : 'transparent',
+                                    color: isActive ? 'var(--color-accent-bright)' : 'rgba(255,255,255,0.65)',
+                                    background: isActive ? 'rgba(224,155,16,0.15)' : 'transparent',
                                     transition: 'all 0.2s ease',
                                     overflow: 'hidden',
                                 }}
@@ -106,15 +106,15 @@ export default function Sidebar() {
                     <div className="px-3 py-2 flex items-center gap-2">
                         <div style={{
                             width: 28, height: 28, borderRadius: '50%',
-                            background: 'var(--color-accent)', color: 'var(--color-base)',
+                            background: 'var(--color-accent)', color: '#fff',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: 11, fontWeight: 700
                         }}>
                             {user.name?.[0] || 'A'}
                         </div>
                         <div>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>{user.name}</div>
-                            <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{user.role}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>{user.name}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>{user.role}</div>
                         </div>
                     </div>
                 )}
@@ -122,8 +122,8 @@ export default function Sidebar() {
                     onClick={() => setCollapsed(!collapsed)}
                     className="w-full flex items-center justify-center py-2 rounded-lg"
                     style={{
-                        background: 'var(--color-surface)', color: 'var(--color-text-secondary)',
-                        border: '1px solid var(--color-border)', cursor: 'pointer',
+                        background: 'var(--color-sidebar-hover)', color: 'rgba(255,255,255,0.6)',
+                        border: '1px solid var(--color-sidebar-border)', cursor: 'pointer',
                         transition: 'all 0.2s ease'
                     }}
                 >
