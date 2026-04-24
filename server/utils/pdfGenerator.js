@@ -819,9 +819,9 @@ async function allRecsTableHTML(quotation) {
         if (!r || !r.brandName) {
           let emptyHtml = "";
           if (sQty) emptyHtml += `<td style="${TD}text-align:center">—</td>`;
-          emptyHtml += `<td style="${TD}text-align:center">—</td>`;
+          if (sDisc) emptyHtml += `<td style="${TD}text-align:center">—</td>`;
           if (sMac) emptyHtml += `<td style="${TD}text-align:center">—</td>`;
-          emptyHtml += `<td style="${TD}text-align:center">—</td>`;
+          if (sSpace) emptyHtml += `<td style="${TD}text-align:center">—</td>`;
           if (sRate) emptyHtml += `<td style="${TD}text-align:right">—</td>`;
           if (sAmt) emptyHtml += `<td style="${TD}text-align:right">—</td>`;
           return emptyHtml;
@@ -1024,7 +1024,7 @@ async function generatePDF(quotation, settings, mode) {
 
   const isLightsGallery = mode === "final_lights_gallery";
   const logoFileName = isLightsGallery ? "logo2.png" : "logo.png";
-  const logoHeight = isLightsGallery ? 380 : 160;
+  const logoHeight = isLightsGallery ? 380 : 100;
   const logoB64 = await getBrandLogoB64(logoFileName);
 
   // ── Light Gallery: all details are permanently hardcoded, not editable ──
@@ -1056,7 +1056,7 @@ async function generatePDF(quotation, settings, mode) {
     : await finalTableHTML(quotation, logoB64);
 
   // All pages: Letter landscape (279 × 216 mm)
-  const html = `<!DOCTYPE html>
+  let html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1095,6 +1095,13 @@ async function generatePDF(quotation, settings, mode) {
 
 </body>
 </html>`;
+
+  if (isLightsGallery) {
+    // Change navy blue accents to black/dark greys
+    html = html.replace(/#002061/g, "#111111")
+               .replace(/#0b162c/g, "#000000")
+               .replace(/#0D1E40/g, "#222222");
+  }
 
   const browser = await puppeteer.launch({
     headless: true,
