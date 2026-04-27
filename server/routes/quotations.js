@@ -261,9 +261,20 @@ router.put('/:id/batch', validateBody(batchSchema), async (req, res) => {
                             }
                         }
                     }
+                    // 4. Delete any items that exist in DB but were removed in the UI
+                    const submittedIds = new Set(
+                        items
+                            .map(i => i.id)
+                            .filter(id => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
+                    );
+                    const idsToDelete = [...existingIds].filter(dbId => !submittedIds.has(dbId));
+                    if (idsToDelete.length > 0) {
+                        await tx.itemRecommendation.deleteMany({ where: { quotationItemId: { in: idsToDelete } } });
+                        await tx.quotationItem.deleteMany({ where: { id: { in: idsToDelete } } });
+                    }
                 }
 
-                // 4. Recalculate Totals inside the transaction
+                // 5. Recalculate Totals inside the transaction
                 await recalculateQuotationTotal(id, tx);
         }, { maxWait: 10000, timeout: 30000 });
 
