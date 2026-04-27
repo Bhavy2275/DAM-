@@ -2976,9 +2976,9 @@ const Step5FinalQuotation = memo(function Step5FinalQuotation({ items, setItems,
 
         const amt = parseFloat(it.finalAmount) || 0;
 
-        const isInc = it.finalPriceType === 'LP_INC';
-
-        return acc + (isInc ? 0 : amt * (gstRate / 100));
+        // finalAmount is always stored as NET (ex-GST) regardless of priceType,
+        // so GST is always amt * gstRate / 100
+        return acc + amt * (gstRate / 100);
 
     }, 0);
 

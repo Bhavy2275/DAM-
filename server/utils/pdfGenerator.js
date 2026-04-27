@@ -393,7 +393,7 @@ async function finalTableHTML(quotation, logoB64) {
 
   let finalSub = 0;
   let finalGst = 0;
-  const gstRate = quotation.gstRate || 18;
+  const gstRate = quotation.gstRate !== undefined && quotation.gstRate !== null ? Number(quotation.gstRate) : 18;
   const gstMult = gstRate / 100;
 
   items.forEach(i => {
@@ -691,7 +691,7 @@ async function allRecsTableHTML(quotation) {
   }));
   const customCols = getCustomCols(quotation);
   const hasCustomCols = customCols.length > 0;
-  const gstRate = quotation.gstRate || 18;
+  const gstRate = quotation.gstRate !== undefined && quotation.gstRate !== null ? Number(quotation.gstRate) : 18;
   const gstMultAdd = gstRate / 100;      // 0.18
   const gstMultTotal = 1 + gstMultAdd;   // 1.18
 
@@ -708,13 +708,9 @@ async function allRecsTableHTML(quotation) {
       const r = (item.recommendations || []).find(r => r.label === label);
       if (r) {
         const amt = parseFloat(r.amount) || 0;
-        const isInc = r.priceType === 'LP_INC';
-        if (isInc) {
-          displaySum += amt * gstMultTotal;
-        } else {
-          displaySum += amt;
-          residualGst += amt * gstMultAdd;
-        }
+        // r.amount is always stored as NET (ex-GST) regardless of priceType
+        displaySum += amt;
+        residualGst += amt * gstMultAdd;
       }
     });
     return { label, sum: displaySum, gst: residualGst, total: displaySum + residualGst };
@@ -744,6 +740,7 @@ async function allRecsTableHTML(quotation) {
   try {
     const sSno = !hCols['S.No'];
     const sCode = !hCols['Code'];
+    const sLayout = !hCols['Layout'];
     const sDesc = !hCols['Description / Attributes'];
     const sPolar = !hCols['Polar Diagram'];
     const sUnit = !hCols['Unit'];
@@ -776,7 +773,8 @@ async function allRecsTableHTML(quotation) {
 
     const specHeaders = [];
     if (sSno) specHeaders.push(`<th rowspan="2" style="${TH}">S.NO</th>`);
-    if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">PRODUCT<br>CODE</th>`);
+    // Layout Code uses the same 'Code' toggle since it replaces Product Code in this PDF
+    if (sCode) specHeaders.push(`<th rowspan="2" style="${TH}">LAYOUT<br>CODE</th>`);
     if (sDesc) {
       specHeaders.push(`<th rowspan="2" style="${TH};width:160px;white-space:normal">DESCRIPTION</th>`);
     }
@@ -849,7 +847,8 @@ async function allRecsTableHTML(quotation) {
 
       let rowHtml = `<tr style="background:${bg}">`;
       if (sSno) rowHtml += `<td style="${TD}text-align:center;">${item.sno || idx + 1}</td>`;
-      if (sCode) rowHtml += `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px;">${item.productCode || ""}</td>`;
+      if (sCode) rowHtml += `<td style="${TD}text-align:center;font-size:7.5px;">${item.layoutCode || "—"}</td>`;
+      // Layout Code replaces Product Code in Recommendation PDF
       if (sDesc) {
         rowHtml += `<td style="${TD}font-size:7px;line-height:1.5;color:#333;min-width:120px">${esc((item.description || "").slice(0, 180))}</td>`;
       }
@@ -929,7 +928,7 @@ async function allRecsTableHTML(quotation) {
   <td style="${TD}text-align:center">${item.sno || idx + 1}</td>
   <td style="${TD}text-align:center;font-weight:700">${qty}</td>
   <td style="${TD}text-align:center">${unit}</td>
-  ${sCode ? `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px">${item.productCode || '\u2014'}</td>` : ''}
+  ${sCode ? `<td style="${TD}text-align:center;font-weight:700;color:#0D1E40;font-size:7.5px">${item.layoutCode || '\u2014'}</td>` : ''}
   ${recSumCells}
 </tr>`;
     }
@@ -962,7 +961,7 @@ async function allRecsTableHTML(quotation) {
         <th style="${TH}">S.No</th>
         <th style="${TH}">Quantity</th>
         <th style="${TH}">Unit</th>
-        ${sCode ? `<th style="${TH}">Product<br>Code</th>` : ''}
+        ${sCode ? `<th style="${TH}">Layout<br>Code</th>` : ''}
         ${summaryRecTh}
       </tr>
     </thead>
